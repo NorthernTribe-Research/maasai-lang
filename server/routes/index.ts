@@ -212,6 +212,42 @@ class LessonRoutes extends BaseRoutes {
         this.handleError(error, res);
       }
     });
+    
+    // Create a new lesson (admin only)
+    app.post("/api/admin/lessons", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+      
+      // Check if user is admin
+      if (!req.user.isAdmin) {
+        return res.status(403).json({ error: "Unauthorized: Admin privileges required" });
+      }
+
+      try {
+        const lessonData = req.body;
+        
+        // Validate required fields
+        if (!lessonData.title || !lessonData.type || !lessonData.languageId) {
+          return res.status(400).json({ error: "Missing required fields" });
+        }
+        
+        // Set default values if not provided
+        if (lessonData.level === undefined) lessonData.level = 1;
+        if (lessonData.xpReward === undefined) lessonData.xpReward = lessonData.level * 10;
+        if (lessonData.duration === undefined) lessonData.duration = 10;
+        if (lessonData.order === undefined) {
+          // Find the highest order for this language and increment
+          const lessons = await lessonService.getLessonsByLanguage(lessonData.languageId);
+          const maxOrder = lessons.reduce((max, lesson) => 
+            lesson.order > max ? lesson.order : max, 0);
+          lessonData.order = maxOrder + 1;
+        }
+        
+        const lesson = await lessonService.addLesson(lessonData);
+        res.status(201).json(lesson);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
   }
 }
 

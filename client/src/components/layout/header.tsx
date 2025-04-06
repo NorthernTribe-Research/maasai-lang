@@ -116,6 +116,13 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                   <a className="cursor-pointer w-full">Achievements</a>
                 </Link>
               </DropdownMenuItem>
+              {user.isAdmin && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">
+                    <a className="cursor-pointer w-full">Admin Dashboard</a>
+                  </Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"

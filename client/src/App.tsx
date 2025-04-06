@@ -2,6 +2,7 @@ import { Switch, Route } from "wouter";
 import { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { ProtectedRoute } from "./lib/protected-route";
+import { AdminProtectedRoute } from "./lib/admin-protected-route";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 
@@ -13,6 +14,10 @@ const Practice = lazy(() => import("@/pages/practice"));
 const Leaderboard = lazy(() => import("@/pages/leaderboard"));
 const Achievements = lazy(() => import("@/pages/achievements"));
 const Profile = lazy(() => import("@/pages/profile"));
+
+// Admin pages
+const AdminDashboard = lazy(() => import("@/pages/admin"));
+const AdminLessons = lazy(() => import("@/pages/admin/lessons"));
 
 // Loading component for suspense fallback
 const PageLoader = () => (
@@ -26,6 +31,8 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/auth" component={AuthPage} />
+        
+        {/* User routes */}
         <ProtectedRoute path="/" component={Dashboard} />
         <ProtectedRoute path="/lessons" component={Lessons} />
         <ProtectedRoute path="/lessons/:id" component={LessonDetail} />
@@ -33,6 +40,11 @@ function Router() {
         <ProtectedRoute path="/leaderboard" component={Leaderboard} />
         <ProtectedRoute path="/achievements" component={Achievements} />
         <ProtectedRoute path="/profile" component={Profile} />
+        
+        {/* Admin routes */}
+        <AdminProtectedRoute path="/admin" component={AdminDashboard} />
+        <AdminProtectedRoute path="/admin/lessons" component={AdminLessons} />
+        
         <Route component={NotFound} />
       </Switch>
     </Suspense>

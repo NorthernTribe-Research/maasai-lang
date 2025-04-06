@@ -77,7 +77,7 @@ export class LessonService extends BaseService {
         const result = await this.db
           .update(userLessons)
           .set({
-            lastAccessed: new Date().toISOString()
+            lastAccessed: new Date()
           })
           .where(
             and(
@@ -95,7 +95,7 @@ export class LessonService extends BaseService {
         .insert(userLessons)
         .values({
           ...userLesson,
-          lastAccessed: new Date().toISOString()
+          lastAccessed: new Date()
         })
         .returning();
       
@@ -143,8 +143,8 @@ export class LessonService extends BaseService {
         .set({
           progress,
           isCompleted: progress >= 100,
-          completedAt: progress >= 100 ? new Date().toISOString() : null,
-          lastAccessed: new Date().toISOString()
+          completedAt: progress >= 100 ? new Date() : null,
+          lastAccessed: new Date()
         })
         .where(
           and(
