@@ -7,7 +7,7 @@ if (!apiKey && process.env.NODE_ENV === 'production') {
 }
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: apiKey || "demo-api-key" });
+export const openai = new OpenAI({ apiKey: apiKey || "demo-api-key" });
 
 // Generate language learning exercises
 export async function generateExercise(language: string, level: string, type: string): Promise<{
