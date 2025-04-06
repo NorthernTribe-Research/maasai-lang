@@ -1,7 +1,13 @@
 import OpenAI from "openai";
 
+// Check if OpenAI API key is available
+const apiKey = process.env.OPENAI_API_KEY;
+if (!apiKey && process.env.NODE_ENV === 'production') {
+  console.error('OPENAI_API_KEY is not set in production environment. AI features will not function correctly.');
+}
+
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "demo-api-key" });
+const openai = new OpenAI({ apiKey: apiKey || "demo-api-key" });
 
 // Generate language learning exercises
 export async function generateExercise(language: string, level: string, type: string): Promise<{
@@ -26,7 +32,8 @@ export async function generateExercise(language: string, level: string, type: st
       response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{}';
+    const result = JSON.parse(content);
     return {
       question: result.question,
       answer: result.answer,
@@ -85,7 +92,8 @@ export async function checkTranslation(original: string, translation: string, la
       response_format: { type: "json_object" },
     });
 
-    return JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{}';
+    return JSON.parse(content);
   } catch (error) {
     console.error("Failed to check translation:", error);
     return {
@@ -138,7 +146,8 @@ export async function generateStudyPlan(
       response_format: { type: "json_object" },
     });
 
-    return JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{}';
+    return JSON.parse(content);
   } catch (error) {
     console.error("Failed to generate study plan:", error);
     return {
