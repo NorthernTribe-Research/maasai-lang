@@ -136,9 +136,9 @@ export class MemStorage implements IStorage {
       id, 
       xp: 0, 
       streak: 0, 
-      lastActive: now, 
-      streakUpdatedAt: now,
-      createdAt: now,
+      lastActive: now.toISOString(), 
+      streakUpdatedAt: now.toISOString(),
+      createdAt: now.toISOString(),
       isAdmin: false
     };
     this.users.set(id, user);
@@ -159,15 +159,15 @@ export class MemStorage implements IStorage {
 
     // If last active was today, just update lastActive
     if (isToday(lastActiveDate)) {
-      updatedUser = { ...user, lastActive: now };
+      updatedUser = { ...user, lastActive: now.toISOString() };
     } 
     // If last active was yesterday, increment streak
     else if (daysSinceLastActive === 1) {
       updatedUser = { 
         ...user, 
         streak: user.streak + 1, 
-        lastActive: now,
-        streakUpdatedAt: now 
+        lastActive: now.toISOString(),
+        streakUpdatedAt: now.toISOString() 
       };
     } 
     // If more than 1 day has passed, reset streak
@@ -175,8 +175,8 @@ export class MemStorage implements IStorage {
       updatedUser = { 
         ...user, 
         streak: 1, 
-        lastActive: now,
-        streakUpdatedAt: now 
+        lastActive: now.toISOString(),
+        streakUpdatedAt: now.toISOString() 
       };
     }
 
@@ -232,7 +232,7 @@ export class MemStorage implements IStorage {
       level: 1,
       progress: 0,
       isActive: true,
-      createdAt: now
+      createdAt: now.toISOString()
     };
     this.userLanguages.set(id, newUserLanguage);
     return newUserLanguage;
@@ -322,7 +322,7 @@ export class MemStorage implements IStorage {
       // Update lastAccessed time
       const updatedUserLesson: UserLesson = {
         ...existingUserLesson,
-        lastAccessed: new Date()
+        lastAccessed: new Date().toISOString()
       };
       this.userLessons.set(existingUserLesson.id, updatedUserLesson);
       return updatedUserLesson;
@@ -335,7 +335,7 @@ export class MemStorage implements IStorage {
       id,
       isCompleted: false,
       progress: 0,
-      lastAccessed: now,
+      lastAccessed: now.toISOString(),
       completedAt: null
     };
     this.userLessons.set(id, newUserLesson);
@@ -360,7 +360,7 @@ export class MemStorage implements IStorage {
 
     const now = new Date();
     const isCompleted = progress >= 100;
-    const completedAt = isCompleted ? now : userLesson.completedAt;
+    const completedAt = isCompleted ? now.toISOString() : userLesson.completedAt;
 
     // If lesson is completed for the first time, reward XP
     let xpToAdd = 0;
@@ -404,7 +404,7 @@ export class MemStorage implements IStorage {
       ...userLesson,
       progress: Math.min(100, progress),
       isCompleted,
-      lastAccessed: now,
+      lastAccessed: now.toISOString(),
       completedAt
     };
 
@@ -443,7 +443,7 @@ export class MemStorage implements IStorage {
     const newUserAchievement: UserAchievement = {
       ...userAchievement,
       id,
-      earnedAt: now
+      earnedAt: now.toISOString()
     };
     this.userAchievements.set(id, newUserAchievement);
     return newUserAchievement;
@@ -527,7 +527,7 @@ export class MemStorage implements IStorage {
     const updatedDailyChallenge: DailyChallenge = {
       ...dailyChallenge,
       isCompleted: true,
-      completedAt: now
+      completedAt: now.toISOString()
     };
 
     this.dailyChallenges.set(dailyChallenge.id, updatedDailyChallenge);
@@ -1262,7 +1262,7 @@ export class DatabaseStorage implements IStorage {
 
     const now = new Date();
     const isCompleted = progress >= 100;
-    const completedAt = isCompleted ? now : userLesson.completedAt;
+    const completedAt = isCompleted ? now.toISOString() : userLesson.completedAt;
 
     // If lesson is completed for the first time, reward XP
     if (isCompleted && !userLesson.isCompleted) {
