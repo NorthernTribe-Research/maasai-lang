@@ -14,12 +14,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Mic, RotateCcw, CheckCircle, XCircle, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Language, UserLanguage, Challenge, DailyChallenge } from "@shared/schema";
+import PronunciationChallenge from "@/components/common/pronunciation-challenge";
 
 enum PracticeType {
   DAILY_CHALLENGE = "daily-challenge",
   VOCABULARY = "vocabulary",
   GRAMMAR = "grammar",
   CONVERSATION = "conversation",
+  PRONUNCIATION = "pronunciation",
 }
 
 interface Exercise {
@@ -212,11 +214,12 @@ export default function Practice() {
           onValueChange={handlePracticeTypeChange}
           className="w-full"
         >
-          <TabsList className="mb-6 grid grid-cols-2 md:grid-cols-4">
+          <TabsList className="mb-6 grid grid-cols-2 md:grid-cols-5">
             <TabsTrigger value={PracticeType.DAILY_CHALLENGE}>Daily Challenge</TabsTrigger>
             <TabsTrigger value={PracticeType.VOCABULARY}>Vocabulary</TabsTrigger>
             <TabsTrigger value={PracticeType.GRAMMAR}>Grammar</TabsTrigger>
             <TabsTrigger value={PracticeType.CONVERSATION}>Conversation</TabsTrigger>
+            <TabsTrigger value={PracticeType.PRONUNCIATION}>Pronunciation</TabsTrigger>
           </TabsList>
           
           {practiceType !== PracticeType.DAILY_CHALLENGE && (
@@ -610,6 +613,71 @@ export default function Practice() {
                 </CardContent>
               </Card>
             ) : null}
+          </TabsContent>
+          
+          <TabsContent value={PracticeType.PRONUNCIATION}>
+            {!selectedLanguage ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-6">
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Select a language to practice pronunciation
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : isGenerating ? (
+              <Skeleton className="h-64 w-full rounded-xl" />
+            ) : (
+              <div>
+                {/* Get language name from selected language ID */}
+                {(() => {
+                  const languageId = parseInt(selectedLanguage);
+                  const language = userLanguages && Array.isArray(userLanguages) 
+                    ? userLanguages.find((ul: UserLanguage & {language: Language}) => ul.languageId === languageId)?.language
+                    : undefined;
+                  
+                  if (!language) return null;
+                  
+                  // Sample phrases for pronunciation practice based on language
+                  const phrases: Record<string, string> = {
+                    "Spanish": "Buenos días, ¿cómo estás hoy?",
+                    "French": "Bonjour, comment allez-vous aujourd'hui?",
+                    "German": "Guten Tag, wie geht es Ihnen heute?",
+                    "Italian": "Buongiorno, come stai oggi?",
+                    "Japanese": "こんにちは、今日の調子はどうですか？",
+                    "Chinese": "你好，今天过得怎么样？",
+                    "Russian": "Здравствуйте, как вы сегодня?",
+                    "Portuguese": "Bom dia, como você está hoje?",
+                    "Korean": "안녕하세요, 오늘 어떻게 지내세요?"
+                  };
+                  
+                  // Use language name or fallback to a default phrase
+                  const phrase = phrases[language.name] || "Hello, how are you today?";
+                  
+                  // Handle completion of pronunciation challenge
+                  const handlePronunciationComplete = (accuracy: number) => {
+                    // Here you could update user progress, award XP, etc.
+                    console.log(`Pronunciation accuracy: ${accuracy}%`);
+                    
+                    if (accuracy >= 80) {
+                      toast({
+                        title: "Great pronunciation!",
+                        description: `You achieved ${accuracy}% accuracy. Keep it up!`,
+                      });
+                    }
+                  };
+                  
+                  return (
+                    <PronunciationChallenge 
+                      language={language.name}
+                      text={phrase}
+                      onComplete={handlePronunciationComplete}
+                    />
+                  );
+                })()}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

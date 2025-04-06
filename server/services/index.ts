@@ -4,6 +4,7 @@ import { LessonService } from './LessonService';
 import { AchievementService } from './AchievementService';
 import { ChallengeService } from './ChallengeService';
 import { OpenAIService } from './OpenAIService';
+import { GeminiService } from './GeminiService';
 
 // Create singleton instances for all services
 export const userService = new UserService();
@@ -12,6 +13,7 @@ export const lessonService = new LessonService();
 export const achievementService = new AchievementService();
 export const challengeService = new ChallengeService();
 export const openAIService = new OpenAIService();
+export const geminiService = new GeminiService();
 
 // Export service classes
 export {
@@ -20,5 +22,6 @@ export {
   LessonService,
   AchievementService,
   ChallengeService,
-  OpenAIService
+  OpenAIService,
+  GeminiService
 };

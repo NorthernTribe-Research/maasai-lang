@@ -6,7 +6,8 @@ import {
   lessonService, 
   achievementService,
   challengeService, 
-  openAIService 
+  openAIService,
+  geminiService
 } from "../services";
 import { User } from "@shared/schema";
 
@@ -36,6 +37,7 @@ export class Router {
     new AchievementRoutes().register(app);
     new ChallengeRoutes().register(app);
     new AIRoutes().register(app);
+    new GeminiAIRoutes().register(app);
     
     // Create and return HTTP server
     const server = createServer(app);
@@ -341,6 +343,78 @@ class AIRoutes extends BaseRoutes {
         const { language, level, goal, timeAvailable } = req.body;
         const studyPlan = await openAIService.generateStudyPlan(language, level, goal, timeAvailable);
         res.json(studyPlan);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+  }
+}
+
+/**
+ * Gemini AI-related routes
+ */
+class GeminiAIRoutes extends BaseRoutes {
+  register(app: Express): void {
+    // Check pronunciation
+    app.post("/api/gemini/pronunciation", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { language, originalText, audioTranscription } = req.body;
+        const feedback = await geminiService.providePronunciationFeedback(
+          language,
+          originalText,
+          audioTranscription
+        );
+        res.json(feedback);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate learning path
+    app.post("/api/gemini/learning-path", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { language, currentLevel, learningGoals, interests } = req.body;
+        const learningPath = await geminiService.generateLearningPath(
+          language,
+          currentLevel,
+          learningGoals,
+          interests
+        );
+        res.json(learningPath);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get mascot dialogue
+    app.post("/api/gemini/mascot", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { language, context, userProgress } = req.body;
+        const mascotResponse = await geminiService.getLanguageMascotDialogue(
+          language,
+          context,
+          userProgress
+        );
+        res.json(mascotResponse);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // General content generation
+    app.post("/api/gemini/generate", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { prompt } = req.body;
+        const content = await geminiService.generateContent(prompt);
+        res.json({ content });
       } catch (error) {
         this.handleError(error, res);
       }
