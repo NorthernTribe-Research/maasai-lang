@@ -66,13 +66,21 @@ export default function AuthPage() {
     }
   }, [user, navigate]);
 
-  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
-    loginMutation.mutate(values);
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    try {
+      loginMutation.mutate(values);
+    } catch (error) {
+      console.error("Login form submission error:", error);
+    }
   };
 
-  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
-    const { confirmPassword, ...userValues } = values;
-    registerMutation.mutate(userValues);
+  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
+    try {
+      const { confirmPassword, ...userValues } = values;
+      registerMutation.mutate(userValues);
+    } catch (error) {
+      console.error("Registration form submission error:", error);
+    }
   };
 
   return (

@@ -989,9 +989,9 @@ export class DatabaseStorage implements IStorage {
       ...insertUser,
       xp: 0,
       streak: 0,
-      lastActive: new Date(),
-      streakUpdatedAt: new Date(),
-      createdAt: new Date(),
+      lastActive: new Date().toISOString(),
+      streakUpdatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
       isAdmin: false
     };
     
@@ -1011,29 +1011,29 @@ export class DatabaseStorage implements IStorage {
     }
 
     const now = new Date();
-    const lastActiveDate = user.lastActive;
+    const lastActiveDate = new Date(user.lastActive);
     const daysSinceLastActive = differenceInDays(now, startOfDay(lastActiveDate));
 
     let updateData: Partial<User>;
 
     // If last active was today, just update lastActive
     if (isToday(lastActiveDate)) {
-      updateData = { lastActive: now };
+      updateData = { lastActive: now.toISOString() };
     } 
     // If last active was yesterday, increment streak
     else if (daysSinceLastActive === 1) {
       updateData = { 
         streak: user.streak + 1, 
-        lastActive: now,
-        streakUpdatedAt: now 
+        lastActive: now.toISOString(),
+        streakUpdatedAt: now.toISOString() 
       };
     } 
     // If more than 1 day has passed, reset streak
     else {
       updateData = { 
         streak: 1, 
-        lastActive: now,
-        streakUpdatedAt: now 
+        lastActive: now.toISOString(),
+        streakUpdatedAt: now.toISOString() 
       };
     }
 
@@ -1097,7 +1097,7 @@ export class DatabaseStorage implements IStorage {
       level: 1,
       progress: 0,
       isActive: true,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
 
     const [newUserLanguage] = await db
@@ -1208,7 +1208,7 @@ export class DatabaseStorage implements IStorage {
       // Update lastAccessed time
       const [updatedUserLesson] = await db
         .update(userLessons)
-        .set({ lastAccessed: new Date() })
+        .set({ lastAccessed: new Date().toISOString() })
         .where(eq(userLessons.id, existingUserLesson.id))
         .returning();
         
@@ -1220,7 +1220,7 @@ export class DatabaseStorage implements IStorage {
       ...userLesson,
       isCompleted: false,
       progress: 0,
-      lastAccessed: new Date(),
+      lastAccessed: new Date().toISOString(),
       completedAt: null
     };
 
@@ -1312,7 +1312,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         progress: Math.min(100, progress),
         isCompleted,
-        lastAccessed: now,
+        lastAccessed: now.toISOString(),
         completedAt
       })
       .where(eq(userLessons.id, userLesson.id))
@@ -1358,7 +1358,7 @@ export class DatabaseStorage implements IStorage {
     // Add default values for fields that are required but not in insertUserAchievement
     const userAchievementToInsert = {
       ...userAchievement,
-      earnedAt: new Date()
+      earnedAt: new Date().toISOString()
     };
 
     const [newUserAchievement] = await db
@@ -1483,7 +1483,7 @@ export class DatabaseStorage implements IStorage {
       .update(dailyChallenges)
       .set({
         isCompleted: true,
-        completedAt: now
+        completedAt: now.toISOString()
       })
       .where(eq(dailyChallenges.id, dailyChallenge.id));
 
@@ -1522,16 +1522,16 @@ export class DatabaseStorage implements IStorage {
     
     for (const user of usersList) {
       // Find user's top language
-      const userLanguages = await db
+      const userLangs = await db
         .select()
         .from(userLanguages)
         .where(eq(userLanguages.userId, user.id));
       
       let topLanguage: { languageId?: number; languageName?: string } = {};
       
-      if (userLanguages.length > 0) {
+      if (userLangs.length > 0) {
         // Find the language with highest level/progress
-        const topUserLanguage = userLanguages.reduce((prev, current) => {
+        const topUserLanguage = userLangs.reduce((prev, current) => {
           if (current.level > prev.level) {
             return current;
           }
