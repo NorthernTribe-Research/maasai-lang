@@ -15,10 +15,16 @@ import connectPg from "connect-pg-simple";
 import { connection } from "./db";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import pg from "pg";
 
 const MemoryStore = createMemoryStore(session);
 const PostgresSessionStore = connectPg(session);
 const scryptAsync = promisify(scrypt);
+
+// Create a proper pg Pool for the session store
+const pgPool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 // Interface for storage operations
 export interface IStorage {
@@ -961,7 +967,7 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({
-      pool: connection,
+      pool: pgPool,
       createTableIfMissing: true,
     });
   }
@@ -1647,7 +1653,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Add owner admin user
-    const adminPassword = await hashPassword("admin123");
+    const adminPassword = await hashPassword("research731");
     const admin = await this.createUser({
       username: "admin",
       password: adminPassword,
