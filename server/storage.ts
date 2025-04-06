@@ -665,6 +665,27 @@ export class MemStorage implements IStorage {
       flag: "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8Y2hpbmF8fHx8fHwxNzA1MzEyMzk1&ixlib=rb-4.0.3&q=80&w=50",
       description: "Learn Mandarin Chinese, the most spoken language in the world.",
     });
+    
+    const english = await this.addLanguage({
+      code: "en",
+      name: "English",
+      flag: "https://images.unsplash.com/photo-1493894473891-10fc1e5dbd22?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8ZW5nbGFuZHx8fHx8fDE3MDUzMTIzOTU&ixlib=rb-4.0.3&q=80&w=50",
+      description: "Learn English, the international language of business and travel.",
+    });
+    
+    const japanese = await this.addLanguage({
+      code: "ja",
+      name: "Japanese",
+      flag: "https://images.unsplash.com/photo-1528164344705-47542687000d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8amFwYW58fHx8fHwxNzA1MzEyMzk1&ixlib=rb-4.0.3&q=80&w=50",
+      description: "Learn Japanese, a language with rich cultural heritage and modern influence.",
+    });
+    
+    const arabic = await this.addLanguage({
+      code: "ar",
+      name: "Arabic",
+      flag: "https://images.unsplash.com/photo-1564507004663-b6dfb3c824d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxfDB8MXxyYW5kb218MHx8ZHViYWl8fHx8fHwxNzA1MzEyMzk1&ixlib=rb-4.0.3&q=80&w=50",
+      description: "Learn Arabic, one of the world's oldest languages with over 300 million speakers.",
+    });
 
     // Add lessons for Spanish
     await this.addLesson({
@@ -763,6 +784,57 @@ export class MemStorage implements IStorage {
       duration: 15,
       icon: "bx-conversation",
     });
+    
+    // Lessons for Japanese
+    await this.addLesson({
+      languageId: japanese.id,
+      title: "Hiragana Basics",
+      description: "Learn the Japanese hiragana alphabet.",
+      level: 1,
+      type: "vocabulary",
+      xpReward: 20,
+      order: 1,
+      duration: 25,
+      icon: "bx-palette",
+    });
+    
+    await this.addLesson({
+      languageId: japanese.id,
+      title: "Greetings & Introductions",
+      description: "Learn essential Japanese greetings and self-introductions.",
+      level: 1,
+      type: "conversation",
+      xpReward: 15,
+      order: 2,
+      duration: 15,
+      icon: "bx-conversation",
+    });
+    
+    // Lessons for English
+    await this.addLesson({
+      languageId: english.id,
+      title: "Basic Vocabulary",
+      description: "Learn everyday English words and phrases.",
+      level: 1,
+      type: "vocabulary",
+      xpReward: 10,
+      order: 1,
+      duration: 10,
+      icon: "bx-book",
+    });
+    
+    // Lessons for Arabic
+    await this.addLesson({
+      languageId: arabic.id,
+      title: "Arabic Alphabet",
+      description: "Learn the Arabic alphabet and basic writing.",
+      level: 1,
+      type: "vocabulary",
+      xpReward: 25,
+      order: 1,
+      duration: 30,
+      icon: "bx-pen",
+    });
 
     // Add achievements
     await this.addAchievement({
@@ -819,6 +891,33 @@ export class MemStorage implements IStorage {
       type: "translation",
       difficulty: 1,
       xpReward: 15,
+    });
+    
+    await this.addChallenge({
+      languageId: japanese.id,
+      prompt: "Good morning",
+      answer: "おはようございます",
+      type: "translation",
+      difficulty: 1,
+      xpReward: 15,
+    });
+    
+    await this.addChallenge({
+      languageId: english.id,
+      prompt: "How are you doing today?",
+      answer: "How are you doing today?",
+      type: "pronunciation",
+      difficulty: 1,
+      xpReward: 10,
+    });
+    
+    await this.addChallenge({
+      languageId: arabic.id,
+      prompt: "Hello, nice to meet you",
+      answer: "مرحبا، تشرفت بمعرفتك",
+      type: "translation",
+      difficulty: 2,
+      xpReward: 20,
     });
   }
 

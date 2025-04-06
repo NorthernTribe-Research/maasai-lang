@@ -19,8 +19,8 @@ export default function LanguagePathCard({ userLanguage, lessons }: LanguagePath
         return "from-red-500 to-red-700";
       case "en":
         return "from-blue-500 to-indigo-500";
-      case "hi":
-        return "from-green-500 to-emerald-500";
+      case "ja":
+        return "from-pink-500 to-rose-500";
       case "ar":
         return "from-purple-500 to-fuchsia-500";
       default:

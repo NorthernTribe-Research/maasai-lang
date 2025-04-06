@@ -122,7 +122,7 @@ export default function Lessons() {
                   language.code === "es" ? "from-orange-500 to-yellow-500" :
                   language.code === "zh" ? "from-red-500 to-red-700" :
                   language.code === "en" ? "from-blue-500 to-indigo-500" :
-                  language.code === "hi" ? "from-green-500 to-emerald-500" :
+                  language.code === "ja" ? "from-pink-500 to-rose-500" :
                   language.code === "ar" ? "from-purple-500 to-fuchsia-500" :
                   "from-primary to-secondary"
                 }`}>
