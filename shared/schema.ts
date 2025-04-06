@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // User table
 export const users = pgTable("users", {
@@ -14,7 +15,16 @@ export const users = pgTable("users", {
   lastActive: timestamp("last_active").notNull().defaultNow(),
   streakUpdatedAt: timestamp("streak_updated_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  isAdmin: boolean("is_admin").notNull().default(false),
 });
+
+// Define relations for users
+export const usersRelations = relations(users, ({ many }) => ({
+  userLanguages: many(userLanguages),
+  userLessons: many(userLessons),
+  userAchievements: many(userAchievements),
+  dailyChallenges: many(dailyChallenges),
+}));
 
 // Languages table
 export const languages = pgTable("languages", {
@@ -119,6 +129,7 @@ export const insertUserSchema = createInsertSchema(users).omit({
   lastActive: true,
   streakUpdatedAt: true,
   createdAt: true,
+  isAdmin: true,
 });
 
 export const insertLanguageSchema = createInsertSchema(languages).omit({
@@ -195,3 +206,74 @@ export type DailyChallenge = typeof dailyChallenges.$inferSelect;
 
 // Authentication
 export type LoginCredentials = Pick<InsertUser, "username" | "password">;
+
+// Define all remaining relations
+export const languagesRelations = relations(languages, ({ many }) => ({
+  userLanguages: many(userLanguages),
+  lessons: many(lessons),
+  challenges: many(challenges),
+}));
+
+export const userLanguagesRelations = relations(userLanguages, ({ one }) => ({
+  user: one(users, {
+    fields: [userLanguages.userId],
+    references: [users.id],
+  }),
+  language: one(languages, {
+    fields: [userLanguages.languageId],
+    references: [languages.id],
+  }),
+}));
+
+export const lessonsRelations = relations(lessons, ({ one, many }) => ({
+  language: one(languages, {
+    fields: [lessons.languageId],
+    references: [languages.id],
+  }),
+  userLessons: many(userLessons),
+}));
+
+export const userLessonsRelations = relations(userLessons, ({ one }) => ({
+  user: one(users, {
+    fields: [userLessons.userId],
+    references: [users.id],
+  }),
+  lesson: one(lessons, {
+    fields: [userLessons.lessonId],
+    references: [lessons.id],
+  }),
+}));
+
+export const achievementsRelations = relations(achievements, ({ many }) => ({
+  userAchievements: many(userAchievements),
+}));
+
+export const userAchievementsRelations = relations(userAchievements, ({ one }) => ({
+  user: one(users, {
+    fields: [userAchievements.userId],
+    references: [users.id],
+  }),
+  achievement: one(achievements, {
+    fields: [userAchievements.achievementId],
+    references: [achievements.id],
+  }),
+}));
+
+export const challengesRelations = relations(challenges, ({ one, many }) => ({
+  language: one(languages, {
+    fields: [challenges.languageId],
+    references: [languages.id],
+  }),
+  dailyChallenges: many(dailyChallenges),
+}));
+
+export const dailyChallengesRelations = relations(dailyChallenges, ({ one }) => ({
+  user: one(users, {
+    fields: [dailyChallenges.userId],
+    references: [users.id],
+  }),
+  challenge: one(challenges, {
+    fields: [dailyChallenges.challengeId],
+    references: [challenges.id],
+  }),
+}));

@@ -39,9 +39,7 @@ export function setupAuth(app: Express) {
       secure: process.env.NODE_ENV === "production",
       maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
     },
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
+    store: storage.sessionStore,
   };
 
   app.set("trust proxy", 1);
@@ -84,10 +82,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      const user = await storage.createUser({
-        ...req.body,
-        password: await hashPassword(req.body.password),
-      });
+      const user = await storage.createUser(req.body);
 
       req.login(user, (err) => {
         if (err) return next(err);
