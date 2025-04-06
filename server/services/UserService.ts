@@ -39,13 +39,14 @@ export class UserService extends BaseService {
     try {
       // Hash the password before storing
       const hashedPassword = await hashPassword(insertUser.password);
+      const now = new Date();
       
       const result = await this.db.insert(users).values({
         ...insertUser,
         password: hashedPassword,
-        lastActive: new Date().toISOString(),
-        streakUpdatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        lastActive: now,
+        streakUpdatedAt: now,
+        createdAt: now
       }).returning();
       
       return result[0];
@@ -72,7 +73,7 @@ export class UserService extends BaseService {
       if (isToday(new Date(currentUser.streakUpdatedAt))) {
         // Streak already updated today, just update lastActive
         const result = await this.db.update(users)
-          .set({ lastActive: now.toISOString() })
+          .set({ lastActive: now })
           .where(eq(users.id, userId))
           .returning();
         return result[0];
@@ -86,8 +87,8 @@ export class UserService extends BaseService {
       const result = await this.db.update(users)
         .set({
           streak: newStreak,
-          lastActive: now.toISOString(),
-          streakUpdatedAt: now.toISOString()
+          lastActive: now,
+          streakUpdatedAt: now
         })
         .where(eq(users.id, userId))
         .returning();

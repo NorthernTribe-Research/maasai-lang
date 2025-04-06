@@ -24,14 +24,15 @@ export class ChallengeService extends BaseService {
    */
   async getDailyChallenge(userId: number): Promise<(DailyChallenge & { challenge: Challenge }) | null> {
     try {
-      // Get today's date at midnight in ISO format
-      const today = startOfDay(new Date()).toISOString();
+      // Get today's date at midnight
+      const today = startOfDay(new Date());
+      const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
       
       // Check if user already has a challenge for today
       let userDailyChallenge = await this.db.query.dailyChallenges.findFirst({
         where: and(
           eq(dailyChallenges.userId, userId),
-          sql`DATE(${dailyChallenges.date}) = DATE(${today})`
+          sql`DATE(${dailyChallenges.date}) = ${todayString}`
         ),
         with: {
           challenge: true
@@ -56,7 +57,7 @@ export class ChallengeService extends BaseService {
         userId,
         challengeId: randomChallenge.id,
         isCompleted: false,
-        date: today
+        date: today // Pass Date object directly
       };
       
       const result = await this.db
@@ -86,8 +87,9 @@ export class ChallengeService extends BaseService {
     isCorrect: boolean
   ): Promise<{ success: boolean; xpEarned: number }> {
     try {
-      // Get today's date at midnight in ISO format
-      const today = startOfDay(new Date()).toISOString();
+      // Get today's date at midnight
+      const today = startOfDay(new Date());
+      const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
       
       // Find the daily challenge
       const dailyChallengeResult = await this.db
@@ -97,7 +99,7 @@ export class ChallengeService extends BaseService {
           and(
             eq(dailyChallenges.userId, userId),
             eq(dailyChallenges.challengeId, challengeId),
-            sql`DATE(${dailyChallenges.date}) = DATE(${today})`
+            sql`DATE(${dailyChallenges.date}) = ${todayString}`
           )
         );
       
@@ -112,11 +114,12 @@ export class ChallengeService extends BaseService {
       }
       
       // Mark as completed
+      const now = new Date();
       await this.db
         .update(dailyChallenges)
         .set({
           isCompleted: true,
-          completedAt: new Date().toISOString()
+          completedAt: now
         })
         .where(eq(dailyChallenges.id, dailyChallenge.id));
       
