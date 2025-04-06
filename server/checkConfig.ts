@@ -43,6 +43,20 @@ if (allConfigValid) {
 console.log("\n");
 
 // Run this script automatically when the server starts
+/**
+ * Check if an API key is present and valid
+ * @param apiKey The API key to check
+ * @param serviceName Name of the service for logging
+ * @returns Boolean indicating if the key is valid
+ */
+export function checkApiKey(apiKey: string, serviceName: string): boolean {
+  const isValid = !!apiKey && apiKey.length > 5 && apiKey !== "demo-api-key";
+  if (!isValid) {
+    console.warn(`${serviceName} key is missing or invalid. Some features may not work correctly.`);
+  }
+  return isValid;
+}
+
 export default function checkConfig() {
   // This function is called from server/index.ts
   return allConfigValid;

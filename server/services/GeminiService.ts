@@ -1,253 +1,208 @@
-import { BaseService } from "./BaseService";
-import fetch from "node-fetch";
+import { BaseService } from './BaseService';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
 /**
- * Service class for handling Gemini AI API operations
+ * Service for interacting with Google's Gemini AI
  */
 export class GeminiService extends BaseService {
+  private genAI: GoogleGenerativeAI;
+  private model: GenerativeModel;
   private apiKey: string;
-  private baseUrl: string = "https://generativelanguage.googleapis.com/v1beta";
-  private model: string = "gemini-2.0-flash";
 
   constructor() {
     super();
+    
     this.apiKey = process.env.GEMINI_API_KEY || "";
     if (!this.apiKey) {
-      console.warn("GEMINI_API_KEY not set. Gemini API features will be unavailable.");
+      this.log("No Gemini API key found in environment variables", "warn");
+    }
+    
+    try {
+      this.genAI = new GoogleGenerativeAI(this.apiKey);
+      // Use Gemini-pro for text generation
+      this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+      this.log("Gemini AI service initialized", "info");
+    } catch (error) {
+      this.handleError(error, "initializing Gemini AI service");
     }
   }
 
   /**
-   * Generate a response from Gemini API
-   * @param prompt The text prompt to send to Gemini
-   * @returns The generated response text
+   * Generate text content using Gemini AI
+   * @param prompt Text prompt to generate content from
+   * @returns Generated content as string
    */
   async generateContent(prompt: string): Promise<string> {
     try {
-      if (!this.apiKey) {
-        throw new Error("GEMINI_API_KEY not set");
-      }
-
-      const response = await fetch(
-        `${this.baseUrl}/models/${this.model}:generateContent?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }],
-              },
-            ],
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gemini API error: ${errorText}`);
-      }
-
-      const data = await response.json() as any;
-      
-      if (!data.candidates || data.candidates.length === 0) {
-        throw new Error("No response from Gemini API");
-      }
-      
-      // Extract the text from the first candidate's response
-      const generatedText = data.candidates[0].content.parts[0].text;
-      return generatedText;
+      const result = await this.model.generateContent(prompt);
+      const response = result.response;
+      return response.text();
     } catch (error) {
-      this.handleError(error, "GeminiService.generateContent");
-      return "I couldn't generate content at this time. Please try again later.";
+      throw this.handleError(error, "generating content");
     }
   }
 
   /**
-   * Provide feedback on pronunciation
-   * @param language Target language
-   * @param originalText The text that should be pronounced
-   * @param audioTranscription Transcription of the user's pronunciation
-   * @returns Feedback on pronunciation accuracy and tips for improvement
+   * Provide feedback on pronunciation using Gemini AI
+   * @param audioUrl URL to the audio recording
+   * @param originalText The text that was supposed to be pronounced
+   * @param languageCode The language code (e.g., "es" for Spanish)
+   * @returns Structured feedback about pronunciation
    */
   async providePronunciationFeedback(
-    language: string,
+    audioUrl: string,
     originalText: string,
-    audioTranscription: string
-  ): Promise<{
-    accuracy: number;
-    feedback: string;
-    improvementTips: string[];
-  }> {
+    languageCode: string
+  ): Promise<string> {
     try {
+      // Note: Ideally we would analyze the audio, but since Gemini doesn't accept audio directly,
+      // we're using a text-based approach. In a production app, we would use a specialized
+      // speech recognition API first, then send the transcript to Gemini for analysis.
+      
       const prompt = `
-        You are a language pronunciation expert for ${language}. 
-        
-        Original text: "${originalText}"
-        User's pronunciation (transcribed): "${audioTranscription}"
-        
-        Please evaluate the pronunciation accuracy and provide feedback.
-        
-        Format your response as JSON with the following structure:
-        {
-          "accuracy": [number between 0-100],
-          "feedback": [brief overall assessment],
-          "improvementTips": [array of specific tips for improvement]
-        }
+      You are a language learning assistant specializing in pronunciation for ${languageCode}.
+      
+      The user was trying to pronounce: "${originalText}"
+      
+      Assuming there are some mistakes, provide detailed feedback on:
+      1. Likely pronunciation errors for this specific text
+      2. Tips to improve pronunciation for these specific sounds
+      3. A simple phonetic guide for challenging words or sounds
+      
+      Format the feedback in a friendly, encouraging way.
       `;
-
-      const response = await this.generateContent(prompt);
       
-      // Extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Failed to parse pronunciation feedback");
-      }
-      
-      return JSON.parse(jsonMatch[0]);
+      const result = await this.model.generateContent(prompt);
+      return result.response.text();
     } catch (error) {
-      this.handleError(error, "GeminiService.providePronunciationFeedback");
-      return {
-        accuracy: 0,
-        feedback: "Unable to evaluate pronunciation at this time",
-        improvementTips: ["Try again later"]
-      };
+      throw this.handleError(error, "providing pronunciation feedback");
     }
   }
 
   /**
    * Generate a personalized learning path
-   * @param language Target language
-   * @param currentLevel User's current level
+   * @param languageCode The language code (e.g., "es" for Spanish)
+   * @param currentLevel User's current proficiency level (beginner, intermediate, advanced)
    * @param learningGoals User's learning goals
-   * @param interests User's interests
-   * @returns Personalized learning path with milestones
+   * @returns A structured learning path as a string
    */
   async generateLearningPath(
-    language: string,
+    languageCode: string,
     currentLevel: string,
-    learningGoals: string[],
-    interests: string[]
-  ): Promise<{
-    overview: string;
-    milestones: Array<{
-      title: string;
-      description: string;
-      estimatedTimeToComplete: string;
-      skills: string[];
-    }>;
-  }> {
+    learningGoals: string
+  ): Promise<string> {
     try {
       const prompt = `
-        Create a personalized learning path for learning ${language}.
-        
-        Current level: ${currentLevel}
-        Learning goals: ${learningGoals.join(", ")}
-        Personal interests: ${interests.join(", ")}
-        
-        The learning path should be motivating, realistic, and tailored to the user's needs.
-        
-        Format your response as JSON with the following structure:
-        {
-          "overview": [brief description of the overall learning journey],
-          "milestones": [
-            {
-              "title": [milestone title],
-              "description": [detailed description],
-              "estimatedTimeToComplete": [time estimate as string],
-              "skills": [array of skills gained]
-            },
-            ...
-          ]
-        }
+      You are a language learning specialist creating a custom learning path for a student.
+      
+      Language: ${languageCode}
+      Current Level: ${currentLevel}
+      Learning Goals: ${learningGoals}
+      
+      Create a structured 8-week learning path with:
+      1. Weekly learning objectives
+      2. Recommended activities (2-3 per week)
+      3. Focus vocabulary and grammar concepts
+      4. A weekly mini-challenge
+      
+      Make the path appropriately challenging for their level and aligned with their goals.
+      Format the response as a clear, organized learning plan they can follow.
       `;
-
-      const response = await this.generateContent(prompt);
       
-      // Extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Failed to parse learning path");
-      }
-      
-      return JSON.parse(jsonMatch[0]);
+      const result = await this.model.generateContent(prompt);
+      return result.response.text();
     } catch (error) {
-      this.handleError(error, "GeminiService.generateLearningPath");
-      return {
-        overview: "A personalized learning path could not be generated at this time.",
-        milestones: [
-          {
-            title: "Basic Communication",
-            description: "Learn fundamental phrases and expressions",
-            estimatedTimeToComplete: "2-3 weeks",
-            skills: ["Basic vocabulary", "Simple greetings", "Numbers and time"]
-          }
-        ]
-      };
+      throw this.handleError(error, "generating learning path");
     }
   }
 
   /**
-   * Get language mascot dialogue
-   * @param language Target language
-   * @param context Current learning context
-   * @param userProgress User's current progress
-   * @returns Mascot dialogue and cultural tips
+   * Get dialog from a language mascot character
+   * @param languageCode The language code (e.g., "es" for Spanish)
+   * @param context The context in which the mascot is speaking
+   * @returns The mascot's response as a string
    */
   async getLanguageMascotDialogue(
-    language: string,
-    context: string,
-    userProgress: {
-      level: string;
-      recentTopics: string[];
-      streakDays: number;
-    }
-  ): Promise<{
-    dialogue: string;
-    culturalTip: string;
-    encouragement: string;
-  }> {
+    languageCode: string,
+    context: string
+  ): Promise<string> {
     try {
+      // Get information about the mascot for this language
+      const mascotInfo = this.getMascotInfo(languageCode);
+      
       const prompt = `
-        You are a friendly mascot for ${language} learning named Lingo. 
-        Your personality is encouraging, supportive, and knowledgeable about the culture.
-        
-        Current context: ${context}
-        User's level: ${userProgress.level}
-        Recent topics: ${userProgress.recentTopics.join(", ")}
-        Streak days: ${userProgress.streakDays}
-        
-        Provide a dialogue with the user that includes:
-        1. A brief greeting
-        2. An interesting cultural tip related to their recent topics
-        3. Encouragement that references their streak
-        
-        Format your response as JSON with the following structure:
-        {
-          "dialogue": [friendly greeting and interaction],
-          "culturalTip": [interesting cultural tip related to recent topics],
-          "encouragement": [positive encouragement about their streak or progress]
-        }
+      You are ${mascotInfo.name}, a friendly mascot character for people learning ${mascotInfo.language}.
+      
+      Your personality: ${mascotInfo.personality}
+      
+      Respond to this learning situation: "${context}"
+      
+      Your response should:
+      - Be written in the voice and style of ${mascotInfo.name}
+      - Include 1-2 simple phrases in ${mascotInfo.language} (with translations)
+      - Be encouraging and helpful
+      - Be brief (2-3 sentences maximum)
+      
+      Remember to stay in character - speak as ${mascotInfo.name} would!
       `;
-
-      const response = await this.generateContent(prompt);
       
-      // Extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Failed to parse mascot dialogue");
-      }
-      
-      return JSON.parse(jsonMatch[0]);
+      const result = await this.model.generateContent(prompt);
+      return result.response.text();
     } catch (error) {
-      this.handleError(error, "GeminiService.getLanguageMascotDialogue");
-      return {
-        dialogue: "¡Hola! I'm Lingo, your language learning companion!",
-        culturalTip: "Did you know? Language learning is not just about words, but also about culture.",
-        encouragement: "You're making great progress! Keep up the good work!"
-      };
+      throw this.handleError(error, "generating mascot dialogue");
     }
+  }
+
+  /**
+   * Get information about the language mascot
+   * @param languageCode The language code
+   * @returns Mascot information
+   */
+  private getMascotInfo(languageCode: string): {
+    name: string;
+    language: string;
+    personality: string;
+  } {
+    // Map language codes to mascot information
+    const mascots: Record<string, { name: string; language: string; personality: string }> = {
+      es: {
+        name: "Taco the Toucan",
+        language: "Spanish",
+        personality: "Energetic, cheerful, and loves to use colorful expressions. Frequently says '¡Fantástico!' and ends sentences with '¿sí?'"
+      },
+      fr: {
+        name: "Croissant the Fox",
+        language: "French",
+        personality: "Sophisticated, witty, and slightly dramatic. Uses 'mon ami' frequently and has a poetic way of explaining things."
+      },
+      de: {
+        name: "Pretzel the Dachshund",
+        language: "German",
+        personality: "Methodical, friendly, and enthusiastic about rules and structure. Says 'Wunderbar!' when praising learners."
+      },
+      ja: {
+        name: "Mochi the Tanuki",
+        language: "Japanese",
+        personality: "Calm, thoughtful, and occasionally mischievous. Ends sentences with 'desu ne' and values harmony in learning."
+      },
+      zh: {
+        name: "Dumpling the Panda",
+        language: "Chinese",
+        personality: "Patient, wise, and encouraging. Speaks slowly and clearly, often using proverbs and saying '加油 (jiā yóu)' for encouragement."
+      },
+      it: {
+        name: "Pasta the Cat",
+        language: "Italian",
+        personality: "Passionate, expressive, and gestures frequently. Says 'Bellissimo!' and 'Mamma mia!' and talks about language as if it's a delicious meal."
+      },
+      ru: {
+        name: "Samovar the Bear",
+        language: "Russian",
+        personality: "Strong, warm-hearted, and resilient. Speaks in a deep voice, uses 'little one' (малыш) as a term of endearment."
+      }
+    };
+    
+    // Default to Spanish mascot if language not found
+    return mascots[languageCode] || mascots.es;
   }
 }

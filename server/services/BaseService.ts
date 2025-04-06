@@ -1,32 +1,78 @@
 import { db } from "../db";
 
 /**
- * BaseService class that provides common database operations
- * for derived service classes.
+ * Base service class that all other services extend
+ * Provides common functionality across services
  */
 export class BaseService {
-  protected db: typeof db;
-  
+  protected db = db;
+  protected serviceName: string;
+
   constructor() {
-    this.db = db;
+    // Extract service name from class name
+    this.serviceName = this.constructor.name;
+  }
+
+  /**
+   * Log messages with service name prefix
+   * @param message Message to log
+   * @param level Log level (default: 'log')
+   */
+  protected log(message: string, level: 'log' | 'error' | 'warn' | 'info' = 'log'): void {
+    const prefix = `[${this.serviceName}]`;
+    
+    switch (level) {
+      case 'error':
+        console.error(`${prefix} ${message}`);
+        break;
+      case 'warn':
+        console.warn(`${prefix} ${message}`);
+        break;
+      case 'info':
+        console.info(`${prefix} ${message}`);
+        break;
+      default:
+        console.log(`${prefix} ${message}`);
+    }
+  }
+
+  /**
+   * Handle and log errors in a consistent way
+   * @param error Error object
+   * @param context Additional context about where the error occurred
+   * @returns The error for further handling
+   */
+  protected handleError(error: any, context: string): Error {
+    const errorMessage = error.message || 'Unknown error';
+    this.log(`Error in ${context}: ${errorMessage}`, 'error');
+    
+    // Log stack trace in development
+    if (process.env.NODE_ENV !== 'production' && error.stack) {
+      console.error(error.stack);
+    }
+    
+    // Return the error for further handling
+    return error instanceof Error 
+      ? error 
+      : new Error(`${context}: ${errorMessage}`);
   }
   
   /**
-   * Handles database errors and provides consistent error messages
+   * Convert date objects to ISO strings for consistent database storage
+   * @param date Date object or ISO string
+   * @returns ISO string representation of the date
    */
-  protected handleError(error: any, context: string): never {
-    console.error(`Error in ${context}:`, error);
+  protected formatDate(date: Date | string | null): string | null {
+    if (!date) return null;
     
-    // Create a standardized error with context
-    const enhancedError = new Error(
-      `Operation failed in ${context}: ${error.message || 'Unknown error'}`
-    );
-    
-    // Preserve original stack trace if available
-    if (error.stack) {
-      enhancedError.stack = error.stack;
+    if (typeof date === 'string') {
+      // Check if it's already a valid ISO string
+      if (isNaN(Date.parse(date))) {
+        throw new Error(`Invalid date string: ${date}`);
+      }
+      return date;
     }
     
-    throw enhancedError;
+    return date.toISOString();
   }
 }

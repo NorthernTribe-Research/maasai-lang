@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import Layout from "@/components/layout/layout";
+import AILanguageTeacher from "@/components/common/ai-language-teacher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -12,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, ArrowLeft, CheckCircle, XCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, ArrowLeft, CheckCircle, XCircle, MessageCircle, Book } from "lucide-react";
 
 enum ExerciseType {
   MULTIPLE_CHOICE = "multiple-choice",
@@ -461,23 +463,59 @@ export default function LessonDetail() {
         </Card>
       )}
       
-      <div className="bg-background dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-4">
-        <h3 className="font-semibold mb-2">Lesson Information</h3>
-        <div className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-          <p>
-            <span className="font-medium">Type:</span> {lessonDetail.type.charAt(0).toUpperCase() + lessonDetail.type.slice(1)}
-          </p>
-          <p>
-            <span className="font-medium">Duration:</span> Approximately {lessonDetail.duration} minutes
-          </p>
-          <p>
-            <span className="font-medium">XP Reward:</span> {lessonDetail.xpReward} XP
-          </p>
-          <p>
-            <span className="font-medium">Description:</span> {lessonDetail.description}
-          </p>
-        </div>
-      </div>
+      <Tabs defaultValue="info" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="info" className="flex items-center gap-1">
+            <Book className="h-4 w-4" />
+            Lesson Info
+          </TabsTrigger>
+          <TabsTrigger value="teacher" className="flex items-center gap-1">
+            <MessageCircle className="h-4 w-4" />
+            AI Teacher
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="info" className="mt-0">
+          <div className="bg-background dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-4">
+            <h3 className="font-semibold mb-2">Lesson Information</h3>
+            <div className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
+              <p>
+                <span className="font-medium">Type:</span> {lessonDetail.type.charAt(0).toUpperCase() + lessonDetail.type.slice(1)}
+              </p>
+              <p>
+                <span className="font-medium">Duration:</span> Approximately {lessonDetail.duration} minutes
+              </p>
+              <p>
+                <span className="font-medium">XP Reward:</span> {lessonDetail.xpReward} XP
+              </p>
+              <p>
+                <span className="font-medium">Description:</span> {lessonDetail.description}
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="teacher" className="mt-0">
+          {user ? (
+            <AILanguageTeacher 
+              language={{
+                id: lessonDetail.languageId,
+                name: lessonDetail.language?.name || "Unknown",
+                code: lessonDetail.language?.code || "us",
+                flag: lessonDetail.language?.flag || ""
+              }}
+              lessonId={parseInt(id)}
+            />
+          ) : (
+            <Card className="w-full p-6 text-center">
+              <p className="mb-4">Please sign in to access the AI language teacher.</p>
+              <Link href="/auth">
+                <Button>Sign In</Button>
+              </Link>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </Layout>
   );
 }

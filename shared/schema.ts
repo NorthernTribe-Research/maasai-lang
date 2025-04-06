@@ -56,6 +56,7 @@ export const lessons = pgTable("lessons", {
   languageId: integer("language_id").notNull().references(() => languages.id),
   title: text("title").notNull(),
   description: text("description"),
+  content: text("content"),
   level: integer("level").notNull().default(1),
   type: text("type").notNull(), // e.g., vocabulary, grammar, conversation
   xpReward: integer("xp_reward").notNull().default(10),

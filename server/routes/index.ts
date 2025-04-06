@@ -7,7 +7,8 @@ import {
   achievementService,
   challengeService, 
   openAIService,
-  geminiService
+  geminiService,
+  aiTeacherService
 } from "../services";
 import { User } from "@shared/schema";
 
@@ -383,6 +384,48 @@ class AIRoutes extends BaseRoutes {
         this.handleError(error, res);
       }
     });
+    
+    // Get AI teacher response
+    app.post("/api/ai/language-teacher", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, teacherPersonaId, message, history } = req.body;
+        
+        if (!languageId || !message || !Array.isArray(history)) {
+          return res.status(400).json({ error: "Missing required parameters" });
+        }
+        
+        const response = await aiTeacherService.getTeacherResponse(
+          parseInt(languageId), 
+          parseInt(teacherPersonaId || "1"), 
+          message, 
+          history
+        );
+        
+        res.json({ reply: response });
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+    
+    // Get available teacher personas
+    app.get("/api/ai/language-teacher/personas/:languageId", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId } = req.params;
+        
+        if (!languageId) {
+          return res.status(400).json({ error: "Missing language ID" });
+        }
+        
+        const personas = await aiTeacherService.getTeacherPersonas(parseInt(languageId));
+        res.json(personas);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
   }
 }
 
@@ -396,13 +439,13 @@ class GeminiAIRoutes extends BaseRoutes {
       if (!this.checkAuth(req, res)) return;
 
       try {
-        const { language, originalText, audioTranscription } = req.body;
+        const { audioUrl, originalText, languageCode } = req.body;
         const feedback = await geminiService.providePronunciationFeedback(
-          language,
+          audioUrl,
           originalText,
-          audioTranscription
+          languageCode
         );
-        res.json(feedback);
+        res.json({ feedback });
       } catch (error) {
         this.handleError(error, res);
       }
@@ -413,14 +456,13 @@ class GeminiAIRoutes extends BaseRoutes {
       if (!this.checkAuth(req, res)) return;
 
       try {
-        const { language, currentLevel, learningGoals, interests } = req.body;
+        const { languageCode, currentLevel, learningGoals } = req.body;
         const learningPath = await geminiService.generateLearningPath(
-          language,
+          languageCode,
           currentLevel,
-          learningGoals,
-          interests
+          learningGoals
         );
-        res.json(learningPath);
+        res.json({ learningPath });
       } catch (error) {
         this.handleError(error, res);
       }
@@ -431,13 +473,12 @@ class GeminiAIRoutes extends BaseRoutes {
       if (!this.checkAuth(req, res)) return;
 
       try {
-        const { language, context, userProgress } = req.body;
+        const { languageCode, context } = req.body;
         const mascotResponse = await geminiService.getLanguageMascotDialogue(
-          language,
-          context,
-          userProgress
+          languageCode,
+          context
         );
-        res.json(mascotResponse);
+        res.json({ response: mascotResponse });
       } catch (error) {
         this.handleError(error, res);
       }

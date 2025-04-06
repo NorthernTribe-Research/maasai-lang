@@ -31,6 +31,18 @@ export class LanguageService extends BaseService {
       this.handleError(error, "LanguageService.getLanguageByCode");
     }
   }
+  
+  /**
+   * Get a language by its ID
+   */
+  async getLanguage(id: number): Promise<Language | undefined> {
+    try {
+      const result = await this.db.select().from(languages).where(eq(languages.id, id));
+      return result[0];
+    } catch (error) {
+      this.handleError(error, "LanguageService.getLanguage");
+    }
+  }
 
   /**
    * Add a new language
