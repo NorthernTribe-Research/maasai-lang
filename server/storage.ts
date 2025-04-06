@@ -488,7 +488,7 @@ export class MemStorage implements IStorage {
         id,
         userId,
         challengeId: randomChallenge.id,
-        date: today,
+        date: today.toISOString(),
         isCompleted: false,
         completedAt: null
       };
@@ -1384,7 +1384,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .prepare()
-      .execute({ today })
+      .execute({ today: today.toISOString() })
       .then(rows => rows[0]);
 
     // If no challenge for today, create one
@@ -1416,7 +1416,7 @@ export class DatabaseStorage implements IStorage {
       const dailyChallengeToInsert = {
         userId,
         challengeId: randomChallenge.id,
-        date: today,
+        date: today.toISOString(),
         isCompleted: false,
         completedAt: null
       };
@@ -1457,7 +1457,7 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .prepare()
-      .execute({ today })
+      .execute({ today: today.toISOString() })
       .then(rows => rows[0]);
 
     if (!dailyChallenge) {
