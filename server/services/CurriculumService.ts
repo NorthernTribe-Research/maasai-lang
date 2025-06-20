@@ -306,7 +306,7 @@ export class CurriculumService extends BaseService {
   /**
    * Get default lesson plan fallback
    */
-  private getDefaultLessonPlan(language: Language, topic: CurriculumTopic): LessonPlan {
+  private getDefaultLessonPlan(language: any, topic: any): LessonPlan {
     const languageName = language?.name || 'Spanish';
     const topicName = topic?.name || 'Basic Conversation';
     const topicCategory = topic?.category || 'speaking';
