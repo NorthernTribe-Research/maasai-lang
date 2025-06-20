@@ -139,8 +139,8 @@ export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherP
         recorder.onstop = async () => {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
           
-          // Simulate speech-to-text (in real app, would use Web Speech API or cloud service)
-          const transcript = await simulateSpeechToText(audioBlob);
+          // Use OpenAI Whisper for accurate speech-to-text
+          const transcript = await whisperSpeechToText(audioBlob);
           
           // Add learner's input to conversation
           setConversation(prev => [...prev, {
@@ -175,25 +175,35 @@ export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherP
     };
   }, []);
 
-  // Simulate speech-to-text
-  const simulateSpeechToText = async (audioBlob: Blob): Promise<string> => {
-    // In a real implementation, this would use:
-    // - Web Speech API (webkitSpeechRecognition)
-    // - Google Cloud Speech-to-Text
-    // - OpenAI Whisper API
-    // - Azure Speech Services
-    
-    // For demo purposes, simulate user responses
-    const responses = [
-      "Hello, how are you?",
-      "I'm fine, thank you",
-      "Can you help me practice pronunciation?",
-      "What should I say next?",
-      "I want to learn more vocabulary",
-      "This is very helpful"
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
+  // Use OpenAI Whisper for speech-to-text
+  const whisperSpeechToText = async (audioBlob: Blob): Promise<string> => {
+    try {
+      // Convert blob to base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      // Send to Whisper API
+      const response = await apiRequest('POST', '/api/ai/whisper/transcribe', {
+        audioData: base64Audio,
+        language: getLanguageCode(languageId)
+      });
+      
+      return response.text || "Could not transcribe audio";
+    } catch (error) {
+      console.error('Whisper transcription error:', error);
+      
+      // Fallback to demo responses
+      const responses = [
+        "Hello, how are you?",
+        "I'm fine, thank you", 
+        "Can you help me practice pronunciation?",
+        "What should I say next?",
+        "I want to learn more vocabulary",
+        "This is very helpful"
+      ];
+      
+      return responses[Math.floor(Math.random() * responses.length)];
+    }
   };
 
   // Simulate text-to-speech

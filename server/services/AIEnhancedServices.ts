@@ -315,14 +315,26 @@ export class AIEnhancedServices extends BaseService {
    * Helper methods
    */
   private async getLanguageById(languageId: number) {
-    // This would typically fetch from storage
-    return {
-      id: languageId,
-      name: 'Spanish',
-      code: 'es',
-      flag: '🇪🇸',
-      description: 'Spanish language'
+    const { storage } = await import('../storage');
+    
+    // Try to get language from database first
+    const languages = await storage.getAllLanguages();
+    const language = languages.find(l => l.id === languageId);
+    
+    if (language) {
+      return language;
+    }
+    
+    // Fallback language mapping
+    const languageMap: { [key: number]: any } = {
+      1: { id: 1, name: 'Spanish', code: 'es', flag: '🇪🇸', description: 'Spanish language' },
+      2: { id: 2, name: 'French', code: 'fr', flag: '🇫🇷', description: 'French language' },
+      3: { id: 3, name: 'German', code: 'de', flag: '🇩🇪', description: 'German language' },
+      4: { id: 4, name: 'Japanese', code: 'ja', flag: '🇯🇵', description: 'Japanese language' },
+      5: { id: 5, name: 'Chinese', code: 'zh', flag: '🇨🇳', description: 'Chinese language' }
     };
+    
+    return languageMap[languageId] || languageMap[1];
   }
 
   private determineLevel(accuracy: number): string {

@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Brain, BookOpen, Mic, Target, TrendingUp, Lightbulb } from 'lucide-react';
 import VoiceTeacher from '@/components/voice/VoiceTeacher';
+import WhisperPronunciation from '@/components/voice/WhisperPronunciation';
 
 interface AIEnhancedLearningProps {
   languageId: number;

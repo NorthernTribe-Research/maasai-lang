@@ -205,4 +205,214 @@ export class GeminiService extends BaseService {
     // Default to Spanish mascot if language not found
     return mascots[languageCode] || mascots.es;
   }
+
+  /**
+   * Generate vocabulary list by theme
+   */
+  async generateVocabularyList(
+    language: string,
+    theme: string,
+    level: string,
+    count: number = 20
+  ): Promise<Array<{
+    word: string;
+    translation: string;
+    pronunciation: string;
+    example: string;
+    difficulty: number;
+    category: string;
+  }>> {
+    if (!this.isAvailable) {
+      return this.getDefaultVocabulary(theme, count);
+    }
+
+    try {
+      const prompt = `Generate ${count} vocabulary words for ${language} on theme: "${theme}" at ${level} level.
+
+Return only a JSON array with this structure:
+[
+  {
+    "word": "palabra",
+    "translation": "word",
+    "pronunciation": "pa-LAH-bra",
+    "example": "Esta es una palabra nueva.",
+    "difficulty": 2,
+    "category": "noun"
+  }
+]`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = result.response.text();
+      
+      try {
+        const parsed = JSON.parse(response);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return this.getDefaultVocabulary(theme, count);
+      }
+    } catch (error) {
+      this.handleError(error, "generating vocabulary list");
+      return this.getDefaultVocabulary(theme, count);
+    }
+  }
+
+  /**
+   * Generate grammar explanations
+   */
+  async generateGrammarExplanation(
+    language: string,
+    grammarTopic: string,
+    level: string
+  ): Promise<{
+    concept: string;
+    explanation: string;
+    rules: string[];
+    examples: Array<{
+      sentence: string;
+      translation: string;
+      breakdown: string;
+    }>;
+    exercises: Array<{
+      question: string;
+      answer: string;
+      explanation: string;
+    }>;
+    commonMistakes: string[];
+  }> {
+    if (!this.isAvailable) {
+      return this.getDefaultGrammarExplanation(grammarTopic);
+    }
+
+    try {
+      const prompt = `Explain ${grammarTopic} in ${language} for ${level} learners.
+
+Return JSON:
+{
+  "concept": "${grammarTopic}",
+  "explanation": "Clear explanation",
+  "rules": ["rule1", "rule2"],
+  "examples": [{"sentence": "Example", "translation": "Translation", "breakdown": "Grammar breakdown"}],
+  "exercises": [{"question": "Question", "answer": "Answer", "explanation": "Why"}],
+  "commonMistakes": ["mistake1", "mistake2"]
+}`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = result.response.text();
+      
+      try {
+        return JSON.parse(response);
+      } catch {
+        return this.getDefaultGrammarExplanation(grammarTopic);
+      }
+    } catch (error) {
+      this.handleError(error, "generating grammar explanation");
+      return this.getDefaultGrammarExplanation(grammarTopic);
+    }
+  }
+
+  /**
+   * Generate cultural content
+   */
+  async generateCulturalContent(
+    language: string,
+    topic: string,
+    level: string
+  ): Promise<{
+    title: string;
+    content: string;
+    vocabulary: string[];
+    discussion: string[];
+    activities: string[];
+    resources: string[];
+  }> {
+    if (!this.isAvailable) {
+      return this.getDefaultCulturalContent(topic);
+    }
+
+    try {
+      const prompt = `Create cultural content about ${topic} for ${language} learners at ${level} level.
+
+Return JSON:
+{
+  "title": "Title about ${topic}",
+  "content": "Educational content",
+  "vocabulary": ["word1", "word2"],
+  "discussion": ["question1", "question2"],
+  "activities": ["activity1", "activity2"],
+  "resources": ["resource1", "resource2"]
+}`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = result.response.text();
+      
+      try {
+        return JSON.parse(response);
+      } catch {
+        return this.getDefaultCulturalContent(topic);
+      }
+    } catch (error) {
+      this.handleError(error, "generating cultural content");
+      return this.getDefaultCulturalContent(topic);
+    }
+  }
+
+  /**
+   * Check if service is available
+   */
+  isServiceAvailable(): boolean {
+    return this.isAvailable;
+  }
+
+  private getDefaultVocabulary(theme: string, count: number) {
+    const spanishColors = [
+      { word: "rojo", translation: "red", pronunciation: "RO-ho", example: "El coche es rojo", difficulty: 1, category: "adjective" },
+      { word: "azul", translation: "blue", pronunciation: "ah-SOOL", example: "El cielo es azul", difficulty: 1, category: "adjective" },
+      { word: "verde", translation: "green", pronunciation: "BEHR-deh", example: "La hierba es verde", difficulty: 1, category: "adjective" }
+    ];
+    
+    const spanishAnimals = [
+      { word: "perro", translation: "dog", pronunciation: "PEH-rro", example: "Mi perro es grande", difficulty: 1, category: "noun" },
+      { word: "gato", translation: "cat", pronunciation: "GAH-to", example: "El gato está durmiendo", difficulty: 1, category: "noun" },
+      { word: "pájaro", translation: "bird", pronunciation: "PAH-ha-ro", example: "El pájaro vuela alto", difficulty: 2, category: "noun" }
+    ];
+    
+    if (theme.toLowerCase().includes('color')) {
+      return spanishColors.slice(0, count);
+    } else if (theme.toLowerCase().includes('animal')) {
+      return spanishAnimals.slice(0, count);
+    }
+    
+    // Generic defaults
+    const defaults = Array(count).fill(null).map((_, i) => ({
+      word: `palabra${i + 1}`,
+      translation: `word${i + 1}`,
+      pronunciation: `pronunciation${i + 1}`,
+      example: `Ejemplo ${i + 1}`,
+      difficulty: 2,
+      category: "noun"
+    }));
+    return defaults;
+  }
+
+  private getDefaultGrammarExplanation(topic: string) {
+    return {
+      concept: topic,
+      explanation: `Basic explanation of ${topic}`,
+      rules: [`Key rule about ${topic}`],
+      examples: [],
+      exercises: [],
+      commonMistakes: []
+    };
+  }
+
+  private getDefaultCulturalContent(topic: string) {
+    return {
+      title: `Cultural Insights: ${topic}`,
+      content: `Learn about ${topic} in different cultures`,
+      vocabulary: [],
+      discussion: [`What do you think about ${topic}?`],
+      activities: ["Research activity"],
+      resources: ["Online resources"]
+    };
+  }
 }

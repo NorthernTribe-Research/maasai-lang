@@ -507,8 +507,6 @@ class AIRoutes extends BaseRoutes {
 
       try {
         const { language, theme, level, count } = req.body;
-        const { geminiService } = await import('../services/GeminiService');
-        
         const vocabulary = await geminiService.generateVocabularyList(
           language,
           theme,
@@ -527,8 +525,6 @@ class AIRoutes extends BaseRoutes {
 
       try {
         const { language, topic, level } = req.body;
-        const { geminiService } = await import('../services/GeminiService');
-        
         const grammar = await geminiService.generateGrammarExplanation(
           language,
           topic,
@@ -546,8 +542,6 @@ class AIRoutes extends BaseRoutes {
 
       try {
         const { language, topic, level } = req.body;
-        const { geminiService } = await import('../services/GeminiService');
-        
         const content = await geminiService.generateCulturalContent(
           language,
           topic,
@@ -686,6 +680,128 @@ class AIRoutes extends BaseRoutes {
         );
         
         res.json(exercise);
+      })
+    );
+
+    // Whisper Speech-to-Text Routes
+    
+    // Transcribe audio using Whisper
+    app.post("/api/ai/whisper/transcribe",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { audioData, language, prompt } = req.body;
+        
+        if (!audioData) {
+          return res.status(400).json({ error: "Audio data is required" });
+        }
+
+        const { WhisperService } = await import('../services/WhisperService');
+        const whisperService = new WhisperService();
+        
+        if (!whisperService.isServiceAvailable()) {
+          return res.status(503).json({ error: "Whisper service not available" });
+        }
+
+        // Convert base64 to buffer
+        const audioBuffer = Buffer.from(audioData, 'base64');
+        
+        const transcription = await whisperService.transcribeAudio(audioBuffer, {
+          language,
+          prompt,
+          responseFormat: 'verbose_json'
+        });
+        
+        res.json(transcription);
+      })
+    );
+
+    // Analyze pronunciation with Whisper
+    app.post("/api/ai/whisper/pronunciation",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { audioData, expectedText, targetLanguage } = req.body;
+        
+        if (!audioData || !expectedText) {
+          return res.status(400).json({ error: "Audio data and expected text are required" });
+        }
+
+        const { WhisperService } = await import('../services/WhisperService');
+        const whisperService = new WhisperService();
+        
+        if (!whisperService.isServiceAvailable()) {
+          return res.status(503).json({ error: "Whisper service not available" });
+        }
+
+        const audioBuffer = Buffer.from(audioData, 'base64');
+        
+        const analysis = await whisperService.analyzePronunciation(
+          audioBuffer,
+          expectedText,
+          targetLanguage || 'en'
+        );
+        
+        res.json(analysis);
+      })
+    );
+
+    // Get pronunciation coaching
+    app.post("/api/ai/whisper/coaching",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { audioData, targetPhrase, targetLanguage, userLevel } = req.body;
+        
+        if (!audioData || !targetPhrase) {
+          return res.status(400).json({ error: "Audio data and target phrase are required" });
+        }
+
+        const { WhisperService } = await import('../services/WhisperService');
+        const whisperService = new WhisperService();
+        
+        if (!whisperService.isServiceAvailable()) {
+          return res.status(503).json({ error: "Whisper service not available" });
+        }
+
+        const audioBuffer = Buffer.from(audioData, 'base64');
+        
+        const coaching = await whisperService.providePronunciationCoaching(
+          audioBuffer,
+          targetPhrase,
+          targetLanguage || 'en',
+          userLevel || 'intermediate'
+        );
+        
+        res.json(coaching);
+      })
+    );
+
+    // Generate pronunciation exercises
+    app.post("/api/ai/whisper/exercises",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { targetLanguage, weakAreas, difficulty } = req.body;
+        
+        const { WhisperService } = await import('../services/WhisperService');
+        const whisperService = new WhisperService();
+        
+        if (!whisperService.isServiceAvailable()) {
+          return res.status(503).json({ error: "Whisper service not available" });
+        }
+
+        const exercises = await whisperService.generatePronunciationExercises(
+          targetLanguage || 'en',
+          weakAreas || [],
+          difficulty || 'intermediate'
+        );
+        
+        res.json(exercises);
       })
     );
     
