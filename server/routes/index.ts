@@ -10,7 +10,14 @@ import {
   geminiService,
   aiTeacherService
 } from "../services";
+import { authService } from "../auth";
+import { storage } from "../storage";
 import { User } from "@shared/schema";
+import { authLimiter, aiLimiter } from "../middleware/security";
+import { validateSchema, loginSchema, registerSchema, aiRequestSchema } from "../middleware/validation";
+import { asyncHandler } from "../middleware/errorHandler";
+import { cache } from "../utils/cache";
+import { logger } from "../utils/logger";
 
 // Extend Express Request type to include user property
 declare global {
@@ -335,18 +342,25 @@ class ChallengeRoutes extends BaseRoutes {
  */
 class AIRoutes extends BaseRoutes {
   register(app: Express): void {
-    // Generate an exercise
-    app.post("/api/ai/exercise", async (req, res) => {
-      if (!this.checkAuth(req, res)) return;
+    // Generate an exercise with rate limiting
+    app.post("/api/ai/exercise", 
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
 
-      try {
         const { language, level, type } = req.body;
-        const exercise = await openAIService.generateExercise(language, level, type);
+        const cacheKey = `exercise:${language}:${level}:${type}`;
+        
+        // Check cache first
+        let exercise = cache.get(cacheKey);
+        if (!exercise) {
+          exercise = await openAIService.generateExercise(language, level, type);
+          cache.set(cacheKey, exercise, 30 * 60 * 1000); // Cache for 30 minutes
+        }
+        
         res.json(exercise);
-      } catch (error) {
-        this.handleError(error, res);
-      }
-    });
+      })
+    );
 
     // Generate a language tip
     app.get("/api/ai/tip/:language", async (req, res) => {
@@ -544,6 +558,136 @@ class AIRoutes extends BaseRoutes {
         this.handleError(error, res);
       }
     });
+
+    // Voice Teaching Routes
+    
+    // Generate voice lesson
+    app.post("/api/ai/voice/lesson", 
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { language, topic, level, duration, learnerProfile } = req.body;
+        const { VoiceTeachingService } = await import('../services/VoiceTeachingService');
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const voiceService = new VoiceTeachingService(geminiService);
+        const lesson = await voiceService.generateVoiceLesson(
+          language,
+          topic,
+          level,
+          duration || 30,
+          learnerProfile || { weakAreas: [], preferences: {}, previousLessons: [] }
+        );
+        
+        res.json(lesson);
+      })
+    );
+
+    // Start voice conversation
+    app.post("/api/ai/voice/conversation/start",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { languageId, topic, level } = req.body;
+        const userId = req.user?.id;
+        const { VoiceTeachingService } = await import('../services/VoiceTeachingService');
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const voiceService = new VoiceTeachingService(geminiService);
+        const session = await voiceService.startVoiceConversation(
+          userId,
+          parseInt(languageId),
+          topic,
+          level
+        );
+        
+        res.json(session);
+      })
+    );
+
+    // Process voice input
+    app.post("/api/ai/voice/conversation/input",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { sessionId, audioTranscript, confidence, audioData } = req.body;
+        const { VoiceTeachingService } = await import('../services/VoiceTeachingService');
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const voiceService = new VoiceTeachingService(geminiService);
+        const response = await voiceService.processVoiceInput(
+          sessionId,
+          audioTranscript,
+          confidence || 100,
+          audioData
+        );
+        
+        res.json(response);
+      })
+    );
+
+    // End voice session
+    app.post("/api/ai/voice/conversation/end",
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { sessionId } = req.body;
+        const { VoiceTeachingService } = await import('../services/VoiceTeachingService');
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const voiceService = new VoiceTeachingService(geminiService);
+        const summary = await voiceService.endVoiceSession(sessionId);
+        
+        res.json(summary);
+      })
+    );
+
+    // Generate pronunciation coaching
+    app.post("/api/ai/voice/pronunciation",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { language, targetPhrase, userAttempt, difficulty } = req.body;
+        const { VoiceTeachingService } = await import('../services/VoiceTeachingService');
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const voiceService = new VoiceTeachingService(geminiService);
+        const coaching = await voiceService.generatePronunciationCoaching(
+          language,
+          targetPhrase,
+          userAttempt || '',
+          difficulty || 'intermediate'
+        );
+        
+        res.json(coaching);
+      })
+    );
+
+    // Generate listening exercise
+    app.post("/api/ai/voice/listening",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { language, level, topic, duration } = req.body;
+        const { VoiceTeachingService } = await import('../services/VoiceTeachingService');
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const voiceService = new VoiceTeachingService(geminiService);
+        const exercise = await voiceService.generateListeningExercise(
+          language,
+          level,
+          topic,
+          duration || 15
+        );
+        
+        res.json(exercise);
+      })
+    );
     
     // Get AI teacher response
     app.post("/api/ai/language-teacher", async (req, res) => {

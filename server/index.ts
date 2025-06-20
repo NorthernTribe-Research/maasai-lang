@@ -1,6 +1,12 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { securityHeaders, apiLimiter, validateInput } from "./middleware/security";
+import { logger } from "./utils/logger";
 import checkConfig from "./checkConfig";
 
 // Check configuration on startup
@@ -74,15 +80,38 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // Error handling middleware (must be last)
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = process.env.PORT || 5000;
   server.listen({
-    port,
+    port: Number(port),
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    logger.info(`Server started on port ${port}`, {
+      environment: process.env.NODE_ENV || 'development',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+  });
+
+  process.on('SIGINT', () => {
+    logger.info('SIGINT signal received: closing HTTP server');
+    server.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
   });
 })();

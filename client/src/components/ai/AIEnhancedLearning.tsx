@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { Brain, BookOpen, Mic, Target, TrendingUp, Lightbulb } from 'lucide-react';
+import VoiceTeacher from '@/components/voice/VoiceTeacher';
 
 interface AIEnhancedLearningProps {
   languageId: number;
@@ -299,25 +300,13 @@ export default function AIEnhancedLearning({ languageId, userId }: AIEnhancedLea
         </TabsContent>
 
         <TabsContent value="speech" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Pronunciation Coach</CardTitle>
-              <CardDescription>
-                Advanced speech analysis and pronunciation feedback
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-4">
-                <div className="h-32 bg-muted rounded-lg flex items-center justify-center">
-                  <Mic className="h-12 w-12 text-muted-foreground" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Record your pronunciation for AI analysis
-                </p>
-                <Button>Start Recording</Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <VoiceTeacher 
+              languageId={languageId}
+              topic="General Conversation"
+              level="intermediate"
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="teacher" className="space-y-6">
