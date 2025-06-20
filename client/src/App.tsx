@@ -14,6 +14,7 @@ const Practice = lazy(() => import("@/pages/practice"));
 const Leaderboard = lazy(() => import("@/pages/leaderboard"));
 const Achievements = lazy(() => import("@/pages/achievements"));
 const Profile = lazy(() => import("@/pages/profile"));
+const AILearning = lazy(() => import("@/pages/ai-learning"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("@/pages/admin"));
@@ -40,6 +41,7 @@ function Router() {
         <ProtectedRoute path="/leaderboard" component={Leaderboard} />
         <ProtectedRoute path="/achievements" component={Achievements} />
         <ProtectedRoute path="/profile" component={Profile} />
+        <ProtectedRoute path="/ai-learning" component={AILearning} />
         
         {/* Admin routes */}
         <AdminProtectedRoute path="/admin" component={AdminDashboard} />

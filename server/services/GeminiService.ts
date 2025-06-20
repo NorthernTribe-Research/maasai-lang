@@ -12,7 +12,7 @@ export class GeminiService extends BaseService {
   constructor() {
     super();
     
-    this.apiKey = process.env.GEMINI_API_KEY || "";
+    this.apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
     if (!this.apiKey) {
       this.log("No Gemini API key found in environment variables", "warn");
     }

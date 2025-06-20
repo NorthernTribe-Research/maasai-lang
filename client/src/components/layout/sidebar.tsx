@@ -22,6 +22,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navItems = [
     { path: "/", label: "Dashboard", icon: "bx-dashboard" },
     { path: "/lessons", label: "Lessons", icon: "bx-book-open" },
+    { path: "/ai-learning", label: "AI Learning", icon: "bx-brain" },
     { path: "/practice", label: "Practice", icon: "bx-cycling" },
     { path: "/achievements", label: "Achievements", icon: "bx-trophy" },
     { path: "/leaderboard", label: "Leaderboard", icon: "bx-bar-chart-alt-2" },

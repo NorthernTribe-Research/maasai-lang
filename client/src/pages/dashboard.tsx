@@ -10,7 +10,9 @@ import LessonCard from "@/components/common/lesson-card";
 import AchievementCard from "@/components/common/achievement-card";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Brain, Sparkles, Target } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -127,6 +129,46 @@ export default function Dashboard() {
             </Link>
           </div>
         )}
+      </div>
+
+      {/* AI-Enhanced Learning Section */}
+      <div className="mb-6">
+        <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-200 dark:border-purple-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-600" />
+              AI-Enhanced Learning
+              <Sparkles className="h-4 w-4 text-yellow-500" />
+            </CardTitle>
+            <CardDescription>
+              Unlock personalized lessons, adaptive exercises, and pronunciation coaching powered by advanced AI
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-4 bg-white/50 dark:bg-neutral-800/50 rounded-lg">
+                <Target className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                <h4 className="font-semibold">Adaptive Learning</h4>
+                <p className="text-sm text-muted-foreground">Personalized based on your progress</p>
+              </div>
+              <div className="text-center p-4 bg-white/50 dark:bg-neutral-800/50 rounded-lg">
+                <Brain className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                <h4 className="font-semibold">AI Teacher</h4>
+                <p className="text-sm text-muted-foreground">24/7 intelligent tutoring</p>
+              </div>
+              <div className="text-center p-4 bg-white/50 dark:bg-neutral-800/50 rounded-lg">
+                <Sparkles className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                <h4 className="font-semibold">Smart Content</h4>
+                <p className="text-sm text-muted-foreground">Generated for your needs</p>
+              </div>
+            </div>
+            <Button asChild className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+              <Link href="/ai-learning">
+                Start AI-Enhanced Learning
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

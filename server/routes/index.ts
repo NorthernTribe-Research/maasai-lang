@@ -384,6 +384,166 @@ class AIRoutes extends BaseRoutes {
         this.handleError(error, res);
       }
     });
+
+    // Generate comprehensive lesson with AI
+    app.post("/api/ai/comprehensive-lesson", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, userId, topic, level } = req.body;
+        const { aiEnhancedServices } = await import('../services/AIEnhancedServices');
+        const lesson = await aiEnhancedServices.generateComprehensiveLesson(
+          parseInt(languageId),
+          parseInt(userId || req.user?.id),
+          topic,
+          level
+        );
+        res.json(lesson);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate personalized exercises
+    app.post("/api/ai/personalized-exercises", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, exerciseType, count } = req.body;
+        const userId = req.user?.id;
+        const { aiEnhancedServices } = await import('../services/AIEnhancedServices');
+        
+        const exercises = await aiEnhancedServices.generatePersonalizedExercises(
+          userId,
+          parseInt(languageId),
+          exerciseType,
+          parseInt(count) || 5
+        );
+        res.json(exercises);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Analyze session and adapt
+    app.post("/api/ai/analyze-session", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, sessionData } = req.body;
+        const userId = req.user?.id;
+        const { aiEnhancedServices } = await import('../services/AIEnhancedServices');
+        
+        const analysis = await aiEnhancedServices.analyzeSessionAndAdapt(
+          userId,
+          parseInt(languageId),
+          sessionData
+        );
+        res.json(analysis);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate learning path
+    app.post("/api/ai/learning-path", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, goals, timeframe } = req.body;
+        const userId = req.user?.id;
+        const { aiEnhancedServices } = await import('../services/AIEnhancedServices');
+        
+        const learningPath = await aiEnhancedServices.generatePersonalizedLearningPath(
+          userId,
+          parseInt(languageId),
+          goals,
+          parseInt(timeframe)
+        );
+        res.json(learningPath);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Pronunciation coaching
+    app.post("/api/ai/pronunciation-coaching", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageCode, audioData, expectedText } = req.body;
+        const userId = req.user?.id;
+        const { aiEnhancedServices } = await import('../services/AIEnhancedServices');
+        
+        const coaching = await aiEnhancedServices.providePronunciationCoaching(
+          userId,
+          languageCode,
+          audioData,
+          expectedText
+        );
+        res.json(coaching);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate vocabulary list
+    app.post("/api/ai/vocabulary", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { language, theme, level, count } = req.body;
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const vocabulary = await geminiService.generateVocabularyList(
+          language,
+          theme,
+          level,
+          parseInt(count) || 20
+        );
+        res.json(vocabulary);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate grammar explanation
+    app.post("/api/ai/grammar", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { language, topic, level } = req.body;
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const grammar = await geminiService.generateGrammarExplanation(
+          language,
+          topic,
+          level
+        );
+        res.json(grammar);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate cultural content
+    app.post("/api/ai/cultural-content", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { language, topic, level } = req.body;
+        const { geminiService } = await import('../services/GeminiService');
+        
+        const content = await geminiService.generateCulturalContent(
+          language,
+          topic,
+          level
+        );
+        res.json(content);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
     
     // Get AI teacher response
     app.post("/api/ai/language-teacher", async (req, res) => {
@@ -396,10 +556,13 @@ class AIRoutes extends BaseRoutes {
           return res.status(400).json({ error: "Missing required parameters" });
         }
         
-        const response = await aiTeacherService.getTeacherResponse(
-          parseInt(languageId), 
-          parseInt(teacherPersonaId || "1"), 
-          message, 
+        const userId = req.user?.id;
+        const { aiEnhancedServices } = await import('../services/AIEnhancedServices');
+        
+        const response = await aiEnhancedServices.getAITeacherResponse(
+          parseInt(languageId),
+          userId,
+          message,
           history
         );
         
