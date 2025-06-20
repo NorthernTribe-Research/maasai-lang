@@ -804,6 +804,108 @@ class AIRoutes extends BaseRoutes {
         res.json(exercises);
       })
     );
+
+    // Advanced AI Services
+    
+    // Learning analytics
+    app.post("/api/ai/advanced/analytics",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { userId, languageId, recentSessions } = req.body;
+        
+        const { advancedAIService } = await import('../services/AdvancedAIService');
+        
+        const analytics = await advancedAIService.generateLearningAnalytics(
+          userId,
+          languageId,
+          recentSessions || []
+        );
+        
+        res.json(analytics);
+      })
+    );
+
+    // Personalized curriculum
+    app.post("/api/ai/advanced/curriculum",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { learnerData, targetLanguage } = req.body;
+        
+        const { advancedAIService } = await import('../services/AdvancedAIService');
+        
+        const curriculum = await advancedAIService.generatePersonalizedCurriculum(
+          learnerData,
+          targetLanguage
+        );
+        
+        res.json(curriculum);
+      })
+    );
+
+    // Real-time assessment
+    app.post("/api/ai/advanced/assessment",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { sessionData, targetLanguage, userLevel } = req.body;
+        
+        const { advancedAIService } = await import('../services/AdvancedAIService');
+        
+        const assessment = await advancedAIService.performRealTimeAssessment(
+          sessionData,
+          targetLanguage,
+          userLevel
+        );
+        
+        res.json(assessment);
+      })
+    );
+
+    // Adaptive content generation
+    app.post("/api/ai/advanced/adaptive",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { currentPerformance, userPreferences, targetLanguage } = req.body;
+        
+        const { advancedAIService } = await import('../services/AdvancedAIService');
+        
+        const adaptiveContent = await advancedAIService.generateAdaptiveContent(
+          currentPerformance,
+          userPreferences,
+          targetLanguage
+        );
+        
+        res.json(adaptiveContent);
+      })
+    );
+
+    // Multi-modal lesson generation
+    app.post("/api/ai/advanced/multimodal",
+      aiLimiter,
+      asyncHandler(async (req, res) => {
+        if (!this.checkAuth(req, res)) return;
+
+        const { topic, targetLanguage, learningModalities, difficulty } = req.body;
+        
+        const { advancedAIService } = await import('../services/AdvancedAIService');
+        
+        const multiModalLesson = await advancedAIService.generateMultiModalLesson(
+          topic,
+          targetLanguage,
+          learningModalities || ['visual', 'auditory'],
+          difficulty
+        );
+        
+        res.json(multiModalLesson);
+      })
+    );
     
     // Get AI teacher response
     app.post("/api/ai/language-teacher", async (req, res) => {
