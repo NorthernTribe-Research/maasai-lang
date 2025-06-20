@@ -357,6 +357,84 @@ Return JSON:
   }
 
   /**
+   * Generate curriculum content
+   */
+  async generateCurriculum(
+    language: string,
+    level: string,
+    duration: number = 4
+  ): Promise<{
+    weeks: Array<{
+      week: number;
+      theme: string;
+      topics: string[];
+      objectives: string[];
+    }>;
+    totalLessons: number;
+    estimatedHours: number;
+  }> {
+    if (!this.isAvailable) {
+      return {
+        weeks: [
+          {
+            week: 1,
+            theme: "Basics",
+            topics: ["Greetings", "Numbers", "Colors"],
+            objectives: ["Learn basic greetings", "Count to 20", "Identify colors"]
+          }
+        ],
+        totalLessons: duration * 3,
+        estimatedHours: duration * 6
+      };
+    }
+
+    try {
+      const prompt = `Create a ${duration}-week curriculum for ${language} at ${level} level.
+
+Return JSON:
+{
+  "weeks": [
+    {
+      "week": 1,
+      "theme": "theme_name",
+      "topics": ["topic1", "topic2"],
+      "objectives": ["objective1", "objective2"]
+    }
+  ],
+  "totalLessons": ${duration * 3},
+  "estimatedHours": ${duration * 6}
+}`;
+
+      const result = await this.model.generateContent(prompt);
+      const response = result.response.text();
+      
+      try {
+        return JSON.parse(response);
+      } catch {
+        return {
+          weeks: [
+            {
+              week: 1,
+              theme: "Foundation",
+              topics: ["Basic conversation", "Essential vocabulary"],
+              objectives: ["Communicate basic needs", "Understand common phrases"]
+            }
+          ],
+          totalLessons: duration * 3,
+          estimatedHours: duration * 6
+        };
+      }
+    } catch (error) {
+      this.handleError(error, "generating curriculum");
+      return {
+        weeks: [],
+        totalLessons: 0,
+        estimatedHours: 0
+      };
+    }
+  }
+
+  /**
    * Check if service is available
    */
   isServiceAvailable(): boolean {
