@@ -989,9 +989,9 @@ export class DatabaseStorage implements IStorage {
       ...insertUser,
       xp: 0,
       streak: 0,
-      lastActive: new Date().toISOString(),
-      streakUpdatedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+      lastActive: new Date(),
+      streakUpdatedAt: new Date(),
+      createdAt: new Date(),
       isAdmin: false
     };
     
@@ -1018,22 +1018,22 @@ export class DatabaseStorage implements IStorage {
 
     // If last active was today, just update lastActive
     if (isToday(lastActiveDate)) {
-      updateData = { lastActive: now.toISOString() };
+      updateData = { lastActive: now };
     } 
     // If last active was yesterday, increment streak
     else if (daysSinceLastActive === 1) {
       updateData = { 
         streak: user.streak + 1, 
-        lastActive: now.toISOString(),
-        streakUpdatedAt: now.toISOString() 
+        lastActive: now,
+        streakUpdatedAt: now 
       };
     } 
     // If more than 1 day has passed, reset streak
     else {
       updateData = { 
         streak: 1, 
-        lastActive: now.toISOString(),
-        streakUpdatedAt: now.toISOString() 
+        lastActive: now,
+        streakUpdatedAt: now 
       };
     }
 
@@ -1097,7 +1097,7 @@ export class DatabaseStorage implements IStorage {
       level: 1,
       progress: 0,
       isActive: true,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
 
     const [newUserLanguage] = await db
@@ -1312,7 +1312,7 @@ export class DatabaseStorage implements IStorage {
       .set({
         progress: Math.min(100, progress),
         isCompleted,
-        lastAccessed: now.toISOString(),
+        lastAccessed: now,
         completedAt
       })
       .where(eq(userLessons.id, userLesson.id))
@@ -1358,7 +1358,7 @@ export class DatabaseStorage implements IStorage {
     // Add default values for fields that are required but not in insertUserAchievement
     const userAchievementToInsert = {
       ...userAchievement,
-      earnedAt: new Date().toISOString()
+      earnedAt: new Date()
     };
 
     const [newUserAchievement] = await db
@@ -1416,7 +1416,7 @@ export class DatabaseStorage implements IStorage {
       const dailyChallengeToInsert = {
         userId,
         challengeId: randomChallenge.id,
-        date: today.toISOString(),
+        date: today,
         isCompleted: false,
         completedAt: null
       };
@@ -1483,7 +1483,7 @@ export class DatabaseStorage implements IStorage {
       .update(dailyChallenges)
       .set({
         isCompleted: true,
-        completedAt: now.toISOString()
+        completedAt: now
       })
       .where(eq(dailyChallenges.id, dailyChallenge.id));
 
