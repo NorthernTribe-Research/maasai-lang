@@ -10,6 +10,10 @@ import {
   geminiService,
   aiTeacherService
 } from "../services";
+import { aiLearningOrchestrator } from "../services/AILearningOrchestrator";
+import { intelligentSessionManager } from "../services/IntelligentSessionManager";
+import { aiContentGenerator } from "../services/AIContentGenerator";
+import { aiPerformanceAnalyzer } from "../services/AIPerformanceAnalyzer";
 import { authService } from "../auth";
 import { storage } from "../storage";
 import { User } from "@shared/schema";
@@ -46,6 +50,7 @@ export class Router {
     new ChallengeRoutes().register(app);
     new AIRoutes().register(app);
     new GeminiAIRoutes().register(app);
+    new AIControlledLearningRoutes().register(app);
     
     // Create and return HTTP server
     const server = createServer(app);
@@ -1017,6 +1022,356 @@ class GeminiAIRoutes extends BaseRoutes {
         const { prompt } = req.body;
         const content = await geminiService.generateContent(prompt);
         res.json({ content });
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+  }
+}
+
+/**
+ * AI-Controlled Learning Routes - Fully AI-driven language learning
+ */
+class AIControlledLearningRoutes extends BaseRoutes {
+  register(app: Express): void {
+    // Start a new AI-controlled learning session
+    app.post("/api/ai-learning/session/start", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, languageName, userProfile, preferences } = req.body;
+        
+        const session = await intelligentSessionManager.startSession(
+          req.user.id,
+          languageId,
+          languageName,
+          userProfile,
+          preferences
+        );
+        
+        res.json(session);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Process user input in an active session
+    app.post("/api/ai-learning/session/:sessionId/message", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { sessionId } = req.params;
+        const { message } = req.body;
+        
+        const response = await intelligentSessionManager.processUserInput(sessionId, message);
+        
+        res.json(response);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get session status
+    app.get("/api/ai-learning/session/:sessionId/status", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { sessionId } = req.params;
+        const status = intelligentSessionManager.getSessionStatus(sessionId);
+        
+        if (!status) {
+          return res.status(404).json({ error: "Session not found" });
+        }
+        
+        res.json(status);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Complete a learning session
+    app.post("/api/ai-learning/session/:sessionId/complete", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { sessionId } = req.params;
+        const summary = await intelligentSessionManager.completeSession(sessionId);
+        
+        res.json(summary);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get AI recommendations for what to learn next
+    app.post("/api/ai-learning/recommendations", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, userProfile } = req.body;
+        
+        const recommendation = await aiLearningOrchestrator.determineNextLearningActivity(
+          req.user.id,
+          languageId,
+          userProfile
+        );
+        
+        res.json(recommendation);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate personalized curriculum
+    app.post("/api/ai-learning/curriculum", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, languageName, userProfile, timeframe } = req.body;
+        
+        const curriculum = await aiLearningOrchestrator.generatePersonalizedCurriculum(
+          req.user.id,
+          languageId,
+          languageName,
+          userProfile,
+          timeframe
+        );
+        
+        res.json(curriculum);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get AI-powered learning insights
+    app.post("/api/ai-learning/insights", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageId, userProfile, recentSessions } = req.body;
+        
+        const insights = await aiLearningOrchestrator.getLearningInsights(
+          req.user.id,
+          languageId,
+          userProfile,
+          recentSessions
+        );
+        
+        res.json(insights);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // AI Content Generation Routes
+    
+    // Generate a lesson
+    app.post("/api/ai-content/lesson", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, topic, difficulty, userProfile } = req.body;
+        
+        const lesson = await aiContentGenerator.generateLesson(
+          languageName,
+          topic,
+          difficulty,
+          userProfile
+        );
+        
+        res.json(lesson);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate vocabulary
+    app.post("/api/ai-content/vocabulary", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, topic, difficulty, count } = req.body;
+        
+        const vocabulary = await aiContentGenerator.generateVocabulary(
+          languageName,
+          topic,
+          difficulty,
+          count || 10
+        );
+        
+        res.json(vocabulary);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate exercises
+    app.post("/api/ai-content/exercises", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, concept, difficulty, exerciseType, count } = req.body;
+        
+        const exercises = await aiContentGenerator.generateExercises(
+          languageName,
+          concept,
+          difficulty,
+          exerciseType,
+          count || 5
+        );
+        
+        res.json(exercises);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate grammar explanation
+    app.post("/api/ai-content/grammar", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, grammarConcept, difficulty } = req.body;
+        
+        const grammar = await aiContentGenerator.generateGrammarExplanation(
+          languageName,
+          grammarConcept,
+          difficulty
+        );
+        
+        res.json(grammar);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate conversation prompts
+    app.post("/api/ai-content/conversation", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, scenario, difficulty } = req.body;
+        
+        const prompts = await aiContentGenerator.generateConversationPrompts(
+          languageName,
+          scenario,
+          difficulty
+        );
+        
+        res.json(prompts);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate assessment
+    app.post("/api/ai-content/assessment", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, topics, difficulty, skillTypes } = req.body;
+        
+        const assessment = await aiContentGenerator.generateAssessment(
+          languageName,
+          topics,
+          difficulty,
+          skillTypes
+        );
+        
+        res.json(assessment);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Generate cultural content
+    app.post("/api/ai-content/cultural", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { languageName, topic } = req.body;
+        
+        const cultural = await aiContentGenerator.generateCulturalContent(
+          languageName,
+          topic
+        );
+        
+        res.json(cultural);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // AI Performance Analysis Routes
+    
+    // Analyze a response
+    app.post("/api/ai-performance/analyze", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { userResponse, expectedAnswer, context } = req.body;
+        
+        const analysis = await aiPerformanceAnalyzer.analyzeResponse(
+          userResponse,
+          expectedAnswer,
+          context
+        );
+        
+        res.json(analysis);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get performance trends
+    app.get("/api/ai-performance/trends", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const timeRange = (req.query.timeRange as string) || 'week';
+        
+        const trends = aiPerformanceAnalyzer.getPerformanceTrends(
+          req.user.id,
+          timeRange as 'day' | 'week' | 'month' | 'all'
+        );
+        
+        res.json(trends);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get AI insights
+    app.post("/api/ai-performance/insights", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { userProfile } = req.body;
+        
+        const insights = await aiPerformanceAnalyzer.getAIInsights(
+          req.user.id,
+          userProfile
+        );
+        
+        res.json(insights);
+      } catch (error) {
+        this.handleError(error, res);
+      }
+    });
+
+    // Get difficulty recommendation
+    app.post("/api/ai-performance/difficulty-recommendation", async (req, res) => {
+      if (!this.checkAuth(req, res)) return;
+
+      try {
+        const { currentDifficulty } = req.body;
+        
+        const recommendation = aiPerformanceAnalyzer.recommendDifficultyAdjustment(
+          req.user.id,
+          currentDifficulty
+        );
+        
+        res.json(recommendation);
       } catch (error) {
         this.handleError(error, res);
       }
