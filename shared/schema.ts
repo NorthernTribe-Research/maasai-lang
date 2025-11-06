@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -122,6 +122,118 @@ export const dailyChallenges = pgTable("daily_challenges", {
   completedAt: timestamp("completed_at"),
 });
 
+// AI-driven learning tables
+// AI Learning Sessions - Dynamic AI-generated learning sessions
+export const aiLearningSessions = pgTable("ai_learning_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  languageId: integer("language_id").notNull().references(() => languages.id),
+  sessionType: text("session_type").notNull(), // conversation, lesson, assessment, practice
+  topic: text("topic").notNull(),
+  difficulty: text("difficulty").notNull(), // beginner, intermediate, advanced
+  aiTeacherPersona: text("ai_teacher_persona"),
+  learningObjectives: jsonb("learning_objectives"), // AI-determined objectives
+  contentSummary: jsonb("content_summary"), // Summary of what was taught
+  performanceMetrics: jsonb("performance_metrics"), // Detailed performance data
+  adaptations: jsonb("adaptations"), // How AI adapted during session
+  xpEarned: integer("xp_earned").notNull().default(0),
+  duration: integer("duration"), // in seconds
+  isCompleted: boolean("is_completed").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Learning Conversations - AI teacher conversation history
+export const learningConversations = pgTable("learning_conversations", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").notNull().references(() => aiLearningSessions.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  role: text("role").notNull(), // user, assistant, system
+  content: text("content").notNull(),
+  aiAnalysis: jsonb("ai_analysis"), // AI's analysis of user's message (errors, strengths, etc.)
+  feedback: text("feedback"), // Specific feedback given in response
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+// User Learning Profiles - AI-enhanced learning profiles
+export const userLearningProfiles = pgTable("user_learning_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  languageId: integer("language_id").notNull().references(() => languages.id),
+  
+  // Knowledge state tracked by AI
+  skillLevels: jsonb("skill_levels"), // { vocabulary: 75, grammar: 68, speaking: 82, ... }
+  masteredConcepts: jsonb("mastered_concepts").array(), // Array of mastered topics
+  strugglingConcepts: jsonb("struggling_concepts").array(), // Topics needing work
+  
+  // Learning style preferences (AI-determined)
+  learningStyle: jsonb("learning_style"), // { visual: 80, auditory: 60, kinesthetic: 40 }
+  preferredPace: text("preferred_pace"), // slow, medium, fast
+  preferredSessionLength: integer("preferred_session_length").default(30), // minutes
+  
+  // Performance metrics
+  overallAccuracy: real("overall_accuracy").default(50),
+  averageResponseTime: integer("average_response_time").default(5), // seconds
+  retentionRate: real("retention_rate").default(50), // percentage
+  engagementScore: real("engagement_score").default(50), // 0-100
+  
+  // Personalization data
+  interests: jsonb("interests").array(), // Array of interest topics
+  goals: jsonb("goals").array(), // Learning goals
+  weaknesses: jsonb("weaknesses").array(), // Identified weak areas
+  
+  // AI recommendations
+  nextRecommendedTopics: jsonb("next_recommended_topics").array(),
+  suggestedFocus: text("suggested_focus"), // What AI recommends focusing on
+  
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userProfileIdx: uniqueIndex("user_profile_idx").on(table.userId, table.languageId),
+  };
+});
+
+// AI Performance Metrics - Detailed performance tracking for AI adaptation
+export const aiPerformanceMetrics = pgTable("ai_performance_metrics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  sessionId: integer("session_id").references(() => aiLearningSessions.id),
+  languageId: integer("language_id").notNull().references(() => languages.id),
+  
+  // Interaction details
+  concept: text("concept").notNull(), // What was being taught/practiced
+  interactionType: text("interaction_type").notNull(), // question, exercise, conversation
+  userResponse: text("user_response"),
+  expectedResponse: text("expected_response"),
+  isCorrect: boolean("is_correct"),
+  accuracy: real("accuracy"), // 0-100
+  responseTime: integer("response_time"), // milliseconds
+  
+  // AI analysis
+  errorType: text("error_type"), // grammar, vocabulary, pronunciation, etc.
+  difficultyLevel: text("difficulty_level"),
+  aiConfidenceScore: real("ai_confidence_score"), // How confident AI is in its assessment
+  
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+// AI Generated Content Cache - Cache for AI-generated content to avoid regeneration
+export const aiContentCache = pgTable("ai_content_cache", {
+  id: serial("id").primaryKey(),
+  contentType: text("content_type").notNull(), // lesson, exercise, explanation, vocabulary
+  languageId: integer("language_id").notNull().references(() => languages.id),
+  topic: text("topic").notNull(),
+  difficulty: text("difficulty").notNull(),
+  contentHash: text("content_hash").notNull().unique(), // Hash of parameters
+  content: jsonb("content").notNull(), // The actual AI-generated content
+  metadata: jsonb("metadata"), // Additional metadata
+  usageCount: integer("usage_count").notNull().default(0),
+  qualityScore: real("quality_score"), // User ratings/feedback
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastUsed: timestamp("last_used").notNull().defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -177,6 +289,38 @@ export const insertDailyChallengeSchema = createInsertSchema(dailyChallenges).om
   completedAt: true,
 });
 
+// AI tables insert schemas
+export const insertAiLearningSessionSchema = createInsertSchema(aiLearningSessions).omit({
+  id: true,
+  xpEarned: true,
+  isCompleted: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertLearningConversationSchema = createInsertSchema(learningConversations).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertUserLearningProfileSchema = createInsertSchema(userLearningProfiles).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+});
+
+export const insertAiPerformanceMetricSchema = createInsertSchema(aiPerformanceMetrics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertAiContentCacheSchema = createInsertSchema(aiContentCache).omit({
+  id: true,
+  usageCount: true,
+  createdAt: true,
+  lastUsed: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -204,6 +348,22 @@ export type Challenge = typeof challenges.$inferSelect;
 
 export type InsertDailyChallenge = z.infer<typeof insertDailyChallengeSchema>;
 export type DailyChallenge = typeof dailyChallenges.$inferSelect;
+
+// AI tables types
+export type InsertAiLearningSession = z.infer<typeof insertAiLearningSessionSchema>;
+export type AiLearningSession = typeof aiLearningSessions.$inferSelect;
+
+export type InsertLearningConversation = z.infer<typeof insertLearningConversationSchema>;
+export type LearningConversation = typeof learningConversations.$inferSelect;
+
+export type InsertUserLearningProfile = z.infer<typeof insertUserLearningProfileSchema>;
+export type UserLearningProfile = typeof userLearningProfiles.$inferSelect;
+
+export type InsertAiPerformanceMetric = z.infer<typeof insertAiPerformanceMetricSchema>;
+export type AiPerformanceMetric = typeof aiPerformanceMetrics.$inferSelect;
+
+export type InsertAiContentCache = z.infer<typeof insertAiContentCacheSchema>;
+export type AiContentCache = typeof aiContentCache.$inferSelect;
 
 // Authentication
 export type LoginCredentials = Pick<InsertUser, "username" | "password">;
@@ -276,5 +436,63 @@ export const dailyChallengesRelations = relations(dailyChallenges, ({ one }) => 
   challenge: one(challenges, {
     fields: [dailyChallenges.challengeId],
     references: [challenges.id],
+  }),
+}));
+
+// AI tables relations
+export const aiLearningSessionsRelations = relations(aiLearningSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [aiLearningSessions.userId],
+    references: [users.id],
+  }),
+  language: one(languages, {
+    fields: [aiLearningSessions.languageId],
+    references: [languages.id],
+  }),
+  conversations: many(learningConversations),
+  performanceMetrics: many(aiPerformanceMetrics),
+}));
+
+export const learningConversationsRelations = relations(learningConversations, ({ one }) => ({
+  session: one(aiLearningSessions, {
+    fields: [learningConversations.sessionId],
+    references: [aiLearningSessions.id],
+  }),
+  user: one(users, {
+    fields: [learningConversations.userId],
+    references: [users.id],
+  }),
+}));
+
+export const userLearningProfilesRelations = relations(userLearningProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [userLearningProfiles.userId],
+    references: [users.id],
+  }),
+  language: one(languages, {
+    fields: [userLearningProfiles.languageId],
+    references: [languages.id],
+  }),
+}));
+
+export const aiPerformanceMetricsRelations = relations(aiPerformanceMetrics, ({ one }) => ({
+  user: one(users, {
+    fields: [aiPerformanceMetrics.userId],
+    references: [users.id],
+  }),
+  session: one(aiLearningSessions, {
+    fields: [aiPerformanceMetrics.sessionId],
+    references: [aiLearningSessions.id],
+  }),
+  language: one(languages, {
+    fields: [aiPerformanceMetrics.languageId],
+    references: [languages.id],
+  }),
+}));
+
+export const aiContentCacheRelations = relations(aiContentCache, ({ one }) => ({
+  language: one(languages, {
+    fields: [aiContentCache.languageId],
+    references: [languages.id],
   }),
 }));
