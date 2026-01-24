@@ -11,7 +11,7 @@ export class UserService extends BaseService {
   /**
    * Get a user by ID
    */
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     try {
       const result = await this.db.select().from(users).where(eq(users.id, id));
       return result[0];
@@ -35,10 +35,14 @@ export class UserService extends BaseService {
   /**
    * Create a new user
    */
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: any): Promise<User> {
     try {
-      // Hash the password before storing
-      const hashedPassword = await hashPassword(insertUser.password);
+      // Hash the password if provided
+      let hashedPassword = insertUser.password;
+      if (insertUser.password) {
+        hashedPassword = await hashPassword(insertUser.password);
+      }
+      
       const now = new Date();
       
       const result = await this.db.insert(users).values({
@@ -58,7 +62,7 @@ export class UserService extends BaseService {
   /**
    * Update user's streak count
    */
-  async updateUserStreak(userId: number): Promise<User> {
+  async updateUserStreak(userId: string): Promise<User> {
     try {
       // Get the current user
       const currentUser = await this.getUser(userId);
@@ -102,7 +106,7 @@ export class UserService extends BaseService {
   /**
    * Add XP to user's account
    */
-  async addUserXp(userId: number, xpAmount: number): Promise<User> {
+  async addUserXp(userId: string, xpAmount: number): Promise<User> {
     try {
       const user = await this.getUser(userId);
       if (!user) {

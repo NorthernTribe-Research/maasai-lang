@@ -36,7 +36,7 @@ export class LessonService extends BaseService {
    * Get all user lessons for a specific language
    */
   async getUserLessonsForLanguage(
-    userId: number, 
+    userId: string, 
     languageId: number
   ): Promise<(UserLesson & { lesson: Lesson })[]> {
     try {
@@ -50,7 +50,7 @@ export class LessonService extends BaseService {
         }
       });
       
-      return result;
+      return result as (UserLesson & { lesson: Lesson })[];
     } catch (error) {
       this.handleError(error, "LessonService.getUserLessonsForLanguage");
     }
@@ -109,7 +109,7 @@ export class LessonService extends BaseService {
    * Complete a lesson for a user
    */
   async completeUserLesson(
-    userId: number, 
+    userId: string, 
     lessonId: number, 
     progress: number
   ): Promise<UserLesson> {

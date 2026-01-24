@@ -86,10 +86,72 @@ export const learningConversations = pgTable("learning_conversations", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 
+// Legacy Tables (Kept for compatibility)
+export const lessons = pgTable("lessons", {
+  id: serial("id").primaryKey(),
+  languageId: integer("language_id").notNull().references(() => languages.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content"),
+  level: integer("level").notNull().default(1),
+  type: text("type").notNull(),
+  xpReward: integer("xp_reward").notNull().default(10),
+  order: integer("order").notNull(),
+  duration: integer("duration").notNull().default(10),
+  icon: text("icon"),
+});
+
+export const userLessons = pgTable("user_lessons", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  lessonId: integer("lesson_id").notNull().references(() => lessons.id),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  progress: integer("progress").notNull().default(0),
+  lastAccessed: timestamp("last_accessed"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull(),
+  condition: text("condition").notNull(),
+});
+
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  achievementId: integer("achievement_id").notNull().references(() => achievements.id),
+  earnedAt: timestamp("earned_at").notNull().defaultNow(),
+});
+
+export const challenges = pgTable("challenges", {
+  id: serial("id").primaryKey(),
+  languageId: integer("language_id").notNull().references(() => languages.id),
+  prompt: text("prompt").notNull(),
+  answer: text("answer").notNull(),
+  type: text("type").notNull(),
+  difficulty: integer("difficulty").notNull().default(1),
+  xpReward: integer("xp_reward").notNull().default(10),
+});
+
+export const dailyChallenges = pgTable("daily_challenges", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  challengeId: integer("challenge_id").notNull().references(() => challenges.id),
+  date: timestamp("date").notNull().defaultNow(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  completedAt: timestamp("completed_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   userLanguages: many(userLanguages),
   aiLearningSessions: many(aiLearningSessions),
+  userLessons: many(userLessons),
+  userAchievements: many(userAchievements),
+  dailyChallenges: many(dailyChallenges),
 }));
 
 export const aiLearningSessionsRelations = relations(aiLearningSessions, ({ one, many }) => ({
@@ -97,9 +159,23 @@ export const aiLearningSessionsRelations = relations(aiLearningSessions, ({ one,
   conversations: many(learningConversations),
 }));
 
-// Types & Schemas
+export const lessonsRelations = relations(lessons, ({ many }) => ({
+  userLessons: many(userLessons),
+}));
+
+export const userLessonsRelations = relations(userLessons, ({ one }) => ({
+  user: one(users, { fields: [userLessons.userId], references: [users.id] }),
+  lesson: one(lessons, { fields: [userLessons.lessonId], references: [lessons.id] }),
+}));
+
+// Schemas & Types
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, xp: true, streak: true, lastActive: true, streakUpdatedAt: true, createdAt: true, updatedAt: true, isAdmin: true });
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Language = typeof languages.$inferSelect;
+export type Lesson = typeof lessons.$inferSelect;
+export type InsertLesson = z.infer<typeof createInsertSchema(lessons)>;
+export type UserLesson = typeof userLessons.$inferSelect;
+export type InsertUserLesson = z.infer<typeof createInsertSchema(userLessons)>;
 export type AiLearningSession = typeof aiLearningSessions.$inferSelect;
+
+export * from "./models/auth";
