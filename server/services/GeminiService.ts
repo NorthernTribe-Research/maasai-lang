@@ -1,4 +1,4 @@
-import { BaseService } from "./base";
+import { BaseService } from "./BaseService";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export class GeminiService extends BaseService {

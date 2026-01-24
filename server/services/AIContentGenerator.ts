@@ -1,6 +1,5 @@
-import { BaseService } from "./base";
+import { BaseService } from "./BaseService";
 import { GeminiService } from "./GeminiService";
-import OpenAI from "openai";
 import crypto from "crypto";
 
 /**
@@ -9,18 +8,11 @@ import crypto from "crypto";
  */
 export class AIContentGenerator extends BaseService {
   private geminiService: GeminiService;
-  private openai: OpenAI | null = null;
   private contentCache: Map<string, any> = new Map();
 
   constructor() {
     super();
     this.geminiService = new GeminiService();
-    
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey && apiKey !== 'demo-api-key') {
-      this.openai = new OpenAI({ apiKey });
-    }
-    
     this.log("AI Content Generator initialized", "info");
   }
 
@@ -85,7 +77,8 @@ Return JSON:
 }`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const lesson = JSON.parse(content);
+      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const lesson = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, lesson);
       return lesson;
@@ -130,7 +123,8 @@ For each word provide:
 Return JSON array of vocabulary items.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const vocabulary = JSON.parse(content);
+      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const vocabulary = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, vocabulary);
       return vocabulary;
@@ -163,10 +157,6 @@ Return JSON array of vocabulary items.`;
     }
 
     try {
-      if (!this.openai) {
-        return this.getDefaultExercises(concept, exerciseType, count);
-      }
-
       const prompt = `Create ${count} ${exerciseType} exercises for ${languageName} focusing on: ${concept}, at ${difficulty} level.
 
 Each exercise should:
@@ -178,15 +168,9 @@ ${exerciseType === 'multiple-choice' ? '5. Have 4 plausible options' : ''}
 
 Return JSON array of exercises.`;
 
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.7
-      });
-
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      const exercises = result.exercises || [];
+      const content = await this.geminiService.generateContent(prompt);
+      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const exercises = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, exercises);
       return exercises;

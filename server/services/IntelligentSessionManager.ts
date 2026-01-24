@@ -1,11 +1,10 @@
-import { BaseService } from "./base";
+import { BaseService } from "./BaseService";
 import { aiLearningOrchestrator } from "./AILearningOrchestrator";
 import { GeminiService } from "./GeminiService";
-import OpenAI from "openai";
 
 interface ActiveSession {
   sessionId: string;
-  userId: number;
+  userId: string;
   languageId: number;
   languageName: string;
   sessionType: string;
@@ -38,7 +37,6 @@ interface ActiveSession {
 export class IntelligentSessionManager extends BaseService {
   private activeSessions: Map<string, ActiveSession> = new Map();
   private geminiService: GeminiService;
-  private openai: OpenAI | null = null;
 
   constructor() {
     super();
@@ -50,7 +48,7 @@ export class IntelligentSessionManager extends BaseService {
    * Start a new AI-driven learning session
    */
   async startSession(
-    userId: number,
+    userId: string,
     languageId: number,
     languageName: string,
     userProfile: any,
@@ -205,7 +203,7 @@ export class IntelligentSessionManager extends BaseService {
       }
 
       // Handle difficulty adaptation
-      if (analysis.adaptation.shouldAdjustDifficulty) {
+      if (analysis.adaptation?.shouldAdjustDifficulty) {
         session.adaptations.push({
           step: session.currentStep,
           type: 'difficulty',
@@ -370,16 +368,14 @@ Return just the message text, no JSON.`;
     analysis: any
   ): Promise<string> {
     try {
-    const prompt = `
-      As a Google-powered AI Language Teacher, analyze this response.
-      Context: ${JSON.stringify(analysis)}
-      User Message: "${userMessage}"
-      Return a JSON with: isCorrect, accuracy (0-100), feedback, and nextStep.
-    `;
-    const result = await this.geminiService.generateContent(prompt);
-    // Extract JSON from potential markdown wrapping
-    const jsonStr = result.replace(/```json|```/g, "").trim();
-    return JSON.parse(jsonStr);
+      const prompt = `
+        As a Google-powered AI Language Teacher, analyze this response.
+        Context: ${JSON.stringify(analysis)}
+        User Message: "${userMessage}"
+        Return a natural conversation response that provides feedback and continues the lesson.
+      `;
+      const result = await this.geminiService.generateContent(prompt);
+      return result.trim();
     } catch (error) {
       this.handleError(error, "generating adaptive response");
       return this.getSimpleResponse(analysis);
@@ -390,7 +386,7 @@ Return just the message text, no JSON.`;
     if (analysis.isCorrect) {
       return `${analysis.encouragement} ${analysis.nextStep}`;
     } else {
-      return `${analysis.feedback} ${analysis.corrections.join('. ')} ${analysis.encouragement}`;
+      return `${analysis.feedback} ${analysis.corrections?.join('. ') || ''} ${analysis.encouragement}`;
     }
   }
 
@@ -432,7 +428,8 @@ Provide:
 Return JSON: { "feedback": "...", "nextRecommendation": "..." }`;
 
       const content = await this.geminiService.generateContent(prompt);
-      return JSON.parse(content);
+      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "generating session summary");
       return {
@@ -445,7 +442,7 @@ Return JSON: { "feedback": "...", "nextRecommendation": "..." }`;
   /**
    * Get all active sessions for a user
    */
-  getUserActiveSessions(userId: number): string[] {
+  getUserActiveSessions(userId: string): string[] {
     return Array.from(this.activeSessions.values())
       .filter(session => session.userId === userId)
       .map(session => session.sessionId);

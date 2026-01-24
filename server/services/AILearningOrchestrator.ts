@@ -1,4 +1,4 @@
-import { BaseService } from "./base";
+import { BaseService } from "./BaseService";
 import { geminiService } from "./GeminiService";
 
 export class AILearningOrchestrator extends BaseService {

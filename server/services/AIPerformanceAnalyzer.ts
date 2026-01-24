@@ -1,22 +1,17 @@
-import { BaseService } from "./base";
-import OpenAI from "openai";
+import { BaseService } from "./BaseService";
+import { GeminiService } from "./GeminiService";
 
 /**
  * AI Performance Analyzer - Continuously evaluates and tracks user performance
  * Provides real-time insights and adaptive recommendations
  */
 export class AIPerformanceAnalyzer extends BaseService {
-  private openai: OpenAI | null = null;
-  private performanceHistory: Map<number, any[]> = new Map();
+  private geminiService: GeminiService;
+  private performanceHistory: Map<string, any[]> = new Map();
 
   constructor() {
     super();
-    
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey && apiKey !== 'demo-api-key') {
-      this.openai = new OpenAI({ apiKey });
-    }
-    
+    this.geminiService = new GeminiService();
     this.log("AI Performance Analyzer initialized", "info");
   }
 
@@ -41,10 +36,6 @@ export class AIPerformanceAnalyzer extends BaseService {
     encouragement: string;
   }> {
     try {
-      if (!this.openai) {
-        return this.getBasicAnalysis(userResponse, expectedAnswer);
-      }
-
       const prompt = `Analyze this language learning response in detail.
 
 Language: ${context.languageName}
@@ -73,14 +64,9 @@ Return JSON:
   "encouragement": "positive message"
 }`;
 
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.3
-      });
-
-      return JSON.parse(response.choices[0].message.content || '{}');
+      const content = await this.geminiService.generateContent(prompt);
+      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "analyzing response");
       return this.getBasicAnalysis(userResponse, expectedAnswer);
@@ -91,7 +77,7 @@ Return JSON:
    * Track performance metrics over time
    */
   trackPerformance(
-    userId: number,
+    userId: string,
     metric: {
       concept: string;
       accuracy: number;
@@ -117,7 +103,7 @@ Return JSON:
    * Get performance trends
    */
   getPerformanceTrends(
-    userId: number,
+    userId: string,
     timeRange: 'day' | 'week' | 'month' | 'all' = 'week'
   ): {
     overallTrend: 'improving' | 'stable' | 'declining';
@@ -160,7 +146,9 @@ Return JSON:
     );
 
     // Calculate average accuracy
-    const averageAccuracy = recentMetrics.reduce((sum, m) => sum + m.accuracy, 0) / recentMetrics.length;
+    const averageAccuracy = recentMetrics.length > 0 
+      ? recentMetrics.reduce((sum, m) => sum + m.accuracy, 0) / recentMetrics.length
+      : 0;
 
     // Calculate concept performance
     const conceptPerformance: { [concept: string]: number } = {};
@@ -193,8 +181,8 @@ Return JSON:
 
     // Calculate improvement rate
     const half = Math.floor(recentMetrics.length / 2);
-    const firstHalfAvg = recentMetrics.slice(0, half).reduce((sum, m) => sum + m.accuracy, 0) / half || 0;
-    const secondHalfAvg = recentMetrics.slice(half).reduce((sum, m) => sum + m.accuracy, 0) / (recentMetrics.length - half) || 0;
+    const firstHalfAvg = half > 0 ? recentMetrics.slice(0, half).reduce((sum, m) => sum + m.accuracy, 0) / half : 0;
+    const secondHalfAvg = (recentMetrics.length - half) > 0 ? recentMetrics.slice(half).reduce((sum, m) => sum + m.accuracy, 0) / (recentMetrics.length - half) : 0;
     const improvementRate = secondHalfAvg - firstHalfAvg;
 
     // Determine overall trend
@@ -221,7 +209,7 @@ Return JSON:
    * Get AI-powered performance insights
    */
   async getAIInsights(
-    userId: number,
+    userId: string,
     userProfile: any
   ): Promise<{
     summary: string;
@@ -233,10 +221,6 @@ Return JSON:
     try {
       const trends = this.getPerformanceTrends(userId);
       const history = this.performanceHistory.get(userId) || [];
-
-      if (!this.openai) {
-        return this.getBasicInsights(trends);
-      }
 
       const prompt = `Analyze this language learner's performance and provide insights.
 
@@ -253,14 +237,9 @@ Provide:
 
 Return JSON with all components.`;
 
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.6
-      });
-
-      return JSON.parse(response.choices[0].message.content || '{}');
+      const content = await this.geminiService.generateContent(prompt);
+      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "getting AI insights");
       return this.getBasicInsights(this.getPerformanceTrends(userId));
@@ -271,7 +250,7 @@ Return JSON with all components.`;
    * Recommend difficulty adjustment
    */
   recommendDifficultyAdjustment(
-    userId: number,
+    userId: string,
     currentDifficulty: string
   ): {
     shouldAdjust: boolean;
@@ -335,7 +314,7 @@ Return JSON with all components.`;
   /**
    * Clear performance history (for testing or data cleanup)
    */
-  clearHistory(userId?: number): void {
+  clearHistory(userId?: string): void {
     if (userId) {
       this.performanceHistory.delete(userId);
     } else {
