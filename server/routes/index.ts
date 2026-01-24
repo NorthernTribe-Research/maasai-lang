@@ -1,5 +1,6 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
+import { setupAuth, registerAuthRoutes } from "../replit_integrations/auth";
 import { 
   userService, 
   languageService, 
@@ -43,6 +44,9 @@ export class Router {
    * @returns HTTP server instance
    */
   async registerRoutes(app: Express): Promise<Server> {
+    await setupAuth(app);
+    registerAuthRoutes(app);
+    
     // Register specific route handlers
     new LanguageRoutes().register(app);
     new LessonRoutes().register(app);

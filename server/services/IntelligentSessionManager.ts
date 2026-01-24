@@ -43,13 +43,7 @@ export class IntelligentSessionManager extends BaseService {
   constructor() {
     super();
     this.geminiService = new GeminiService();
-    
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (apiKey && apiKey !== 'demo-api-key') {
-      this.openai = new OpenAI({ apiKey });
-    }
-    
-    this.log("Intelligent Session Manager initialized", "info");
+    this.log("Intelligent Session Manager initialized (Google AI Only)", "info");
   }
 
   /**
@@ -376,33 +370,16 @@ Return just the message text, no JSON.`;
     analysis: any
   ): Promise<string> {
     try {
-      if (!this.openai) {
-        return this.getSimpleResponse(analysis);
-      }
-
-      const messages = [
-        {
-          role: 'system' as const,
-          content: `You are an expert ${session.languageName} teacher. Adapt your teaching based on the student's performance. Current difficulty: ${session.difficulty}. Student accuracy: ${session.performanceMetrics.averageAccuracy}%.`
-        },
-        ...session.conversationHistory.slice(-6).map(msg => ({
-          role: msg.role as 'user' | 'assistant',
-          content: msg.content
-        })),
-        {
-          role: 'user' as const,
-          content: `Analysis of last response: ${JSON.stringify(analysis)}. Respond appropriately, providing feedback and continuing the lesson.`
-        }
-      ];
-
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages,
-        temperature: 0.7,
-        max_tokens: 200
-      });
-
-      return response.choices[0].message.content || this.getSimpleResponse(analysis);
+    const prompt = `
+      As a Google-powered AI Language Teacher, analyze this response.
+      Context: ${JSON.stringify(analysis)}
+      User Message: "${userMessage}"
+      Return a JSON with: isCorrect, accuracy (0-100), feedback, and nextStep.
+    `;
+    const result = await this.geminiService.generateContent(prompt);
+    // Extract JSON from potential markdown wrapping
+    const jsonStr = result.replace(/```json|```/g, "").trim();
+    return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "generating adaptive response");
       return this.getSimpleResponse(analysis);
