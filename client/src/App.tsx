@@ -32,7 +32,9 @@ function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Switch>
-        <Route path="/auth" component={AuthPage} />
+        <Route path="/auth">
+          <AuthPage />
+        </Route>
         
         {/* User routes */}
         <ProtectedRoute path="/" component={Dashboard} />
@@ -49,7 +51,9 @@ function Router() {
         <AdminProtectedRoute path="/admin" component={AdminDashboard} />
         <AdminProtectedRoute path="/admin/lessons" component={AdminLessons} />
         
-        <Route component={NotFound} />
+        <Route>
+          <NotFound />
+        </Route>
       </Switch>
     </Suspense>
   );
