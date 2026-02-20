@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { User } from "@shared/models/auth";
+import { type User } from "@shared/schema";
 import React, { createContext, useContext, ReactNode } from "react";
 
 interface AuthContextType {
@@ -13,23 +13,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/auth/user", {
-    credentials: "include",
-  });
-
-  if (response.status === 401) {
+  try {
+    const response = await fetch("/api/auth/user");
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
     return null;
   }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
-async function logout(): Promise<void> {
-  window.location.href = "/api/logout";
+async function logoutApi(): Promise<void> {
+  await fetch("/api/logout", { method: "POST" });
+  window.location.href = "/";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -38,17 +33,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: Infinity,
   });
 
   const logoutMutation = useMutation({
-    mutationFn: logout,
+    mutationFn: logoutApi,
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
     },
   });
 
-  const value = {
+  const value: AuthContextType = {
     user: user ?? null,
     isLoading,
     isAuthenticated: !!user,

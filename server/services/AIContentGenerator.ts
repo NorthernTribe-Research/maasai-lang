@@ -286,10 +286,6 @@ Return JSON array of prompts.`;
     passingScore: number;
   }> {
     try {
-      if (!this.openai) {
-        return this.getDefaultAssessment(topics, difficulty);
-      }
-
       const prompt = `Create a comprehensive assessment for ${languageName} covering: ${topics.join(', ')}.
 
 Difficulty: ${difficulty}
@@ -304,14 +300,9 @@ Generate 10-15 questions testing:
 
 Return JSON with introduction, questions array, and passing score.`;
 
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.5
-      });
-
-      return JSON.parse(response.choices[0].message.content || '{}');
+      const content = await this.geminiService.generateContent(prompt);
+      const jsonStr = content.replace(/```json|```/g, "").trim();
+      return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "generating assessment");
       return this.getDefaultAssessment(topics, difficulty);

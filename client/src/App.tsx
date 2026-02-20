@@ -55,8 +55,6 @@ function Router() {
   );
 }
 
-function App() {
+export default function App() {
   return <Router />;
 }
-
-export default App;
