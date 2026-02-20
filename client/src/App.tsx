@@ -1,5 +1,5 @@
 import { Switch, Route } from "wouter";
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { Loader2 } from "lucide-react";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AdminProtectedRoute } from "./lib/admin-protected-route";
@@ -56,5 +56,7 @@ function Router() {
 }
 
 export default function App() {
-  return <Router />;
+  return (
+    <Router />
+  );
 }
