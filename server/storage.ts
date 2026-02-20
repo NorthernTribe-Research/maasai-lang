@@ -6,7 +6,7 @@ import {
   users, languages, userLanguages, lessons, userLessons, 
   achievements, userAchievements, challenges, dailyChallenges
 } from "@shared/schema";
-import { differenceInDays, startOfDay, isToday } from "date-fns";
+import { differenceInDays, startOfDay } from "date-fns";
 import session from "express-session";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "./db";
@@ -15,50 +15,33 @@ import pg from "pg";
 
 const PostgresSessionStore = connectPg(session);
 
-// Create a proper pg Pool for the session store
 const pgPool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Interface for storage operations
 export interface IStorage {
-  // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStreak(userId: string): Promise<User>;
-  
-  // Language operations
   getAllLanguages(): Promise<Language[]>;
   getLanguageByCode(code: string): Promise<Language | undefined>;
-  addLanguage(language: Language): Promise<Language>;
-  
-  // UserLanguage operations
+  addLanguage(language: any): Promise<Language>;
   getUserLanguages(userId: string): Promise<(UserLanguage & { language: Language })[]>;
   addUserLanguage(userLanguage: InsertUserLanguage): Promise<UserLanguage>;
   updateUserLanguageProgress(userId: string, languageId: number, progress: number): Promise<UserLanguage>;
-  
-  // Lesson operations
   getLessonsByLanguage(languageId: number): Promise<Lesson[]>;
   getUserLessonsForLanguage(userId: string, languageId: number): Promise<(UserLesson & { lesson: Lesson })[]>;
   startUserLesson(userLesson: InsertUserLesson): Promise<UserLesson>;
   completeUserLesson(userId: string, lessonId: number, progress: number): Promise<UserLesson>;
-  
-  // Achievement operations
   getAllAchievements(): Promise<Achievement[]>;
   getUserAchievements(userId: string): Promise<(UserAchievement & { achievement: Achievement })[]>;
   awardAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
-  
-  // Challenge operations
   getDailyChallenge(userId: string): Promise<(DailyChallenge & { challenge: Challenge }) | null>;
   completeDailyChallenge(userId: string, challengeId: number, isCorrect: boolean): Promise<{ success: boolean; xpEarned: number }>;
   getLeaderboard(): Promise<{ id: string; username: string | null; displayName: string | null; xp: number; languageId?: number; languageName?: string; }[]>;
-  
-  // Initialization
   initializeData(): Promise<void>;
-  
-  // Session store
-  sessionStore: any; // session store type
+  sessionStore: any;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -198,7 +181,7 @@ export class DatabaseStorage implements IStorage {
         lastAccessed: null,
         completedAt: null,
         lesson,
-      };
+      } as (UserLesson & { lesson: Lesson });
     });
   }
 
@@ -333,7 +316,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async initializeData(): Promise<void> {
-    // Basic data initialization logic
+    const langs = await this.getAllLanguages();
+    if (langs.length === 0) {
+      await db.insert(languages).values([
+        { code: "zh", name: "Mandarin Chinese", flag: "🇨🇳", description: "The world's most spoken language" },
+        { code: "es", name: "Spanish", flag: "🇪🇸", description: "Vibrant and widely spoken" },
+        { code: "en", name: "English", flag: "🇺🇸", description: "The global language of business" },
+        { code: "hi", name: "Hindi", flag: "🇮🇳", description: "The beautiful language of India" },
+        { code: "ar", name: "Arabic", flag: "🇸🇦", description: "The rich language of the Arab world" },
+      ]);
+    }
   }
 }
 
