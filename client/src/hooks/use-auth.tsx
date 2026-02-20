@@ -21,10 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: ["/api/user"],
     queryFn: async () => {
       try {
-        const res = await fetch("/api/auth/user");
+        const res = await fetch("/api/user");
         if (res.status === 401) return null;
         if (!res.ok) throw new Error("Failed to fetch user");
         return res.json();
@@ -42,7 +42,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
+      queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Welcome back!",
+        description: `Logged in as ${user.username}`,
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -59,7 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json();
     },
     onSuccess: (user: User) => {
-      queryClient.setQueryData(["/api/auth/user"], user);
+      queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Account created!",
+        description: "Welcome to LinguaMaster.",
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -75,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(["/api/user"], null);
       window.location.href = "/auth";
     },
   });
