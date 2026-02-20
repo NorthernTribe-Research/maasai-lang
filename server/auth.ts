@@ -5,11 +5,9 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { User as SelectUser } from "@shared/schema";
-import createMemoryStore from "memorystore";
 import { userService } from "./services";
-import { storage } from "./storage"; // Keep for sessionStore
+import { storage } from "./storage";
 
-const MemoryStore = createMemoryStore(session);
 const scryptAsync = promisify(scrypt);
 
 declare global {
@@ -25,7 +23,9 @@ export async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
+  if (!stored) return false;
   const [hashed, salt] = stored.split(".");
+  if (!salt) return false;
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
   return timingSafeEqual(hashedBuf, suppliedBuf);
@@ -67,7 +67,7 @@ export class AuthService {
       new LocalStrategy(async (username, password, done) => {
         try {
           const user = await userService.getUserByUsername(username);
-          if (!user || !(await comparePasswords(password, user.password))) {
+          if (!user || !user.password || !(await comparePasswords(password, user.password))) {
             return done(null, false);
           } else {
             return done(null, user);
@@ -82,7 +82,7 @@ export class AuthService {
       done(null, user.id);
     });
 
-    passport.deserializeUser(async (id: number, done) => {
+    passport.deserializeUser(async (id: string, done) => {
       try {
         const user = await userService.getUser(id);
         done(null, user);
@@ -115,7 +115,7 @@ export class AuthService {
     });
 
     app.post("/api/login", (req, res, next) => {
-      passport.authenticate("local", (err, user) => {
+      passport.authenticate("local", (err: any, user: any) => {
         if (err) return next(err);
         if (!user) {
           return res.status(401).json({ message: "Invalid username or password" });
@@ -144,7 +144,7 @@ export class AuthService {
 
     // Update streak and last active
     app.post("/api/streak/update", async (req, res, next) => {
-      if (!req.isAuthenticated()) {
+      if (!req.isAuthenticated() || !req.user) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 

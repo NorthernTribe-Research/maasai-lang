@@ -7,6 +7,7 @@ import { LanguageService } from './LanguageService';
 import { LessonService } from './LessonService';
 import { AchievementService } from './AchievementService';
 import { ChallengeService } from './ChallengeService';
+import { AdminService } from './AdminService';
 
 // Initialize services
 const openAIService = new OpenAIService();
@@ -17,6 +18,7 @@ const languageService = new LanguageService();
 const lessonService = new LessonService();
 const achievementService = new AchievementService();
 const challengeService = new ChallengeService();
+const adminService = new AdminService();
 
 // Export service instances
 export {
@@ -27,7 +29,8 @@ export {
   languageService,
   lessonService,
   achievementService,
-  challengeService
+  challengeService,
+  adminService
 };
 
 // Export service classes
@@ -40,5 +43,6 @@ export {
   LanguageService,
   LessonService,
   AchievementService,
-  ChallengeService
+  ChallengeService,
+  AdminService
 };

@@ -16,7 +16,7 @@ export class UserService extends BaseService {
       const result = await this.db.select().from(users).where(eq(users.id, id));
       return result[0];
     } catch (error) {
-      this.handleError(error, "UserService.getUser");
+      throw this.handleError(error, "UserService.getUser");
     }
   }
 
@@ -28,14 +28,14 @@ export class UserService extends BaseService {
       const result = await this.db.select().from(users).where(eq(users.username, username));
       return result[0];
     } catch (error) {
-      this.handleError(error, "UserService.getUserByUsername");
+      throw this.handleError(error, "UserService.getUserByUsername");
     }
   }
 
   /**
    * Create a new user
    */
-  async createUser(insertUser: any): Promise<User> {
+  async createUser(insertUser: InsertUser): Promise<User> {
     try {
       // Hash the password if provided
       let hashedPassword = insertUser.password;
@@ -50,12 +50,13 @@ export class UserService extends BaseService {
         password: hashedPassword,
         lastActive: now,
         streakUpdatedAt: now,
-        createdAt: now
+        createdAt: now,
+        isAdmin: false
       }).returning();
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "UserService.createUser");
+      throw this.handleError(error, "UserService.createUser");
     }
   }
 
@@ -99,7 +100,7 @@ export class UserService extends BaseService {
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "UserService.updateUserStreak");
+      throw this.handleError(error, "UserService.updateUserStreak");
     }
   }
 
@@ -120,7 +121,9 @@ export class UserService extends BaseService {
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "UserService.addUserXp");
+      throw this.handleError(error, "UserService.addUserXp");
     }
   }
 }
+
+export const userService = new UserService();

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex, jsonb, real, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uniqueIndex, jsonb, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations, sql } from "drizzle-orm";
@@ -86,7 +86,7 @@ export const learningConversations = pgTable("learning_conversations", {
   timestamp: timestamp("timestamp").notNull().defaultNow(),
 });
 
-// Legacy Tables (Kept for compatibility)
+// Legacy Tables
 export const lessons = pgTable("lessons", {
   id: serial("id").primaryKey(),
   languageId: integer("language_id").notNull().references(() => languages.id),
@@ -171,13 +171,29 @@ export const userLessonsRelations = relations(userLessons, ({ one }) => ({
 // Schemas & Types
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, xp: true, streak: true, lastActive: true, streakUpdatedAt: true, createdAt: true, updatedAt: true, isAdmin: true });
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Language = typeof languages.$inferSelect;
+export type UserLanguage = typeof userLanguages.$inferSelect;
+export const insertUserLanguageSchema = createInsertSchema(userLanguages);
+export type InsertUserLanguage = z.infer<typeof insertUserLanguageSchema>;
 export type Lesson = typeof lessons.$inferSelect;
 export const insertLessonSchema = createInsertSchema(lessons);
 export type InsertLesson = z.infer<typeof insertLessonSchema>;
-export const insertUserLessonSchema = createInsertSchema(userLessons);
 export type UserLesson = typeof userLessons.$inferSelect;
+export const insertUserLessonSchema = createInsertSchema(userLessons);
 export type InsertUserLesson = z.infer<typeof insertUserLessonSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+export const insertAchievementSchema = createInsertSchema(achievements);
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export const insertUserAchievementSchema = createInsertSchema(userAchievements);
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+export type Challenge = typeof challenges.$inferSelect;
+export const insertChallengeSchema = createInsertSchema(challenges);
+export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
+export type DailyChallenge = typeof dailyChallenges.$inferSelect;
+export const insertDailyChallengeSchema = createInsertSchema(dailyChallenges);
+export type InsertDailyChallenge = z.infer<typeof insertDailyChallengeSchema>;
 export type AiLearningSession = typeof aiLearningSessions.$inferSelect;
 
 export * from "./models/auth";
