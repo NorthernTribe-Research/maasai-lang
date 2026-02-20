@@ -77,7 +77,7 @@ Return JSON:
 }`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const jsonStr = content.replace(/```json|```/g, "").trim();
       const lesson = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, lesson);
@@ -123,7 +123,7 @@ For each word provide:
 Return JSON array of vocabulary items.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const jsonStr = content.replace(/```json|```/g, "").trim();
       const vocabulary = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, vocabulary);
@@ -169,7 +169,7 @@ ${exerciseType === 'multiple-choice' ? '5. Have 4 plausible options' : ''}
 Return JSON array of exercises.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const jsonStr = content.replace(/```json|```/g, "").trim();
       const exercises = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, exercises);
@@ -213,7 +213,8 @@ Provide:
 Return JSON with all components.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const grammar = JSON.parse(content);
+      const jsonStr = content.replace(/```json|```/g, "").trim();
+      const grammar = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, grammar);
       return grammar;
@@ -253,7 +254,8 @@ Generate 5 conversation starters with:
 Return JSON array of prompts.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const prompts = JSON.parse(content);
+      const jsonStr = content.replace(/```json|```/g, "").trim();
+      const prompts = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, prompts);
       return prompts;
@@ -346,7 +348,8 @@ Provide:
 Return JSON with all components.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const cultural = JSON.parse(content);
+      const jsonStr = content.replace(/```json|```/g, "").trim();
+      const cultural = JSON.parse(jsonStr);
       
       this.contentCache.set(cacheKey, cultural);
       return cultural;

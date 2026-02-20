@@ -65,7 +65,7 @@ Return JSON:
 }`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const jsonStr = content.replace(/```json|```/g, "").trim();
       return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "analyzing response");
@@ -238,7 +238,7 @@ Provide:
 Return JSON with all components.`;
 
       const content = await this.geminiService.generateContent(prompt);
-      const jsonStr = content.replace(/\`\`\`json|\`\`\`/g, "").trim();
+      const jsonStr = content.replace(/```json|```/g, "").trim();
       return JSON.parse(jsonStr);
     } catch (error) {
       this.handleError(error, "getting AI insights");

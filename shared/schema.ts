@@ -173,9 +173,11 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, xp: t
 export type User = typeof users.$inferSelect;
 export type Language = typeof languages.$inferSelect;
 export type Lesson = typeof lessons.$inferSelect;
-export type InsertLesson = z.infer<typeof createInsertSchema(lessons)>;
+export const insertLessonSchema = createInsertSchema(lessons);
+export type InsertLesson = z.infer<typeof insertLessonSchema>;
+export const insertUserLessonSchema = createInsertSchema(userLessons);
 export type UserLesson = typeof userLessons.$inferSelect;
-export type InsertUserLesson = z.infer<typeof createInsertSchema(userLessons)>;
+export type InsertUserLesson = z.infer<typeof insertUserLessonSchema>;
 export type AiLearningSession = typeof aiLearningSessions.$inferSelect;
 
 export * from "./models/auth";
