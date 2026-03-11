@@ -1,4 +1,4 @@
-import { useUser } from "@/hooks/use-user";
+import { useAuth } from "@/hooks/use-auth";
 import AIEnhancedLearning from "@/components/ai/AIEnhancedLearning";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
 export default function AILearningPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
 
   if (!user) {
     return (
