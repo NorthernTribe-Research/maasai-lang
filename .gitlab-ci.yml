@@ -4,6 +4,7 @@
 stages:
   - lint
   - test
+  - security-scan
   - build
   - deploy-staging
   - smoke-test
@@ -15,7 +16,9 @@ variables:
   GAR_REPOSITORY: "linguamaster"
   CLOUD_RUN_SERVICE: "linguamaster"
   IMAGE_NAME: "linguamaster"
-  IMAGE_URI: "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+  # Version tagging: git commit SHA + timestamp + branch
+  VERSION_TAG: "$CI_COMMIT_SHORT_SHA-$CI_PIPELINE_IID"
+  IMAGE_URI: "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:$VERSION_TAG"
   DOCKER_TLS_CERTDIR: "/certs"
 
 # Default configuration
@@ -71,6 +74,40 @@ test:unit:
     - main
     - merge_requests
 
+# Security scanning - Dependency vulnerabilities
+security:dependencies:
+  stage: security-scan
+  image: node:20-alpine
+  before_script:
+    - npm ci
+  script:
+    - npm audit --audit-level=moderate
+    - echo "✓ Dependency security scan passed"
+  allow_failure: true
+  only:
+    - main
+    - merge_requests
+
+# Security scanning - Docker image vulnerabilities
+security:docker:
+  stage: security-scan
+  image: docker:27.0.3
+  services:
+    - docker:27.0.3-dind
+  before_script:
+    - apk add --no-cache curl
+    # Install Trivy for container scanning
+    - |
+      curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+  script:
+    - docker build -t "$IMAGE_NAME:test" .
+    - trivy image --severity HIGH,CRITICAL --exit-code 0 "$IMAGE_NAME:test"
+    - echo "✓ Docker security scan completed"
+  allow_failure: true
+  only:
+    - main
+    - merge_requests
+
 # Build Docker image
 build:
   stage: build
@@ -103,9 +140,18 @@ build:
   script:
     - docker build -t "$IMAGE_URI" .
     - docker push "$IMAGE_URI"
-    # Also tag as latest
+    # Tag with multiple versions for easy rollback
     - docker tag "$IMAGE_URI" "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:latest"
+    - docker tag "$IMAGE_URI" "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+    - docker tag "$IMAGE_URI" "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:$CI_COMMIT_REF_SLUG"
     - docker push "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:latest"
+    - docker push "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+    - docker push "$GCP_REGION-docker.pkg.dev/$GCP_PROJECT_ID/$GAR_REPOSITORY/$IMAGE_NAME:$CI_COMMIT_REF_SLUG"
+    - echo "✓ Built and pushed image with tags:"
+    - echo "  - $VERSION_TAG (primary)"
+    - echo "  - $CI_COMMIT_SHORT_SHA (git commit)"
+    - echo "  - $CI_COMMIT_REF_SLUG (branch)"
+    - echo "  - latest"
   only:
     - main
 

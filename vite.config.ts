@@ -71,10 +71,37 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Bundle optimization settings
+    // Requirements: 3.2, 3.5, 3.6
+    target: 'es2020',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: process.env.NODE_ENV === 'production',
+        drop_debugger: true,
+      },
+    },
+    // Chunk size warnings
+    chunkSizeWarningLimit: 500, // 500KB limit per chunk
     rollupOptions: {
       output: {
         manualChunks,
+        // Optimize chunk naming for caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
+    // Source maps for production debugging (can be disabled for smaller builds)
+    sourcemap: process.env.NODE_ENV !== 'production',
+  },
+  // Performance optimizations
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'wouter',
+      '@tanstack/react-query',
+    ],
   },
 });

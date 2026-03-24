@@ -1,0 +1,1042 @@
+openapi: 3.0.3
+info:
+  title: LinguaMaster AI-Powered Language Learning Platform API
+  description: |
+    RESTful API for the LinguaMaster platform, providing endpoints for language learning,
+    AI-powered exercises, gamification, progress tracking, and user management.
+    
+    ## Authentication
+    Most endpoints require authentication using session-based authentication with JWT tokens.
+    Include the session cookie in requests to authenticated endpoints.
+    
+    ## Rate Limiting
+    - Unauthenticated requests: 100 requests per 15 minutes per IP
+    - Authenticated requests: 1000 requests per 15 minutes per user
+    - AI endpoints: 50 requests per hour per user
+    
+    ## Error Responses
+    All error responses follow this format:
+    ```json
+    {
+      "message": "Error description",
+      "code": "ERROR_CODE",
+      "details": {}
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: LinguaMaster Support
+    email: support@linguamaster.ai
+    url: https://linguamaster.ai
+  license:
+    name: Proprietary
+    url: https://linguamaster.ai/terms
+
+servers:
+  - url: https://linguamaster.ai/api
+    description: Production server
+  - url: https://staging.linguamaster.ai/api
+    description: Staging server
+  - url: http://localhost:8080/api
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check and monitoring endpoints
+  - name: Metrics
+    description: Application metrics and monitoring
+  - name: Authentication
+    description: User authentication and session management
+  - name: Languages
+    description: Language management and user language preferences
+  - name: Lessons
+    description: Lesson content and progress tracking
+  - name: Exercises
+    description: Practice exercises and assessments
+  - name: AI Services
+    description: AI-powered content generation and tutoring
+  - name: Gamification
+    description: Achievements, challenges, and leaderboards
+  - name: Progress
+    description: User progress tracking and analytics
+  - name: Profiles
+    description: Learning profiles and preferences
+  - name: Voice
+    description: Voice teaching and pronunciation
+  - name: Admin
+    description: Administrative endpoints (admin only)
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: |
+        Returns the health status of the application and its dependencies.
+        Used by load balancers and monitoring systems.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/liveness:
+    get:
+      tags:
+        - Health
+      summary: Liveness probe
+      description: Kubernetes/Cloud Run liveness probe endpoint
+      operationId: getLiveness
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /health/readiness:
+    get:
+      tags:
+        - Health
+      summary: Readiness probe
+      description: Kubernetes/Cloud Run readiness probe endpoint
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Service is ready to accept traffic
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: not ready
+
+  /metrics:
+    get:
+      tags:
+        - Metrics
+      summary: Prometheus metrics
+      description: Application metrics in Prometheus format
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Metrics in Prometheus format
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP http_requests_total Total HTTP requests
+                  # TYPE http_requests_total counter
+                  http_requests_total{method="GET",status="200"} 1234
+
+  /metrics/json:
+    get:
+      tags:
+        - Metrics
+      summary: JSON metrics
+      description: Application metrics in JSON format
+      operationId: getMetricsJson
+      responses:
+        '200':
+          description: Metrics in JSON format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metrics'
+
+  /languages:
+    get:
+      tags:
+        - Languages
+      summary: Get all available languages
+      description: Returns a list of all languages available on the platform
+      operationId: getLanguages
+      responses:
+        '200':
+          description: List of languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Language'
+
+  /user/languages:
+    get:
+      tags:
+        - Languages
+      summary: Get user's languages
+      description: Returns languages the authenticated user is learning
+      operationId: getUserLanguages
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User's languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserLanguage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Languages
+      summary: Add language to user's learning list
+      description: Adds a new language for the user to learn
+      operationId: addUserLanguage
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - languageId
+              properties:
+                languageId:
+                  type: integer
+                  example: 1
+                level:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  default: 1
+      responses:
+        '201':
+          description: Language added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserLanguage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /languages/{languageId}/lessons:
+    get:
+      tags:
+        - Lessons
+      summary: Get lessons for a language
+      description: Returns all lessons available for a specific language
+      operationId: getLessonsByLanguage
+      parameters:
+        - name: languageId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Language ID
+      responses:
+        '200':
+          description: List of lessons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lesson'
+
+  /user/languages/{languageId}/lessons:
+    get:
+      tags:
+        - Lessons
+      summary: Get user's lessons for a language
+      description: Returns lessons with user progress for a specific language
+      operationId: getUserLessonsForLanguage
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: languageId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Language ID
+      responses:
+        '200':
+          description: User's lessons with progress
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserLesson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/lessons/{lessonId}:
+    patch:
+      tags:
+        - Lessons
+      summary: Update lesson progress
+      description: Updates the user's progress for a specific lesson
+      operationId: updateLessonProgress
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lesson ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - progress
+              properties:
+                progress:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: Progress percentage
+      responses:
+        '200':
+          description: Progress updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserLesson'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Payment required (hearts depleted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Lesson access restricted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /user/lessons/{lessonId}/exercises:
+    get:
+      tags:
+        - Exercises
+      summary: Get exercises for a lesson
+      description: Generates or retrieves exercises for a specific lesson
+      operationId: getLessonExercises
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lesson ID
+      responses:
+        '200':
+          description: List of exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exercise'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /achievements:
+    get:
+      tags:
+        - Gamification
+      summary: Get all achievements
+      description: Returns all available achievements on the platform
+      operationId: getAchievements
+      responses:
+        '200':
+          description: List of achievements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Achievement'
+
+  /user/achievements:
+    get:
+      tags:
+        - Gamification
+      summary: Get user's achievements
+      description: Returns achievements earned by the authenticated user
+      operationId: getUserAchievements
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User's achievements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserAchievement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/daily-challenge:
+    get:
+      tags:
+        - Gamification
+      summary: Get daily challenge
+      description: Returns the current daily challenge for the user
+      operationId: getDailyChallenge
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Daily challenge
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyChallenge'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/daily-challenge/{challengeId}/complete:
+    post:
+      tags:
+        - Gamification
+      summary: Complete daily challenge
+      description: Marks a daily challenge as completed
+      operationId: completeDailyChallenge
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Challenge ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isCorrect
+              properties:
+                isCorrect:
+                  type: boolean
+                  description: Whether the challenge was completed correctly
+      responses:
+        '200':
+          description: Challenge completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  xpEarned:
+                    type: integer
+                  streakUpdated:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /leaderboard:
+    get:
+      tags:
+        - Gamification
+      summary: Get leaderboard
+      description: Returns the global leaderboard rankings
+      operationId: getLeaderboard
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+          description: Number of entries to return
+      responses:
+        '200':
+          description: Leaderboard rankings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+
+  /ai/exercise:
+    post:
+      tags:
+        - AI Services
+      summary: Generate AI exercise
+      description: |
+        Generates a custom exercise using AI based on language, level, and type.
+        Rate limited to 50 requests per hour per user.
+      operationId: generateAIExercise
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - language
+                - level
+                - type
+              properties:
+                language:
+                  type: string
+                  example: Spanish
+                level:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                  example: 3
+                type:
+                  type: string
+                  enum: [vocabulary, grammar, conversation, listening]
+                  example: vocabulary
+      responses:
+        '200':
+          description: Generated exercise
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /ai/explain-answer:
+    post:
+      tags:
+        - AI Services
+      summary: Explain answer with AI
+      description: |
+        Provides an AI-generated explanation of why an answer was incorrect
+        and how to improve. Rate limited to 50 requests per hour per user.
+      operationId: explainAnswer
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - question
+                - userAnswer
+                - correctAnswer
+              properties:
+                question:
+                  type: string
+                  example: "Translate 'Hello' to Spanish"
+                userAnswer:
+                  type: string
+                  example: "Holla"
+                correctAnswer:
+                  type: string
+                  example: "Hola"
+                exerciseType:
+                  type: string
+                  default: language-exercise
+      responses:
+        '200':
+          description: Answer explanation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnswerExplanation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /ai/roleplay:
+    post:
+      tags:
+        - AI Services
+      summary: AI roleplay conversation
+      description: |
+        Engages in an AI-powered roleplay conversation for language practice.
+        Rate limited to 50 requests per hour per user.
+      operationId: aiRoleplay
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - scenario
+              properties:
+                scenario:
+                  type: string
+                  example: "Ordering food at a restaurant"
+                expectedAnswer:
+                  type: string
+                  example: "I would like a coffee, please"
+                learnerMessage:
+                  type: string
+                  example: "I want coffee"
+                history:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        type: string
+      responses:
+        '200':
+          description: Roleplay response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleplayResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+      description: Session cookie for authentication
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: Uptime in seconds
+        version:
+          type: string
+        dependencies:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/DependencyStatus'
+            gemini:
+              $ref: '#/components/schemas/DependencyStatus'
+            openai:
+              $ref: '#/components/schemas/DependencyStatus'
+        metrics:
+          type: object
+          properties:
+            memory:
+              type: object
+              properties:
+                used:
+                  type: number
+                total:
+                  type: number
+                percentage:
+                  type: number
+            cpu:
+              type: object
+              properties:
+                usage:
+                  type: number
+            requests:
+              type: object
+              properties:
+                total:
+                  type: number
+                active:
+                  type: number
+                errored:
+                  type: number
+
+    DependencyStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [up, down, degraded]
+        responseTime:
+          type: number
+          description: Response time in milliseconds
+        message:
+          type: string
+        lastChecked:
+          type: string
+          format: date-time
+
+    Metrics:
+      type: object
+      properties:
+        http:
+          type: object
+          properties:
+            requestCount:
+              type: number
+            requestDuration:
+              $ref: '#/components/schemas/HistogramData'
+            statusCodes:
+              type: object
+              additionalProperties:
+                type: number
+        database:
+          type: object
+          properties:
+            queryCount:
+              type: number
+            queryDuration:
+              $ref: '#/components/schemas/HistogramData'
+            connectionPoolUsage:
+              type: number
+        ai:
+          type: object
+          properties:
+            requestCount:
+              type: object
+              additionalProperties:
+                type: number
+            tokenUsage:
+              type: object
+              additionalProperties:
+                type: number
+            estimatedCost:
+              type: object
+              additionalProperties:
+                type: number
+
+    HistogramData:
+      type: object
+      properties:
+        count:
+          type: number
+        sum:
+          type: number
+        min:
+          type: number
+        max:
+          type: number
+        mean:
+          type: number
+        p50:
+          type: number
+        p95:
+          type: number
+        p99:
+          type: number
+
+    Language:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        flag:
+          type: string
+        description:
+          type: string
+
+    UserLanguage:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        languageId:
+          type: integer
+        level:
+          type: integer
+        progress:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: integer
+        languageId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        level:
+          type: integer
+        order:
+          type: integer
+        content:
+          type: object
+
+    UserLesson:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        lessonId:
+          type: integer
+        progress:
+          type: integer
+        completed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+        lastAccessedAt:
+          type: string
+          format: date-time
+
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [multiple-choice, fill-in-blank, translation, listening]
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+
+    Achievement:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        xpReward:
+          type: integer
+        category:
+          type: string
+
+    UserAchievement:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        achievementId:
+          type: integer
+        earnedAt:
+          type: string
+          format: date-time
+        achievement:
+          $ref: '#/components/schemas/Achievement'
+
+    DailyChallenge:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        xpReward:
+          type: integer
+        completed:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        xp:
+          type: integer
+        streak:
+          type: integer
+        avatar:
+          type: string
+
+    AnswerExplanation:
+      type: object
+      properties:
+        summary:
+          type: string
+          description: Brief summary of what went wrong
+        whyExpectedAnswerWorks:
+          type: string
+          description: Explanation of why the expected answer is correct
+        keyDifference:
+          type: string
+          description: Main difference between user and expected answer
+        tips:
+          type: array
+          items:
+            type: string
+          description: Learning tips
+        suggestedRetry:
+          type: string
+          description: Suggested corrected attempt
+        source:
+          type: string
+          enum: [ai, fallback]
+
+    RoleplayResponse:
+      type: object
+      properties:
+        assistantMessage:
+          type: string
+          description: AI tutor's next message in the roleplay
+        coachTip:
+          type: string
+          description: Coaching tip for the learner
+        suggestedReplies:
+          type: array
+          items:
+            type: string
+          description: Suggested replies for the learner
+        source:
+          type: string
+          enum: [ai, fallback]
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  responses:
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Not authenticated"
+            code: "UNAUTHORIZED"
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Invalid request parameters"
+            code: "BAD_REQUEST"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Resource not found"
+            code: "NOT_FOUND"
+
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: "Rate limit exceeded. Please try again later."
+            code: "RATE_LIMIT_EXCEEDED"
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until rate limit resets

@@ -46,6 +46,17 @@ type RoleplayPayload = {
  */
 export class Router {
   async registerRoutes(app: Express): Promise<Server> {
+    // Health check and metrics routes (no auth required)
+    const healthRouter = (await import("./health")).default;
+    app.use("/api", healthRouter);
+    
+    const metricsRouter = (await import("./metrics")).default;
+    app.use("/api", metricsRouter);
+    
+    // API documentation routes (no auth required)
+    const apiDocsRouter = (await import("./api-docs")).default;
+    app.use("/api", apiDocsRouter);
+    
     // Register specific routes
     this.registerLanguageRoutes(app);
     this.registerLessonRoutes(app);
@@ -112,6 +123,10 @@ export class Router {
     // User settings routes
     const userSettingsRouter = (await import("./user-settings")).default;
     app.use("/api", userSettingsRouter);
+    
+    // GDPR compliance routes
+    const gdprRouter = (await import("./gdpr")).default;
+    app.use("/api", gdprRouter);
     
     const server = createServer(app);
     return server;

@@ -12,20 +12,40 @@ import {
   validateInput,
   requestLogger
 } from "./middleware";
+import { compressionMiddleware } from "./middleware/compression";
+import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import { logger } from "./utils/logger";
 import { runStartupMigrations } from "./utils/migrations";
 import checkConfig from "./checkConfig";
+import { configManager } from "./config/ConfigurationManager";
 import { db } from "./db";
 
-// Check configuration on startup
+// Load and validate configuration on startup
+(async () => {
+  try {
+    await configManager.loadConfig();
+    logger.info('Configuration loaded successfully');
+  } catch (error) {
+    logger.error('Failed to load configuration', { error });
+    process.exit(1);
+  }
+})();
+
+// Check configuration on startup (legacy check)
 checkConfig();
 
 const app = express();
+
+// Compression middleware (should be early in the stack)
+app.use(compressionMiddleware);
 
 // Apply security middleware first
 app.use(corsMiddleware);
 app.use(securityHeaders);
 app.use(httpsEnforcement);
+
+// Metrics collection middleware
+app.use(metricsMiddleware);
 
 // Body parsing middleware
 app.use(express.json());
