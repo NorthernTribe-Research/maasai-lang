@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linguamaster-config
+  labels:
+    app.kubernetes.io/name: linguamaster
+data:
+  NODE_ENV: "production"
+  PORT: "5000"
+  APP_BASE_URL: "https://linguamaster.ai"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  LOG_SERVICE_NAME: "linguamaster-api"
+  ALLOWED_ORIGINS: "https://linguamaster.ai,https://linguamaster.ntr-kenya.com"
+  API_RATE_LIMIT: "100"
+  AUTH_RATE_LIMIT: "5"
+  AI_RATE_LIMIT: "10"
