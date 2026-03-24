@@ -2,131 +2,112 @@
 
 AI-powered language learning platform developed by NorthernTribe Research.
 
-LinguaMaster is a full-stack application designed for production deployment. It combines adaptive curriculum generation, conversational AI, pronunciation coaching, and learner analytics in a modular platform that can be operated in enterprise environments.
+LinguaMaster is a full-stack application that combines adaptive lessons, AI-generated exercises, voice learning, pronunciation coaching, and learner progress tracking.
 
-## Overview
+## Repository Structure
 
-LinguaMaster provides a digital learning experience with:
-
-- Personalized lesson paths based on learner performance.
-- AI-generated lesson content for vocabulary, grammar, and context.
-- Voice-led instruction and pronunciation feedback loops.
-- Progress tracking, gamification, and daily engagement systems.
-
-## Core Capabilities
-
-### Learning and Engagement
-- Adaptive lesson sequencing and difficulty management.
-- Interactive lessons with vocabulary, grammar, and cultural context.
-- XP, streaks, achievements, and challenge mechanics.
-
-### AI Services
-- Curriculum and lesson generation.
-- Personalized exercise generation.
-- Conversational voice teaching.
-- Pronunciation analysis and coaching.
-
-### Platform Operations
-- Structured logging and error handling.
-- Security middleware and request validation.
-- Caching, monitoring, and deployment automation scripts.
+```text
+linguamaster/
+|- client/         # React frontend (Vite + TypeScript)
+|- server/         # Express API and backend services
+|- shared/         # Shared types/schemas
+|- db/             # Database schema and persistence assets
+|- docs/           # Architecture, deployment, runbooks, API docs
+|- scripts/        # Deployment and operations scripts
+`- k8s/            # Kubernetes baseline manifests
+```
 
 ## Technology Stack
 
 ### Backend
-- Node.js, Express, and TypeScript.
-- PostgreSQL with Drizzle ORM.
-- Google Gemini AI as primary language model integration.
-- Optional OpenAI integration for extended AI functionality.
+- Node.js + Express + TypeScript
+- PostgreSQL + Drizzle ORM
+- Session auth (Passport) and JWT support
+- Google Gemini and OpenAI integrations
 
 ### Frontend
-- React 18 with TypeScript.
-- Vite for build and development tooling.
-- TanStack Query for data synchronization.
-- Tailwind CSS and shadcn/ui component foundation.
-- Wouter for lightweight routing.
+- React 18 + TypeScript
+- Vite
+- TanStack Query
+- Tailwind CSS + shadcn/ui
+- Wouter
 
-## System Architecture
+## Prerequisites
 
-The platform is structured as a monorepo with clear separation of concerns:
+- Node.js 20 or later (recommended)
+- npm 8 or later
+- PostgreSQL
 
-```text
-linguamaster/
-|- client/          # React frontend
-|- server/          # Express API and service layer
-|- shared/          # Shared schemas and types
-`- database/        # Database schema and migrations
-```
+## Environment Configuration
 
-The backend exposes REST endpoints for authentication, learning operations, and AI features. The frontend consumes these APIs and handles real-time learner interactions.
+Copy and edit the template:
 
-## Development Setup
-
-### Prerequisites
-- Node.js 18 or later.
-- npm 8 or later.
-- PostgreSQL instance.
-- Google Gemini API key.
-- OpenAI API key (optional).
-
-### Installation
 ```bash
-npm install
 cp .env.example .env
 ```
 
-### Required Configuration
-Update `.env` with values for your environment:
+### Required
+- `DATABASE_URL` (all environments)
 
-```env
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/linguamaster
+### Required In Production
+- `SESSION_SECRET`
+- `JWT_SECRET`
+- `GEMINI_API_KEY`
 
-# AI Services
-GEMINI_API_KEY=your_gemini_api_key_here
-OPENAI_API_KEY=your_openai_api_key_here
+### Optional But Used By Features
+- `OPENAI_API_KEY`
+- `GOOGLE_WEB_CLIENT_ID` or `GOOGLE_WEB_CLIENT_IDS` (Google login)
+- `STRIPE_SECRET_KEY` (billing flows)
+- `UPTIME_ALERT_WEBHOOK_URL` (uptime alert script)
 
-# Application
-NODE_ENV=development
-PORT=5000
-SESSION_SECRET=your_super_secret_session_key_here
-JWT_SECRET=your_super_secret_jwt_secret_here
-APP_BASE_URL=http://localhost:5000
+Use `.env.example` as the complete source of supported variables.
 
-# Optional billing support
-STRIPE_SECRET_KEY=sk_test_your_secret_key_here
-```
+## Local Development
 
-### Initialize and Run
 ```bash
+npm install
 npm run db:push
 npm run dev
 ```
 
 Default local URL: `http://localhost:5000`
 
-## Docker Operations
+## Build and Run (Production Mode)
 
-### Build and Run
+```bash
+npm run build
+npm run start
+```
+
+## Docker
+
+Build and run using project scripts:
+
 ```bash
 npm run docker:build
 npm run docker:run
 ```
 
-### Example Compose Configuration
+Notes:
+- `docker:run` loads `.env`, so `PORT` comes from your `.env` file.
+- If `PORT` is not set at runtime, the Docker image defaults to port `8080`.
+
+### Example Compose Snippet
+
 ```yaml
 version: "3.8"
 services:
   linguamaster:
     build: .
     ports:
-      - "5000:5000"
+      - "5000:8080"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       - postgres
 
@@ -143,39 +124,95 @@ volumes:
   postgres_data:
 ```
 
-## Security and Reliability
+## Kubernetes
 
-LinguaMaster includes production-focused controls such as:
+Baseline manifests are in `k8s/`.
 
-- Rate limiting for API protection.
-- Input validation and sanitization.
-- Security headers and CORS policy enforcement.
-- Session and authentication safeguards.
-- Structured error handling to reduce information leakage.
+Quick start:
 
-## Observability and Operations
+```bash
+kubectl create namespace linguamaster
+kubectl -n linguamaster create secret generic linguamaster-secrets \
+  --from-literal=DATABASE_URL='postgresql://...' \
+  --from-literal=GEMINI_API_KEY='...' \
+  --from-literal=OPENAI_API_KEY='...' \
+  --from-literal=SESSION_SECRET='...' \
+  --from-literal=JWT_SECRET='...'
+kubectl apply -k k8s
+```
 
-Operational tooling includes:
+## API Documentation
 
-- Structured application logging.
-- Health and uptime verification workflows.
-- Database backup and restore automation scripts.
-- Staging deployment and rollback scripts.
+Interactive API docs are served by the app:
 
-## API Summary
+- `GET /api/docs`
+- `GET /api/docs/openapi.yaml`
+- `GET /api/docs/openapi.json`
+- `GET /api/docs/info`
 
-### Authentication and Core
-- `POST /api/login`
+Source spec file: `docs/api/openapi.yaml`
+
+## API Summary (Implemented Routes)
+
+### Health and Metrics
+- `GET /api/health`
+- `GET /api/health/live`
+- `GET /api/health/ready`
+- `GET /api/metrics`
+- `GET /api/metrics/json`
+- `GET /api/metrics/summary`
+
+### Authentication
 - `POST /api/register`
+- `POST /api/login`
+- `POST /api/google-login`
+- `POST /api/logout`
+- `GET /api/user`
+- `PUT /api/auth/profile`
+
+### Core Learning
+- `GET /api/languages`
 - `GET /api/user/languages`
-- `GET /api/lessons`
+- `POST /api/user/languages`
+- `GET /api/languages/:languageId/lessons`
+- `GET /api/user/languages/:languageId/lessons`
+- `PATCH /api/user/lessons/:lessonId`
+- `GET /api/user/lessons/:lessonId/exercises`
+- `GET /api/achievements`
+- `GET /api/user/achievements`
+- `GET /api/user/daily-challenge`
+- `POST /api/user/daily-challenge/:challengeId/complete`
+- `GET /api/leaderboard`
 
 ### AI Endpoints
-- `POST /api/ai/comprehensive-lesson`
-- `POST /api/ai/personalized-exercises`
-- `POST /api/ai/voice/conversation/start`
-- `POST /api/ai/voice/pronunciation`
+- `POST /api/ai/exercise`
 - `POST /api/ai/vocabulary`
+- `POST /api/ai/grammar`
+- `POST /api/ai/explain-answer`
+- `POST /api/ai/roleplay`
+
+### Additional Route Modules
+
+The following route modules are also mounted and active under `/api` or scoped subpaths:
+
+- `profiles`
+- `curriculum`
+- `exercises`
+- `practice`
+- `voice`
+- `speech`
+- `tutor`
+- `gamification`
+- `progress`
+- `admin` (mounted at `/api/admin`)
+- `cache` (mounted at `/api/cache`)
+- `sessions` (mounted at `/api/sessions`)
+- `learning-path` (mounted at `/api/learning-path`)
+- `user-stats` (mounted at `/api/user-stats`)
+- `user-settings`
+- `gdpr`
+
+See `server/routes/` for exact route contracts.
 
 ## Development Scripts
 
@@ -197,33 +234,23 @@ npm run drill:backup-restore # Validate backup/restore process
 npm run monitor:uptime       # Run uptime check
 ```
 
-## Deployment Guidance
+## Security and Operations
 
-Recommended production rollout process:
+The project includes:
 
-1. Build artifacts: `npm run build`
-2. Set production environment variables and secrets.
-3. Provision and validate database connectivity.
-4. Deploy application container(s).
-5. Configure TLS and reverse proxy as required.
-6. Enable monitoring, backup, and rollback processes.
+- Rate limiting
+- Input validation and sanitization
+- Security headers and CORS controls
+- Structured logging
+- Health and metrics endpoints
+- Backup and rollback scripts
 
-## Roadmap
+Operational references:
 
-Current roadmap themes:
-
-- Mobile client support.
-- Offline learning mode.
-- Group and collaborative learning features.
-- Expanded analytics and model-driven insight tooling.
-- Additional multimodal learning experiences.
-
-## Support
-
-For support and issue tracking:
-
-- Open an issue in the repository.
-- Contact the project maintainers.
+- `docs/runbooks/`
+- `docs/deployment/`
+- `docs/observability.md`
+- `docs/integrations.md`
 
 ## License
 
