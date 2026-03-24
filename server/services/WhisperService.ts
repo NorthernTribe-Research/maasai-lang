@@ -1,5 +1,5 @@
-import OpenAI from 'openai';
 import { BaseService } from './BaseService';
+import { openai } from '../openai';
 import fs from 'fs';
 import FormData from 'form-data';
 
@@ -37,7 +37,7 @@ export interface SpeechAnalysis {
  * OpenAI Whisper service for speech-to-text and pronunciation analysis
  */
 export class WhisperService extends BaseService {
-  private openai: OpenAI;
+  private openai: any = null;
   private isAvailable: boolean = false;
 
   constructor() {
@@ -45,7 +45,7 @@ export class WhisperService extends BaseService {
     
     const apiKey = process.env.OPENAI_API_KEY;
     if (apiKey && apiKey !== 'demo-api-key') {
-      this.openai = new OpenAI({ apiKey });
+      this.openai = openai;
       this.isAvailable = true;
       this.log("Whisper service initialized with API key", "info");
     } else {
@@ -74,7 +74,7 @@ export class WhisperService extends BaseService {
       const tempFilePath = `/tmp/audio_${Date.now()}.webm`;
       fs.writeFileSync(tempFilePath, audioBuffer);
 
-      const transcription = await this.openai.audio.transcriptions.create({
+      const transcription = await this.openai!.audio.transcriptions.create({
         file: fs.createReadStream(tempFilePath),
         model: "whisper-1",
         language: options.language,
@@ -94,7 +94,7 @@ export class WhisperService extends BaseService {
         text: transcription.text,
         language: transcription.language,
         duration: transcription.duration,
-        segments: transcription.segments?.map(segment => ({
+        segments: transcription.segments?.map((segment: any) => ({
           start: segment.start,
           end: segment.end,
           text: segment.text
@@ -186,7 +186,7 @@ export class WhisperService extends BaseService {
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -279,7 +279,7 @@ export class WhisperService extends BaseService {
         ]
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -341,7 +341,7 @@ export class WhisperService extends BaseService {
         }
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.openai!.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },

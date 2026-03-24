@@ -1,9 +1,11 @@
 import { BaseService } from "./BaseService";
 import { 
-  Language, InsertLanguage, languages, 
+  Language, languages, 
   UserLanguage, InsertUserLanguage, userLanguages 
 } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+
+type InsertLanguage = typeof languages.$inferInsert;
 
 /**
  * Service class for handling language-related operations
@@ -16,7 +18,7 @@ export class LanguageService extends BaseService {
     try {
       return await this.db.select().from(languages);
     } catch (error) {
-      this.handleError(error, "LanguageService.getAllLanguages");
+      throw this.handleError(error, "LanguageService.getAllLanguages");
     }
   }
 
@@ -28,7 +30,7 @@ export class LanguageService extends BaseService {
       const result = await this.db.select().from(languages).where(eq(languages.code, code));
       return result[0];
     } catch (error) {
-      this.handleError(error, "LanguageService.getLanguageByCode");
+      throw this.handleError(error, "LanguageService.getLanguageByCode");
     }
   }
   
@@ -40,7 +42,7 @@ export class LanguageService extends BaseService {
       const result = await this.db.select().from(languages).where(eq(languages.id, id));
       return result[0];
     } catch (error) {
-      this.handleError(error, "LanguageService.getLanguage");
+      throw this.handleError(error, "LanguageService.getLanguage");
     }
   }
 
@@ -52,14 +54,14 @@ export class LanguageService extends BaseService {
       const result = await this.db.insert(languages).values(language).returning();
       return result[0];
     } catch (error) {
-      this.handleError(error, "LanguageService.addLanguage");
+      throw this.handleError(error, "LanguageService.addLanguage");
     }
   }
 
   /**
    * Get all languages a user is learning
    */
-  async getUserLanguages(userId: number): Promise<(UserLanguage & { language: Language })[]> {
+  async getUserLanguages(userId: string): Promise<(UserLanguage & { language: Language })[]> {
     try {
       const result = await this.db.query.userLanguages.findMany({
         where: eq(userLanguages.userId, userId),
@@ -70,7 +72,7 @@ export class LanguageService extends BaseService {
       
       return result;
     } catch (error) {
-      this.handleError(error, "LanguageService.getUserLanguages");
+      throw this.handleError(error, "LanguageService.getUserLanguages");
     }
   }
 
@@ -95,15 +97,12 @@ export class LanguageService extends BaseService {
       
       // Add the new language
       const result = await this.db.insert(userLanguages)
-        .values({
-          ...userLanguage,
-          lastAccessed: new Date().toISOString()
-        })
+        .values(userLanguage)
         .returning();
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "LanguageService.addUserLanguage");
+      throw this.handleError(error, "LanguageService.addUserLanguage");
     }
   }
 
@@ -111,16 +110,13 @@ export class LanguageService extends BaseService {
    * Update user's progress in a language
    */
   async updateUserLanguageProgress(
-    userId: number, 
+    userId: string, 
     languageId: number, 
     progress: number
   ): Promise<UserLanguage> {
     try {
       const result = await this.db.update(userLanguages)
-        .set({ 
-          progress,
-          lastAccessed: new Date().toISOString()
-        })
+        .set({ progress })
         .where(
           and(
             eq(userLanguages.userId, userId),
@@ -135,7 +131,7 @@ export class LanguageService extends BaseService {
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "LanguageService.updateUserLanguageProgress");
+      throw this.handleError(error, "LanguageService.updateUserLanguageProgress");
     }
   }
 }

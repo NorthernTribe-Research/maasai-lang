@@ -15,7 +15,7 @@ import WhisperPronunciation from '@/components/voice/WhisperPronunciation';
 
 interface AIEnhancedLearningProps {
   languageId: number;
-  userId: number;
+  userId: string;
 }
 
 export default function AIEnhancedLearning({ languageId, userId }: AIEnhancedLearningProps) {

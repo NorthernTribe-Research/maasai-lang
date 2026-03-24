@@ -3,7 +3,7 @@ import {
   Achievement, InsertAchievement, achievements,
   UserAchievement, InsertUserAchievement, userAchievements 
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { UserService } from "./UserService";
 
 /**
@@ -24,14 +24,14 @@ export class AchievementService extends BaseService {
     try {
       return await this.db.select().from(achievements);
     } catch (error) {
-      this.handleError(error, "AchievementService.getAllAchievements");
+      throw this.handleError(error, "AchievementService.getAllAchievements");
     }
   }
 
   /**
    * Get all achievements for a user
    */
-  async getUserAchievements(userId: number): Promise<(UserAchievement & { achievement: Achievement })[]> {
+  async getUserAchievements(userId: string): Promise<(UserAchievement & { achievement: Achievement })[]> {
     try {
       const result = await this.db.query.userAchievements.findMany({
         where: eq(userAchievements.userId, userId),
@@ -42,7 +42,7 @@ export class AchievementService extends BaseService {
       
       return result;
     } catch (error) {
-      this.handleError(error, "AchievementService.getUserAchievements");
+      throw this.handleError(error, "AchievementService.getUserAchievements");
     }
   }
 
@@ -56,8 +56,10 @@ export class AchievementService extends BaseService {
         .select()
         .from(userAchievements)
         .where(
-          eq(userAchievements.userId, userAchievement.userId),
-          eq(userAchievements.achievementId, userAchievement.achievementId)
+          and(
+            eq(userAchievements.userId, userAchievement.userId),
+            eq(userAchievements.achievementId, userAchievement.achievementId)
+          )
         );
       
       if (existingResult.length > 0) {
@@ -85,13 +87,13 @@ export class AchievementService extends BaseService {
         .insert(userAchievements)
         .values({
           ...userAchievement,
-          earnedAt: new Date().toISOString()
+          earnedAt: new Date()
         })
         .returning();
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "AchievementService.awardAchievement");
+      throw this.handleError(error, "AchievementService.awardAchievement");
     }
   }
 
@@ -107,14 +109,14 @@ export class AchievementService extends BaseService {
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "AchievementService.addAchievement");
+      throw this.handleError(error, "AchievementService.addAchievement");
     }
   }
 
   /**
    * Check and award achievements based on user's progress
    */
-  async checkAchievements(userId: number): Promise<void> {
+  async checkAchievements(userId: string): Promise<void> {
     try {
       const user = await this.userService.getUser(userId);
       if (!user) {
@@ -148,7 +150,7 @@ export class AchievementService extends BaseService {
       // More achievement checks can be added here
       
     } catch (error) {
-      this.handleError(error, "AchievementService.checkAchievements");
+      throw this.handleError(error, "AchievementService.checkAchievements");
     }
   }
 }

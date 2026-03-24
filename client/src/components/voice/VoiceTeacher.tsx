@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequestJson } from '@/lib/queryClient';
 import { Mic, MicOff, Volume2, Play, Pause, RotateCcw } from 'lucide-react';
 
 interface VoiceTeacherProps {
@@ -23,6 +23,27 @@ interface ConversationTurn {
   feedback?: string;
 }
 
+interface StartConversationResponse {
+  sessionId: string;
+  initialGreeting: string;
+  audioScript: string;
+}
+
+interface ProcessVoiceResponse {
+  response: string;
+  audioScript: string;
+  feedback: string;
+  corrections: Array<{ explanation: string }>;
+}
+
+interface EndSessionResponse {
+  summary: string;
+}
+
+interface WhisperTranscriptionResponse {
+  text?: string;
+}
+
 export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -37,7 +58,7 @@ export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherP
   // Start voice conversation
   const startConversationMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/voice/conversation/start', {
+      return apiRequestJson<StartConversationResponse>('POST', '/api/ai/voice/conversation/start', {
         languageId,
         topic,
         level
@@ -64,7 +85,7 @@ export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherP
     mutationFn: async (transcript: string) => {
       if (!sessionId) throw new Error('No active session');
       
-      return apiRequest('POST', '/api/ai/voice/conversation/input', {
+      return apiRequestJson<ProcessVoiceResponse>('POST', '/api/ai/voice/conversation/input', {
         sessionId,
         audioTranscript: transcript,
         confidence: 85
@@ -97,7 +118,7 @@ export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherP
     mutationFn: async () => {
       if (!sessionId) throw new Error('No active session');
       
-      return apiRequest('POST', '/api/ai/voice/conversation/end', {
+      return apiRequestJson<EndSessionResponse>('POST', '/api/ai/voice/conversation/end', {
         sessionId
       });
     },
@@ -180,10 +201,15 @@ export default function VoiceTeacher({ languageId, topic, level }: VoiceTeacherP
     try {
       // Convert blob to base64
       const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const uint8 = new Uint8Array(arrayBuffer);
+      let binary = "";
+      uint8.forEach((byte) => {
+        binary += String.fromCharCode(byte);
+      });
+      const base64Audio = btoa(binary);
       
       // Send to Whisper API
-      const response = await apiRequest('POST', '/api/ai/whisper/transcribe', {
+      const response = await apiRequestJson<WhisperTranscriptionResponse>('POST', '/api/ai/whisper/transcribe', {
         audioData: base64Audio,
         language: getLanguageCode(languageId)
       });

@@ -1,521 +1,1004 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useLocation } from "wouter";
+import { useEffect, useState } from "react";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import Layout from "@/components/layout/layout";
-import AILanguageTeacher from "@/components/common/ai-language-teacher";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LessonInterface, type Exercise } from "@/components/duolingo";
+import LessonViewer from "@/components/learning/LessonViewer";
+import { DuolingoHeader } from "@/components/duolingo/DuolingoHeader";
+import { BottomNav } from "@/components/duolingo/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowLeft, CheckCircle, XCircle, MessageCircle, Book } from "lucide-react";
+import { playLevelUpSound } from "@/lib/sounds";
+import { LoadingState } from "@/components/ui/loading-state";
+import {
+  flushQueuedLessonCompletions,
+  getOfflineLegacyLessonPackage,
+  isLikelyNetworkError,
+  queueLegacyLessonCompletion,
+  saveOfflineLegacyLessonPackage,
+  type OfflineLegacyLessonPackage,
+} from "@/lib/offline-lessons";
 
-enum ExerciseType {
-  MULTIPLE_CHOICE = "multiple-choice",
-  TRANSLATION = "translation",
-  MATCHING = "matching",
+const EXERCISE_GENERATION_TIMEOUT_MS = 8500;
+
+interface LessonAccessInfo {
+  canStart: boolean;
+  reason: string;
+  accessMode: "free" | "hearts" | "unlimited" | "blocked";
+  heartsRequired: number;
+  hearts?: number;
+  freeLessonsPerDay?: number;
+  lessonsCompletedToday?: number;
+  remainingFreeLessons?: number;
+  nextFreeLessonAt?: string | null;
+  message?: string;
 }
 
-interface Exercise {
+interface LegacyLessonSummary {
   id: number;
-  type: ExerciseType;
-  prompt: string;
-  answer: string;
-  options?: string[];
+  title: string;
+  description?: string | null;
+  icon?: string | null;
+  xpReward?: number | null;
+  duration?: number | null;
+  level?: number | null;
 }
 
-// Generate exercises based on lesson type
-const generateExercises = (lesson: any, count: number = 5): Exercise[] => {
-  const exercises: Exercise[] = [];
-  
-  // Vocabulary lesson exercises
-  if (lesson.type === "vocabulary") {
-    exercises.push(
-      {
-        id: 1,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "What is the translation of 'hello'?",
-        answer: lesson.languageId === 1 ? "hola" : "你好",
-        options: lesson.languageId === 1 
-          ? ["hola", "adiós", "gracias", "por favor"] 
-          : ["你好", "再见", "谢谢", "请"],
-      },
-      {
-        id: 2,
-        type: ExerciseType.TRANSLATION,
-        prompt: "Translate 'I would like to order a coffee, please.'",
-        answer: lesson.languageId === 1 
-          ? "Me gustaría pedir un café, por favor." 
-          : "我想点一杯咖啡，谢谢。",
-      },
-      {
-        id: 3,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "Choose the correct word for 'food'",
-        answer: lesson.languageId === 1 ? "comida" : "食物",
-        options: lesson.languageId === 1 
-          ? ["comida", "bebida", "mesa", "plato"] 
-          : ["食物", "饮料", "桌子", "盘子"],
-      },
-      {
-        id: 4,
-        type: ExerciseType.TRANSLATION,
-        prompt: "Translate 'Good morning, how are you?'",
-        answer: lesson.languageId === 1 
-          ? "Buenos días, ¿cómo estás?" 
-          : "早上好，你好吗？",
-      },
-      {
-        id: 5,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "What is the word for 'thank you'?",
-        answer: lesson.languageId === 1 ? "gracias" : "谢谢",
-        options: lesson.languageId === 1 
-          ? ["gracias", "por favor", "de nada", "perdón"] 
-          : ["谢谢", "请", "不客气", "对不起"],
-      }
-    );
+interface ExerciseLoadResult {
+  exercises: Exercise[];
+  source: "online" | "offline";
+}
+
+interface StripeConfirmResponse {
+  checkoutType?: "hearts_package" | "unlimited_hearts_subscription";
+  message?: string;
+  heartsAdded?: number;
+}
+
+function extractApiErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Request failed";
   }
-  
-  // Grammar lesson exercises
-  else if (lesson.type === "grammar") {
-    exercises.push(
-      {
-        id: 1,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "Choose the correct verb form: 'He ___ to the store.'",
-        answer: lesson.languageId === 1 ? "va" : "去",
-        options: lesson.languageId === 1 
-          ? ["va", "vas", "voy", "van"] 
-          : ["去", "去了", "去着", "去过"],
-      },
-      {
-        id: 2,
-        type: ExerciseType.TRANSLATION,
-        prompt: "Translate 'I am eating dinner.'",
-        answer: lesson.languageId === 1 
-          ? "Estoy comiendo la cena." 
-          : "我在吃晚饭。",
-      },
-      {
-        id: 3,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "Select the correct past tense form: 'Yesterday, I ___ to the park.'",
-        answer: lesson.languageId === 1 ? "fui" : "去了",
-        options: lesson.languageId === 1 
-          ? ["fui", "fue", "fuiste", "fueron"] 
-          : ["去了", "去", "去过", "去着"],
-      },
-      {
-        id: 4,
-        type: ExerciseType.TRANSLATION,
-        prompt: "Translate 'They will arrive tomorrow.'",
-        answer: lesson.languageId === 1 
-          ? "Ellos llegarán mañana." 
-          : "他们明天会到达。",
-      },
-      {
-        id: 5,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "Choose the correct article: '___ casa es grande.'",
-        answer: lesson.languageId === 1 ? "La" : "这个",
-        options: lesson.languageId === 1 
-          ? ["La", "El", "Los", "Las"] 
-          : ["这个", "那个", "一个", "些"],
+
+  const raw = error.message || "Request failed";
+  const jsonStart = raw.indexOf("{");
+  if (jsonStart >= 0) {
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart));
+      if (typeof parsed?.message === "string" && parsed.message.length > 0) {
+        return parsed.message;
       }
-    );
+    } catch {
+      // Ignore parse errors and fall back to raw message.
+    }
   }
-  
-  // Conversation lesson exercises
-  else {
-    exercises.push(
-      {
-        id: 1,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "How would you ask for the check in a restaurant?",
-        answer: lesson.languageId === 1 ? "La cuenta, por favor." : "买单，谢谢。",
-        options: lesson.languageId === 1 
-          ? ["La cuenta, por favor.", "Más comida, por favor.", "¿Dónde está el baño?", "¿Cuánto cuesta?"] 
-          : ["买单，谢谢。", "再来点菜，谢谢。", "洗手间在哪里？", "多少钱？"],
-      },
-      {
-        id: 2,
-        type: ExerciseType.TRANSLATION,
-        prompt: "Translate 'Could I have a glass of water, please?'",
-        answer: lesson.languageId === 1 
-          ? "¿Podría tener un vaso de agua, por favor?" 
-          : "请给我一杯水好吗？",
-      },
-      {
-        id: 3,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "What's the appropriate response to 'How are you?'",
-        answer: lesson.languageId === 1 ? "Estoy bien, gracias." : "我很好，谢谢。",
-        options: lesson.languageId === 1 
-          ? ["Estoy bien, gracias.", "Me llamo Juan.", "Encantado de conocerte.", "Hasta luego."] 
-          : ["我很好，谢谢。", "我叫王。", "很高兴认识你。", "再见。"],
-      },
-      {
-        id: 4,
-        type: ExerciseType.TRANSLATION,
-        prompt: "Translate 'Nice to meet you!'",
-        answer: lesson.languageId === 1 
-          ? "¡Encantado de conocerte!" 
-          : "很高兴认识你！",
-      },
-      {
-        id: 5,
-        type: ExerciseType.MULTIPLE_CHOICE,
-        prompt: "How do you say 'goodbye' formally?",
-        answer: lesson.languageId === 1 ? "Adiós." : "再见。",
-        options: lesson.languageId === 1 
-          ? ["Adiós.", "Hola.", "Buenos días.", "Gracias."] 
-          : ["再见。", "你好。", "早上好。", "谢谢。"],
-      }
-    );
+
+  return raw.replace(/^\d+:\s*/, "");
+}
+
+async function readJsonOrThrow(response: Response): Promise<any> {
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || payload?.message || "Request failed");
   }
-  
-  return exercises.slice(0, count);
-};
+  return payload;
+}
+
+async function fetchLegacyLessonExercises(lessonId: number): Promise<Exercise[]> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), EXERCISE_GENERATION_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(`/api/user/lessons/${lessonId}/exercises`, {
+      signal: controller.signal,
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      const errorPayload = await res.json().catch(() => null);
+      throw new Error(errorPayload?.message || "Failed to fetch exercises");
+    }
+
+    const payload = await res.json();
+    if (!Array.isArray(payload)) {
+      throw new Error("Unexpected exercise format from server");
+    }
+    return payload as Exercise[];
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Lesson generation took too long. Please retry.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 
 export default function LessonDetail() {
   const { id } = useParams<{ id: string }>();
-  const [location, navigate] = useLocation();
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const [currentExercise, setCurrentExercise] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
-  const [showResults, setShowResults] = useState(false);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [progress, setProgress] = useState(0);
-  
-  // Fetch lesson details
-  const { 
-    data: lessonDetail,
-    isLoading: isLoadingLesson 
-  } = useQuery({
-    queryKey: ["/api/languages", 0, "lessons"],
-    enabled: !!id,
-    select: (data) => data?.find((lesson: any) => lesson.id === parseInt(id))
+  const [started, setStarted] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    return window.navigator.onLine;
   });
-  
-  // Fetch user lesson progress if it exists
-  const { 
-    data: userLesson,
-    isLoading: isLoadingUserLesson 
-  } = useQuery({
-    queryKey: ["/api/user/languages", 0, "lessons"],
-    enabled: !!id && !!user,
-    select: (data) => data?.find((lesson: any) => lesson.lessonId === parseInt(id))
+  const [offlinePackage, setOfflinePackage] = useState<OfflineLegacyLessonPackage | null>(null);
+  const [isConfirmingStripe, setIsConfirmingStripe] = useState(false);
+  const isAILessonId = !!id && id.includes("-");
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const clearStripeQueryParams = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("stripe");
+    url.searchParams.delete("checkout");
+    url.searchParams.delete("session_id");
+    const nextSearch = url.searchParams.toString();
+    const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ""}${url.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  };
+
+  // AI lesson flow uses enhanced lessons + profile-based completion endpoint.
+  const {
+    data: profiles,
+    isLoading: isLoadingProfiles,
+    error: profilesError,
+  } = useQuery<any[]>({
+    queryKey: ["/api/profiles"],
+    queryFn: async () => {
+      const res = await fetch("/api/profiles");
+      if (!res.ok) throw new Error("Failed to fetch profiles");
+      return res.json();
+    },
+    enabled: !!user && isAILessonId,
   });
-  
-  // Start lesson mutation
-  const startLessonMutation = useMutation({
+
+  const activeProfileId = profiles?.[0]?.id as string | undefined;
+  const lessonAccessProfileId = isAILessonId ? activeProfileId : undefined;
+
+  const {
+    data: lessonAccess,
+    isLoading: isLoadingLessonAccess,
+    refetch: refetchLessonAccess,
+  } = useQuery<LessonAccessInfo>({
+    queryKey: ["/api/learning-path/lesson-access", id, lessonAccessProfileId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (lessonAccessProfileId) {
+        params.set("profileId", lessonAccessProfileId);
+      }
+
+      const query = params.toString();
+      const res = await fetch(`/api/learning-path/lesson-access/${id}${query ? `?${query}` : ""}`, {
+        credentials: "include",
+      });
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        return {
+          canStart: false,
+          reason: payload?.reason || "blocked",
+          accessMode: payload?.accessMode || "blocked",
+          heartsRequired: payload?.heartsRequired || 0,
+          hearts: payload?.hearts,
+          freeLessonsPerDay: payload?.freeLessonsPerDay,
+          lessonsCompletedToday: payload?.lessonsCompletedToday,
+          remainingFreeLessons: payload?.remainingFreeLessons,
+          nextFreeLessonAt: payload?.nextFreeLessonAt || null,
+          message: payload?.message || "Lesson unavailable right now.",
+        } satisfies LessonAccessInfo;
+      }
+
+      return payload as LessonAccessInfo;
+    },
+    enabled: !!user && !!id && (!isAILessonId || !!activeProfileId),
+    retry: false,
+  });
+
+  const confirmStripeCheckoutMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const response = await fetch("/api/user-stats/stripe/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ sessionId }),
+      });
+      return readJsonOrThrow(response) as Promise<StripeConfirmResponse>;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user-stats/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      refetchLessonAccess();
+      toast({
+        title: result.checkoutType === "hearts_package" ? "Hearts purchased" : "Unlimited hearts activated",
+        description: result.message || "Payment confirmed successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Payment confirmation failed",
+        description: extractApiErrorMessage(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const stripeState = params.get("stripe");
+    const sessionId = params.get("session_id");
+
+    if (!stripeState) {
+      return;
+    }
+
+    if (stripeState === "cancel") {
+      clearStripeQueryParams();
+      toast({
+        title: "Checkout canceled",
+        description: "No charge was made. You can try again anytime.",
+      });
+      return;
+    }
+
+    if (stripeState === "success" && sessionId) {
+      clearStripeQueryParams();
+      setIsConfirmingStripe(true);
+      confirmStripeCheckoutMutation.mutate(sessionId, {
+        onSettled: () => {
+          setIsConfirmingStripe(false);
+        },
+      });
+      return;
+    }
+
+    clearStripeQueryParams();
+  }, []);
+
+  const purchaseHeartsMutation = useMutation({
+    mutationFn: async (packageId: "small" | "medium" | "large") => {
+      const response = await fetch("/api/user-stats/hearts/purchase-money", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          packageId,
+          returnPath: id ? `/lessons/${id}` : "/lessons",
+        }),
+      });
+
+      return readJsonOrThrow(response);
+    },
+    onSuccess: (result: any) => {
+      if (result?.checkoutRequired && result?.checkoutUrl) {
+        window.location.assign(result.checkoutUrl);
+        return;
+      }
+
+      toast({
+        title: "Hearts purchased",
+        description: result?.message || "Hearts added to your account.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-stats/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      refetchLessonAccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Purchase failed",
+        description: extractApiErrorMessage(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const purchaseUnlimitedMutation = useMutation({
+    mutationFn: async (plan: "monthly" | "yearly") => {
+      const response = await fetch("/api/user-stats/subscription/unlimited-hearts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          plan,
+          returnPath: id ? `/lessons/${id}` : "/lessons",
+        }),
+      });
+
+      return readJsonOrThrow(response);
+    },
+    onSuccess: (result: any) => {
+      if (result?.checkoutRequired && result?.checkoutUrl) {
+        window.location.assign(result.checkoutUrl);
+        return;
+      }
+
+      toast({
+        title: "Unlimited hearts activated",
+        description: result?.message || "Subscription is active.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-stats/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      refetchLessonAccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Subscription failed",
+        description: extractApiErrorMessage(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const renderLessonBlockedScreen = (title: string) => (
+    <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+      <DuolingoHeader />
+      <main className="max-w-lg mx-auto px-4 pt-12">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {lessonAccess?.message || "Daily free lessons are finished for today."}
+          </p>
+
+          <div className="rounded-xl bg-primary/5 p-4 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+            <p>Free lessons today: {lessonAccess?.freeLessonsPerDay ?? "—"}</p>
+            <p>Completed today: {lessonAccess?.lessonsCompletedToday ?? "—"}</p>
+            <p>Hearts balance: {lessonAccess?.hearts ?? "—"}</p>
+            {lessonAccess?.nextFreeLessonAt && (
+              <p>Free unlock: {new Date(lessonAccess.nextFreeLessonAt).toLocaleString()}</p>
+            )}
+          </div>
+
+          <button
+            onClick={() => purchaseHeartsMutation.mutate("small")}
+            disabled={purchaseHeartsMutation.isPending || isConfirmingStripe}
+            className="w-full py-3 bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white rounded-xl font-semibold"
+          >
+            {purchaseHeartsMutation.isPending ? "Processing..." : "Buy 5 Hearts ($0.99)"}
+          </button>
+
+          <button
+            onClick={() => purchaseUnlimitedMutation.mutate("monthly")}
+            disabled={purchaseUnlimitedMutation.isPending || isConfirmingStripe}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl font-semibold"
+          >
+            {purchaseUnlimitedMutation.isPending ? "Processing..." : "Activate Unlimited Hearts ($9.99/mo)"}
+          </button>
+
+          <button
+            onClick={() => navigate("/")}
+            className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+          >
+            ← Back to Learning Path
+          </button>
+        </div>
+      </main>
+      <BottomNav />
+    </div>
+  );
+
+  if (isConfirmingStripe || confirmStripeCheckoutMutation.isPending) {
+    return (
+      <LoadingState
+        fullScreen
+        title="Finalizing payment..."
+        description="Confirming your checkout so you can continue learning."
+      />
+    );
+  }
+
+  if (isAILessonId) {
+    if (isLoadingProfiles) {
+      return (
+        <LoadingState
+          fullScreen
+          title="Preparing AI lesson..."
+          description="Loading your active learning profile."
+        />
+      );
+    }
+
+    if (profilesError) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+          <DuolingoHeader />
+          <main className="max-w-2xl mx-auto px-4 pt-12">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Could not load profile</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Please refresh and try opening this lesson again.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+              >
+                ← Back to Learning Path
+              </button>
+            </div>
+          </main>
+          <BottomNav />
+        </div>
+      );
+    }
+
+    if (!activeProfileId) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+          <DuolingoHeader />
+          <main className="max-w-2xl mx-auto px-4 pt-12">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">No learning profile found</h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Create a profile first to access AI-powered lessons.
+              </p>
+              <button
+                onClick={() => navigate("/")}
+                className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+              >
+                ← Back to Learning Path
+              </button>
+            </div>
+          </main>
+          <BottomNav />
+        </div>
+      );
+    }
+
+    if (isLoadingLessonAccess) {
+      return (
+        <LoadingState
+          fullScreen
+          title="Checking lesson access..."
+          description="Applying your daily progression rules."
+        />
+      );
+    }
+
+    if (lessonAccess && !lessonAccess.canStart) {
+      return renderLessonBlockedScreen("Lesson Access Paused");
+    }
+
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+        <DuolingoHeader />
+        <main className="max-w-4xl mx-auto px-4 pt-8">
+          <LessonViewer
+            lessonId={id!}
+            profileId={activeProfileId}
+            onComplete={(xpAwarded) => {
+              if (xpAwarded > 0) {
+                playLevelUpSound();
+                toast({
+                  title: "Lesson Complete! 🎉",
+                  description: `Great work! You earned ${xpAwarded} XP.`,
+                });
+              } else {
+                toast({
+                  title: "Lesson saved offline",
+                  description: "Your completion is queued and will sync when you're online.",
+                });
+              }
+              queryClient.invalidateQueries({ queryKey: ["/api/learning-path"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/user-stats/stats"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/lessons/next"] });
+              setTimeout(() => navigate("/"), 500);
+            }}
+          />
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Try to fetch lesson info from the user's enrolled language
+  const { data: userLanguages, isLoading: isLoadingUserLanguages } = useQuery({
+    queryKey: ["/api/user/languages"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/languages");
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  // Get the language ID from the first enrollment
+  const primaryLanguageId = userLanguages?.[0]?.languageId || userLanguages?.[0]?.language?.id;
+
+  // Fetch lessons for the language
+  const {
+    data: allLessons,
+    isLoading: isLoadingLessons,
+    error: lessonsError,
+  } = useQuery({
+    queryKey: ["/api/languages", primaryLanguageId, "lessons"],
+    queryFn: async () => {
+      const res = await fetch(`/api/languages/${primaryLanguageId}/lessons`);
+      if (!res.ok) throw new Error("Failed to fetch lessons");
+      return res.json();
+    },
+    enabled: !!primaryLanguageId,
+  });
+
+  const lesson = allLessons?.find((l: LegacyLessonSummary) => l.id === parseInt(id!, 10)) as
+    | LegacyLessonSummary
+    | undefined;
+
+  useEffect(() => {
+    if (!lesson?.id) {
+      setOfflinePackage(null);
+      return;
+    }
+    setOfflinePackage(getOfflineLegacyLessonPackage(lesson.id));
+  }, [lesson?.id]);
+
+  const downloadLessonMutation = useMutation<number, Error, void>({
+    mutationFn: async () => {
+      if (!lesson) {
+        throw new Error("Lesson is not available for download.");
+      }
+      if (!isOnline) {
+        throw new Error("Connect to the internet to download this lesson.");
+      }
+
+      const downloadedExercises = await fetchLegacyLessonExercises(lesson.id);
+      saveOfflineLegacyLessonPackage({
+        lessonId: lesson.id,
+        downloadedAt: new Date().toISOString(),
+        lesson: {
+          id: lesson.id,
+          title: lesson.title,
+          description: lesson.description,
+          icon: lesson.icon,
+          xpReward: lesson.xpReward,
+          duration: lesson.duration,
+          level: lesson.level,
+        },
+        exercises: downloadedExercises,
+      });
+
+      return downloadedExercises.length;
+    },
+    onSuccess: (exerciseCount) => {
+      if (lesson) {
+        setOfflinePackage(getOfflineLegacyLessonPackage(lesson.id));
+      }
+
+      toast({
+        title: "Lesson downloaded",
+        description: `Saved ${exerciseCount} exercises for offline practice.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Download failed",
+        description: extractApiErrorMessage(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch AI exercises for the lesson once started
+  const {
+    data: exercisePayload,
+    isLoading: isLoadingExercises,
+    error: exercisesError,
+    refetch: refetchExercises,
+    isFetching: isFetchingExercises,
+  } = useQuery<ExerciseLoadResult>({
+    queryKey: ["/api/user/lessons", lesson?.id, "exercises", started, isOnline],
+    queryFn: async () => {
+      if (!lesson) {
+        throw new Error("Lesson is not available.");
+      }
+
+      const cachedPackage = getOfflineLegacyLessonPackage(lesson.id);
+      if (!isOnline) {
+        if (cachedPackage) {
+          return { exercises: cachedPackage.exercises, source: "offline" };
+        }
+        throw new Error("You're offline. Download this lesson first to keep learning without internet.");
+      }
+
+      try {
+        const generatedExercises = await fetchLegacyLessonExercises(lesson.id);
+        saveOfflineLegacyLessonPackage({
+          lessonId: lesson.id,
+          downloadedAt: new Date().toISOString(),
+          lesson: {
+            id: lesson.id,
+            title: lesson.title,
+            description: lesson.description,
+            icon: lesson.icon,
+            xpReward: lesson.xpReward,
+            duration: lesson.duration,
+            level: lesson.level,
+          },
+          exercises: generatedExercises,
+        });
+        return { exercises: generatedExercises, source: "online" };
+      } catch (error) {
+        if (cachedPackage && isLikelyNetworkError(error)) {
+          return { exercises: cachedPackage.exercises, source: "offline" };
+        }
+        throw error;
+      }
+    },
+    enabled: !!lesson && started,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+  });
+
+  const exercises = exercisePayload?.exercises;
+
+  useEffect(() => {
+    if (exercisePayload?.source === "online" && lesson?.id) {
+      setOfflinePackage(getOfflineLegacyLessonPackage(lesson.id));
+    }
+  }, [exercisePayload?.source, lesson?.id]);
+
+  // Complete lesson mutation
+  const completeLessonMutation = useMutation({
     mutationFn: async (lessonId: number) => {
-      const res = await apiRequest("POST", "/api/user/lessons", { lessonId });
+      const res = await apiRequest("PATCH", `/api/user/lessons/${lessonId}`, { progress: 100 });
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/learning-path"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-stats/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/languages"] });
     },
   });
-  
-  // Complete lesson mutation
-  const completeLessonMutation = useMutation({
-    mutationFn: async ({ lessonId, progress }: { lessonId: number, progress: number }) => {
-      const res = await apiRequest("PUT", `/api/user/lessons/${lessonId}/complete`, { progress });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/languages"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      
+
+  const handleComplete = async () => {
+    if (!lesson) {
+      return;
+    }
+
+    const queueCompletionAndExit = () => {
+      queueLegacyLessonCompletion({ lessonId: lesson.id, progress: 100 });
       toast({
-        title: "Lesson completed!",
-        description: `You've earned XP and made progress in your language journey.`,
+        title: "Lesson saved offline",
+        description: "Completion queued. We'll sync it when you're back online.",
       });
-      
-      // Wait a bit before redirecting
-      setTimeout(() => {
-        navigate("/lessons");
-      }, 2000);
-    },
-  });
-  
-  // Initialize exercises when lesson is loaded
-  useEffect(() => {
-    if (lessonDetail) {
-      setExercises(generateExercises(lessonDetail, 5));
-      
-      // Start the lesson
-      if (user && !startLessonMutation.isPending) {
-        startLessonMutation.mutate(parseInt(id));
-      }
+      setTimeout(() => navigate("/"), 500);
+    };
+
+    if (!isOnline) {
+      queueCompletionAndExit();
+      return;
     }
-  }, [lessonDetail, id, user]);
-  
-  // Update progress as user advances
-  useEffect(() => {
-    if (exercises.length > 0) {
-      setProgress(Math.floor((currentExercise / exercises.length) * 100));
-    }
-  }, [currentExercise, exercises.length]);
-  
-  const handleAnswerChange = (value: string) => {
-    setUserAnswers({
-      ...userAnswers,
-      [currentExercise]: value
-    });
-  };
-  
-  const handleNextExercise = () => {
-    if (currentExercise < exercises.length - 1) {
-      setCurrentExercise(currentExercise + 1);
-    } else {
-      // Show results when all exercises are completed
-      setShowResults(true);
-      
-      // Calculate score as percentage
-      const correctAnswers = exercises.filter(
-        (exercise, index) => userAnswers[index]?.toLowerCase().trim() === exercise.answer.toLowerCase().trim()
-      ).length;
-      
-      const scorePercentage = Math.floor((correctAnswers / exercises.length) * 100);
-      
-      // Complete the lesson
-      if (user && !completeLessonMutation.isPending) {
-        completeLessonMutation.mutate({
-          lessonId: parseInt(id),
-          progress: scorePercentage
+
+    try {
+      await completeLessonMutation.mutateAsync(lesson.id);
+      const syncResult = await flushQueuedLessonCompletions();
+
+      toast({
+        title: "Lesson Complete! 🎉",
+        description: "Great job! Keep up the learning streak!",
+      });
+
+      if (syncResult.synced > 0) {
+        toast({
+          title: "Offline progress synced",
+          description: `Synced ${syncResult.synced} queued completion${syncResult.synced === 1 ? "" : "s"}.`,
         });
       }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/learning-path/lesson-access", id, lessonAccessProfileId] });
+      setTimeout(() => navigate("/"), 500);
+    } catch (error) {
+      if (isLikelyNetworkError(error)) {
+        queueCompletionAndExit();
+        return;
+      }
+
+      toast({
+        title: "Lesson cannot be completed yet",
+        description: extractApiErrorMessage(error),
+        variant: "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-stats/stats"] });
+      refetchLessonAccess();
+      setStarted(false);
     }
   };
-  
-  const isCurrentAnswerCorrect = () => {
-    const currentEx = exercises[currentExercise];
-    return currentEx && userAnswers[currentExercise]?.toLowerCase().trim() === currentEx.answer.toLowerCase().trim();
+
+  const handleExit = () => {
+    navigate("/");
   };
-  
-  const calculateScore = () => {
-    if (!exercises.length) return 0;
-    
-    const correctAnswers = exercises.filter(
-      (exercise, index) => userAnswers[index]?.toLowerCase().trim() === exercise.answer.toLowerCase().trim()
-    ).length;
-    
-    return correctAnswers;
-  };
-  
-  if (isLoadingLesson) {
+
+  if (isLoadingUserLanguages || isLoadingLessons) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      </Layout>
+      <LoadingState
+        fullScreen
+        title="Loading lesson..."
+        description="Preparing your lesson details."
+      />
     );
   }
-  
-  if (!lessonDetail) {
+
+  if (!isAILessonId && !started && isLoadingLessonAccess) {
     return (
-      <Layout>
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-4">Lesson not found</h2>
-          <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-            Sorry, the lesson you're looking for doesn't exist or has been removed.
-          </p>
-          <Link href="/lessons">
-            <Button>Return to Lessons</Button>
-          </Link>
-        </div>
-      </Layout>
+      <LoadingState
+        fullScreen
+        title="Checking lesson access..."
+        description="Applying your daily progression rules."
+      />
     );
   }
-  
-  return (
-    <Layout>
-      <div className="mb-6 flex items-center">
-        <Link href="/lessons">
-          <Button variant="ghost" size="icon" className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h2 className="text-2xl font-bold">{lessonDetail.title}</h2>
+
+  if (lessonsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+        <DuolingoHeader />
+        <main className="max-w-lg mx-auto px-4 pt-12">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Could not load lesson</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              We could not fetch lesson details right now.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+            >
+              ← Back to Learning Path
+            </button>
+          </div>
+        </main>
+        <BottomNav />
       </div>
-      
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm text-neutral-600 dark:text-neutral-400">
-            {showResults ? "Lesson completed" : `Exercise ${currentExercise + 1} of ${exercises.length}`}
-          </span>
-          <span className="text-sm font-medium">
-            {progress}% complete
-          </span>
-        </div>
-        <Progress value={progress} className="h-2" />
+    );
+  }
+
+  if (!lesson) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+        <DuolingoHeader />
+        <main className="max-w-lg mx-auto px-4 pt-12">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lesson not found</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              This lesson may have been removed or your path has changed.
+            </p>
+            <button
+              onClick={() => navigate("/")}
+              className="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold"
+            >
+              Back to Learning Path
+            </button>
+          </div>
+        </main>
+        <BottomNav />
       </div>
-      
-      {!showResults ? (
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            {exercises.length > 0 && exercises[currentExercise] && (
-              <div>
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold mb-4">{exercises[currentExercise].prompt}</h3>
-                  
-                  {exercises[currentExercise].type === ExerciseType.MULTIPLE_CHOICE && (
-                    <RadioGroup
-                      value={userAnswers[currentExercise] || ""}
-                      onValueChange={handleAnswerChange}
-                      className="space-y-3"
-                    >
-                      {exercises[currentExercise].options?.map((option, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                          <RadioGroupItem value={option} id={`option-${index}`} />
-                          <Label htmlFor={`option-${index}`} className="text-base">
-                            {option}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  )}
-                  
-                  {exercises[currentExercise].type === ExerciseType.TRANSLATION && (
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Type your translation here..."
-                        value={userAnswers[currentExercise] || ""}
-                        onChange={(e) => handleAnswerChange(e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleNextExercise}
-                    disabled={!userAnswers[currentExercise]}
-                    className="bg-primary hover:bg-primary-hover"
-                  >
-                    {currentExercise < exercises.length - 1 ? "Next" : "Finish Lesson"}
-                  </Button>
-                </div>
+    );
+  }
+
+  // If not started, show lesson info
+  if (!started) {
+    if (lessonAccess && !lessonAccess.canStart) {
+      return renderLessonBlockedScreen("Daily Lesson Limit Reached");
+    }
+
+    const requiresHeartsToContinue = lessonAccess?.accessMode === "hearts";
+    const hasUnlimitedHearts = lessonAccess?.accessMode === "unlimited";
+    const hasOfflineCopy = !!offlinePackage;
+    const canStartLesson = isOnline || hasOfflineCopy;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+        <DuolingoHeader />
+        <main className="max-w-lg mx-auto px-4 pt-12">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-6">
+            <div className="w-20 h-20 mx-auto bg-primary/10 rounded-full flex items-center justify-center text-4xl">
+              {lesson.icon || "📚"}
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {lesson.title}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {lesson.description || "Complete this lesson to earn XP!"}
+            </p>
+            <div className="flex justify-center gap-6 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1">
+                <span>⚡</span>
+                <span>{lesson.xpReward} XP</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>⏱</span>
+                <span>{lesson.duration || 10} min</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>📊</span>
+                <span>Level {lesson.level}</span>
+              </div>
+            </div>
+
+            {requiresHeartsToContinue && (
+              <div className="rounded-xl bg-red-50 dark:bg-red-950/30 p-3 text-sm text-red-700 dark:text-red-300">
+                This lesson will cost {lessonAccess?.heartsRequired || 1} ❤️ when completed today.
               </div>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="text-center py-6">
-              <div className="mb-4">
-                {calculateScore() >= Math.ceil(exercises.length / 2) ? (
-                  <CheckCircle className="h-16 w-16 text-primary mx-auto" />
-                ) : (
-                  <XCircle className="h-16 w-16 text-accent mx-auto" />
-                )}
+
+            {hasUnlimitedHearts && (
+              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+                Unlimited hearts active. Continue as much as you want today.
               </div>
-              
-              <h3 className="text-2xl font-bold mb-2">
-                {calculateScore() >= Math.ceil(exercises.length / 2) 
-                  ? "Great job!" 
-                  : "Keep practicing!"}
-              </h3>
-              
-              <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                You got {calculateScore()} out of {exercises.length} correct.
-              </p>
-              
-              {completeLessonMutation.isPending ? (
-                <div className="flex justify-center items-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                  <span>Saving your progress...</span>
-                </div>
+            )}
+
+            <div className="rounded-xl bg-cyan-50 dark:bg-cyan-950/30 p-3 text-sm text-cyan-800 dark:text-cyan-200">
+              {hasOfflineCopy ? (
+                <>
+                  Offline copy ready.
+                  {offlinePackage?.downloadedAt
+                    ? ` Downloaded ${new Date(offlinePackage.downloadedAt).toLocaleString()}.`
+                    : ""}
+                </>
               ) : (
-                <div>
-                  <p className="text-green-600 dark:text-green-400 font-medium mb-6">
-                    Your progress has been saved!
-                  </p>
-                  
-                  <div className="flex justify-center space-x-4">
-                    <Link href={`/lessons/${id}`}>
-                      <Button variant="outline">Try Again</Button>
-                    </Link>
-                    <Link href="/lessons">
-                      <Button className="bg-primary hover:bg-primary-hover">
-                        Back to Lessons
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
+                "Download this lesson now to study later without internet."
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-      
-      <Tabs defaultValue="info" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="info" className="flex items-center gap-1">
-            <Book className="h-4 w-4" />
-            Lesson Info
-          </TabsTrigger>
-          <TabsTrigger value="teacher" className="flex items-center gap-1">
-            <MessageCircle className="h-4 w-4" />
-            AI Teacher
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="info" className="mt-0">
-          <div className="bg-background dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-4">
-            <h3 className="font-semibold mb-2">Lesson Information</h3>
-            <div className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-              <p>
-                <span className="font-medium">Type:</span> {lessonDetail.type.charAt(0).toUpperCase() + lessonDetail.type.slice(1)}
-              </p>
-              <p>
-                <span className="font-medium">Duration:</span> Approximately {lessonDetail.duration} minutes
-              </p>
-              <p>
-                <span className="font-medium">XP Reward:</span> {lessonDetail.xpReward} XP
-              </p>
-              <p>
-                <span className="font-medium">Description:</span> {lessonDetail.description}
-              </p>
-            </div>
+
+            <button
+              onClick={() => downloadLessonMutation.mutate()}
+              disabled={downloadLessonMutation.isPending || !isOnline}
+              className="w-full py-3 border border-cyan-500 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-50 dark:hover:bg-cyan-950/30 disabled:opacity-60 rounded-2xl font-semibold"
+            >
+              {downloadLessonMutation.isPending
+                ? "Downloading offline lesson..."
+                : hasOfflineCopy
+                ? "Refresh Offline Download"
+                : "Download for Offline"}
+            </button>
+
+            {!isOnline && !hasOfflineCopy && (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-200">
+                You're offline and this lesson is not downloaded yet.
+              </div>
+            )}
+
+            <button
+              onClick={() => setStarted(true)}
+              disabled={!canStartLesson}
+              className="w-full py-4 bg-primary hover:bg-primary/90 disabled:opacity-60 text-white rounded-2xl font-bold text-lg shadow-lg transition-all hover:shadow-xl"
+            >
+              {requiresHeartsToContinue
+                ? `Start Lesson (${lessonAccess?.heartsRequired || 1} ❤️ on completion)`
+                : "Start Lesson"}
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+            >
+              ← Back to Learning Path
+            </button>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="teacher" className="mt-0">
-          {user ? (
-            <AILanguageTeacher 
-              language={{
-                id: lessonDetail.languageId,
-                name: lessonDetail.language?.name || "Unknown",
-                code: lessonDetail.language?.code || "us",
-                flag: lessonDetail.language?.flag || ""
-              }}
-              lessonId={parseInt(id)}
-            />
-          ) : (
-            <Card className="w-full p-6 text-center">
-              <p className="mb-4">Please sign in to access the AI language teacher.</p>
-              <Link href="/auth">
-                <Button>Sign In</Button>
-              </Link>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-    </Layout>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // If generating exercises, show loading
+  if (started && !exercises && (isLoadingExercises || isFetchingExercises)) {
+    return (
+      <LoadingState
+        fullScreen
+        title={isOnline ? "Generating personalized lesson..." : "Opening downloaded lesson..."}
+        description={
+          isOnline
+            ? "Our AI is designing exercises just for you. This usually takes a few seconds."
+            : "Using your saved exercises so you can keep learning offline."
+        }
+      />
+    );
+  }
+
+  if (started && exercisesError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+        <DuolingoHeader />
+        <main className="max-w-lg mx-auto px-4 pt-12">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {isOnline ? "Could not generate exercises" : "Offline lesson unavailable"}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {(exercisesError as Error).message || "Please retry to continue the lesson."}
+            </p>
+            <button
+              onClick={() => refetchExercises()}
+              className="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold"
+            >
+              {isOnline ? "Retry Generation" : "Try Again"}
+            </button>
+            <button
+              onClick={() => setStarted(false)}
+              className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+            >
+              ← Back to lesson details
+            </button>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  if (started && (!exercises || exercises.length === 0)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-white dark:from-gray-900 dark:to-gray-800 pb-20">
+        <DuolingoHeader />
+        <main className="max-w-lg mx-auto px-4 pt-12">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center space-y-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">No exercises generated yet</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              We did not receive exercises this time. Try generating again.
+            </p>
+            <button
+              onClick={() => refetchExercises()}
+              className="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold"
+            >
+              Generate Again
+            </button>
+            <button
+              onClick={() => setStarted(false)}
+              className="text-gray-500 dark:text-gray-400 hover:underline text-sm"
+            >
+              ← Back to lesson details
+            </button>
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  return (
+    <LessonInterface
+      lessonId={String(lesson.id)}
+      exercises={exercises ?? []}
+      onComplete={handleComplete}
+      onExit={handleExit}
+    />
   );
 }

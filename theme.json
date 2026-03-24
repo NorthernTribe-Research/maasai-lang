@@ -2,5 +2,5 @@
   "variant": "tint",
   "primary": "hsl(220, 70%, 50%)",
   "appearance": "system",
-  "radius": 0.6
+  "radius": 0.75
 }

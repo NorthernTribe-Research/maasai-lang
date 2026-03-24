@@ -12,35 +12,55 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Brain, Sparkles, Target } from "lucide-react";
+import { Brain, Sparkles, Target, TrendingUp, Calendar, Award } from "lucide-react";
+import type { Achievement, Language, Lesson, UserAchievement, UserLanguage, UserLesson } from "@shared/schema";
+
+type LanguageData = Language;
+
+type UserLanguageData = UserLanguage & { language: LanguageData };
+
+type LessonData = Lesson;
+
+type UserLessonData = UserLesson & {
+  lesson: LessonData;
+  lastAccessed?: string | Date | null;
+  completedAt?: string | Date | null;
+};
+
+type AchievementData = Achievement;
+
+type UserAchievementData = UserAchievement & {
+  earnedAt: string | Date;
+  achievement: AchievementData;
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
   
   // Fetch user's languages
-  const { data: userLanguages, isLoading: isLoadingLanguages } = useQuery({
+  const { data: userLanguages = [], isLoading: isLoadingLanguages } = useQuery<UserLanguageData[]>({
     queryKey: ["/api/user/languages"],
     enabled: !!user,
   });
 
   // Fetch user's achievements
-  const { data: userAchievements, isLoading: isLoadingAchievements } = useQuery({
+  const { data: userAchievements = [], isLoading: isLoadingAchievements } = useQuery<UserAchievementData[]>({
     queryKey: ["/api/user/achievements"],
     enabled: !!user,
   });
 
   // For each language, fetch lessons and user lesson progress
-  const userLessonsQueries = userLanguages?.map(userLanguage => {
-    return useQuery({
+  const userLessonsQueries = userLanguages.map((userLanguage) => {
+    return useQuery<UserLessonData[]>({
       queryKey: ["/api/user/languages", userLanguage.languageId, "lessons"],
       enabled: !!userLanguage,
     });
   });
 
   // Calculate lesson stats for each language
-  const languageLessonStats = userLanguages?.map((userLanguage, index) => {
-    const userLessonsData = userLessonsQueries?.[index].data || [];
-    const completedLessons = userLessonsData.filter(ul => ul.isCompleted).length;
+  const languageLessonStats = userLanguages.map((userLanguage, index) => {
+    const userLessonsData = userLessonsQueries[index].data || [];
+    const completedLessons = userLessonsData.filter((ul) => ul.isCompleted).length;
     return {
       languageId: userLanguage.languageId,
       completed: completedLessons,
@@ -50,9 +70,12 @@ export default function Dashboard() {
 
   // Get recommended lessons
   const getRecommendedLessons = () => {
-    if (!userLanguages || !userLessonsQueries) return [];
+    if (userLanguages.length === 0 || userLessonsQueries.length === 0) return [];
     
-    const recommendedLessons = [];
+    const recommendedLessons: Array<{
+      userLesson: UserLessonData;
+      language: LanguageData;
+    }> = [];
     
     // Look through each language's lessons
     for (let i = 0; i < userLanguages.length; i++) {
@@ -60,7 +83,7 @@ export default function Dashboard() {
       
       // Find incomplete lessons
       const incompleteLessons = userLessonsData
-        .filter(ul => !ul.isCompleted)
+        .filter((ul) => !ul.isCompleted)
         .sort((a, b) => a.lesson.level - b.lesson.level || a.lesson.order - b.lesson.order);
       
       // Add the first incomplete lesson for each language
@@ -80,11 +103,62 @@ export default function Dashboard() {
       {/* Dashboard Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold mb-1">
-          Welcome back, {user?.displayName || user?.username}!
+          Welcome back, {user?.firstName || user?.username || "Learner"}!
         </h2>
         <p className="text-neutral-600 dark:text-neutral-400">
           Continue your language learning journey
         </p>
+      </div>
+
+      {/* Quick Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total XP</p>
+                <p className="text-2xl font-bold">{user?.xp || 0}</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Streak</p>
+                <p className="text-2xl font-bold">{user?.streak || 0}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Level</p>
+                <p className="text-2xl font-bold">{user?.level || 1}</p>
+              </div>
+              <Target className="h-8 w-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Achievements</p>
+                <p className="text-2xl font-bold">{userAchievements?.length || 0}</p>
+              </div>
+              <Award className="h-8 w-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Streak Section */}
@@ -94,9 +168,17 @@ export default function Dashboard() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-lg">Your Learning Paths</h3>
-          <Link href="/lessons">
-            <a className="text-secondary text-sm font-medium">View All</a>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/progress">
+              <Button variant="outline" size="sm">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View Progress
+              </Button>
+            </Link>
+            <Link href="/lessons">
+              <a className="text-secondary text-sm font-medium flex items-center">View All</a>
+            </Link>
+          </div>
         </div>
 
         {isLoadingLanguages ? (
@@ -104,7 +186,7 @@ export default function Dashboard() {
             <Skeleton className="h-64 w-full rounded-xl" />
             <Skeleton className="h-64 w-full rounded-xl" />
           </div>
-        ) : userLanguages && userLanguages.length > 0 ? (
+        ) : userLanguages.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {userLanguages.map((userLanguage, index) => (
               <LanguagePathCard 
@@ -192,7 +274,7 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {userLanguages?.length === 0 ? (
+        {userLanguages.length === 0 ? (
           <div className="bg-background dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6 text-center">
             <p className="text-neutral-600 dark:text-neutral-400">
               Start learning a language to get personalized recommendations
@@ -230,13 +312,17 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {userAchievements ? (
+            {userAchievements.length > 0 ? (
               userAchievements.slice(0, 4).map((userAchievement) => (
                 <AchievementCard
                   key={userAchievement.id}
                   achievement={userAchievement.achievement}
                   earned={true}
-                  earnedAt={userAchievement.earnedAt}
+                  earnedAt={
+                    typeof userAchievement.earnedAt === "string"
+                      ? new Date(userAchievement.earnedAt)
+                      : userAchievement.earnedAt
+                  }
                 />
               ))
             ) : (

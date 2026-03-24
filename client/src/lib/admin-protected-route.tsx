@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { ComponentType, ReactNode } from "react";
 import { Redirect, useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
+import { LoadingState } from "@/components/ui/loading-state";
 
 interface AdminProtectedRouteProps {
   component: ComponentType<any>;
@@ -22,9 +22,12 @@ export function AdminProtectedRoute({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
+      <LoadingState
+        fullScreen
+        compact
+        title="Loading admin..."
+        description="Checking your access."
+      />
     );
   }
 

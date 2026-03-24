@@ -24,8 +24,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: "/lessons", label: "Lessons", icon: "bx-book-open" },
     { path: "/ai-learning", label: "AI Learning", icon: "bx-brain" },
     { path: "/practice", label: "Practice", icon: "bx-cycling" },
+    { path: "/progress", label: "Progress", icon: "bx-line-chart" },
     { path: "/achievements", label: "Achievements", icon: "bx-trophy" },
     { path: "/leaderboard", label: "Leaderboard", icon: "bx-bar-chart-alt-2" },
+    { path: "/settings", label: "Settings", icon: "bx-cog" },
   ];
 
   const handleNavigation = () => {

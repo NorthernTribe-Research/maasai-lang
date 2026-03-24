@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import OpenAI from "openai/index.mjs";
 
 // Check if OpenAI API key is available
 const apiKey = process.env.OPENAI_API_KEY;

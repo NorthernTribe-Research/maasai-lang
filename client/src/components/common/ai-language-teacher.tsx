@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Send, Book, BookOpen, Clock, MessageSquare, Lightbulb, RefreshCw, BookMarked } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequestJson } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 
@@ -43,8 +43,7 @@ export default function AILanguageTeacher({ language, lessonId }: AILanguageTeac
   const { data: teacherPersonas = [] } = useQuery<TeacherPersona[]>({ 
     queryKey: ['/api/ai/language-teacher/personas', language.id],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/ai/language-teacher/personas/${language.id}`);
-      return response;
+      return apiRequestJson<TeacherPersona[]>('GET', `/api/ai/language-teacher/personas/${language.id}`);
     },
     enabled: !!language.id
   });
@@ -104,7 +103,7 @@ export default function AILanguageTeacher({ language, lessonId }: AILanguageTeac
     setIsLoading(true);
     
     try {
-      const response = await apiRequest('POST', '/api/ai/language-teacher', {
+      const response = await apiRequestJson<{ reply: string }>('POST', '/api/ai/language-teacher', {
         languageId: language.id,
         lessonId: lessonId || null,
         message: userMessage.content,

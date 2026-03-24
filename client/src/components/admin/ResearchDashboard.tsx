@@ -63,9 +63,9 @@ export default function ResearchDashboard() {
   const queryClient = useQueryClient();
 
   // Generate learning analytics
-  const analyticsMutation = useMutation({
+  const analyticsMutation = useMutation<AnalyticsData>({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/advanced/analytics', {
+      const res = await apiRequest('POST', '/api/ai/advanced/analytics', {
         userId: 1,
         languageId: 1,
         recentSessions: [
@@ -73,8 +73,9 @@ export default function ResearchDashboard() {
           { type: 'grammar', accuracy: 75, duration: 450, topics: ['present tense'], mistakes: ['conjugation'] }
         ]
       });
+      return res.json() as Promise<AnalyticsData>;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       toast({ title: "Analytics generated", description: "Learning insights ready" });
     },
     onError: () => {
@@ -83,12 +84,13 @@ export default function ResearchDashboard() {
   });
 
   // Generate personalized curriculum
-  const curriculumMutation = useMutation({
+  const curriculumMutation = useMutation<PersonalizedCurriculum>({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/advanced/curriculum', {
+      const res = await apiRequest('POST', '/api/ai/advanced/curriculum', {
         learnerData: learnerProfile,
         targetLanguage: selectedLanguage
       });
+      return res.json() as Promise<PersonalizedCurriculum>;
     },
     onSuccess: () => {
       toast({ title: "Curriculum generated", description: "Personalized learning path created" });
@@ -96,13 +98,14 @@ export default function ResearchDashboard() {
   });
 
   // Real-time assessment
-  const assessmentMutation = useMutation({
+  const assessmentMutation = useMutation<{ accuracy: number; fluency: number; comprehension: number; areas?: Record<string, number>; feedback?: string; recommendations?: string[] }>({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/advanced/assessment', {
+      const res = await apiRequest('POST', '/api/ai/advanced/assessment', {
         sessionData: testSession,
         targetLanguage: selectedLanguage.toLowerCase(),
         userLevel: 'intermediate'
       });
+      return res.json();
     },
     onSuccess: () => {
       toast({ title: "Assessment completed", description: "Performance analysis ready" });
@@ -125,34 +128,37 @@ export default function ResearchDashboard() {
   });
 
   // Test basic AI services
-  const testVocabulary = useMutation({
+  const testVocabulary = useMutation<any[]>({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/vocabulary', {
+      const res = await apiRequest('POST', '/api/ai/vocabulary', {
         language: selectedLanguage,
         theme: 'technology',
         level: 'intermediate',
         count: 5
       });
+      return res.json();
     }
   });
 
-  const testGrammar = useMutation({
+  const testGrammar = useMutation<{ concept?: string; explanation?: string }>({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/grammar', {
+      const res = await apiRequest('POST', '/api/ai/grammar', {
         language: selectedLanguage,
         topic: 'conditional tense',
         level: 'intermediate'
       });
+      return res.json();
     }
   });
 
-  const testVoiceConversation = useMutation({
+  const testVoiceConversation = useMutation<{ initialGreeting?: string }>({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/ai/voice/conversation/start', {
+      const res = await apiRequest('POST', '/api/ai/voice/conversation/start', {
         languageId: 1,
         topic: 'technology discussion',
         level: 'intermediate'
       });
+      return res.json();
     }
   });
 

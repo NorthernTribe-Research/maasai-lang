@@ -1,35 +1,84 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import { sql } from "drizzle-orm";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
+import { 
+  errorHandler, 
+  notFoundHandler,
+  corsMiddleware,
+  securityHeaders,
+  httpsEnforcement,
+  validateInput,
+  requestLogger
+} from "./middleware";
 import { logger } from "./utils/logger";
+import { runStartupMigrations } from "./utils/migrations";
 import checkConfig from "./checkConfig";
+import { db } from "./db";
 
 // Check configuration on startup
 checkConfig();
 
 const app = express();
+
+// Apply security middleware first
+app.use(corsMiddleware);
+app.use(securityHeaders);
+app.use(httpsEnforcement);
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Input validation and sanitization
+app.use(validateInput);
+
+// Request logging middleware
+app.use(requestLogger);
+
+const SENSITIVE_LOG_KEYS = new Set([
+  "token",
+  "password",
+  "authorization",
+  "cookie",
+  "session",
+  "secret",
+  "apikey",
+  "api_key",
+  "jwt",
+]);
+
+function redactSensitivePayload(payload: unknown): unknown {
+  if (Array.isArray(payload)) {
+    return payload.map(redactSensitivePayload);
+  }
+
+  if (payload && typeof payload === "object") {
+    const redacted: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+      if (SENSITIVE_LOG_KEYS.has(key.toLowerCase())) {
+        redacted[key] = "[REDACTED]";
+      } else {
+        redacted[key] = redactSensitivePayload(value);
+      }
+    }
+
+    return redacted;
+  }
+
+  return payload;
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
 
       if (logLine.length > 80) {
         logLine = logLine.slice(0, 79) + "…";
@@ -42,8 +91,35 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/api/health", async (_req, res) => {
+  try {
+    await db.execute(sql`SELECT 1`);
+
+    return res.status(200).json({
+      status: "healthy",
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+      database: "connected",
+    });
+  } catch (error) {
+    logger.error("Health check failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    return res.status(503).json({
+      status: "unhealthy",
+      uptimeSeconds: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+      database: "disconnected",
+    });
+  }
+});
+
 (async () => {
   try {
+    // Run startup migrations
+    await runStartupMigrations();
+    
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

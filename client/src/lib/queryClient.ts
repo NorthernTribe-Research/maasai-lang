@@ -23,6 +23,21 @@ export async function apiRequest(
   return res;
 }
 
+export async function apiRequestJson<T>(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<T> {
+  const res = await apiRequest(method, url, data);
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await res.json()) as T;
+  }
+
+  return (await res.text()) as unknown as T;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

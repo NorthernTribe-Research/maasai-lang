@@ -1,0 +1,3 @@
+CONTAINER_NAME=linguamaster-staging
+ENV_FILE=.env
+PORT=5001

@@ -1,538 +1,369 @@
 import { BaseService } from './BaseService';
-import { GeminiService } from './GeminiService';
+import { geminiService } from './GeminiService';
+import { WhisperService } from './WhisperService';
+import { aiServiceMonitor } from './AIServiceMonitor';
+import { db } from '../db';
+import { voiceSessions, learningProfiles, xpGains, VoiceSession } from '../../shared/schema';
+import { eq } from 'drizzle-orm';
+import { withTransactionAndRetry } from '../utils/transactions';
 
-export interface VoiceLesson {
-  id: string;
-  title: string;
-  description: string;
-  language: string;
-  level: string;
-  duration: number;
-  sections: VoiceSection[];
-  vocabulary: VoiceVocabulary[];
-  exercises: VoiceExercise[];
-}
-
-export interface VoiceSection {
-  id: string;
-  type: 'introduction' | 'explanation' | 'practice' | 'assessment';
-  title: string;
-  content: string;
-  audioScript: string;
-  interactionPoints: InteractionPoint[];
-  expectedResponses: string[];
-}
-
-export interface InteractionPoint {
-  timestamp: number;
-  type: 'pause' | 'question' | 'repeat' | 'feedback';
-  prompt: string;
-  expectedResponse?: string;
-  hints: string[];
-}
-
-export interface VoiceVocabulary {
-  word: string;
-  translation: string;
-  pronunciation: string;
-  audioScript: string;
-  examples: string[];
-  difficulty: number;
-}
-
-export interface VoiceExercise {
-  id: string;
-  type: 'pronunciation' | 'comprehension' | 'conversation' | 'repetition';
-  instruction: string;
-  audioScript: string;
-  targetPhrase: string;
-  feedback: VoiceFeedback[];
-}
-
-export interface VoiceFeedback {
-  condition: string;
-  response: string;
-  audioScript: string;
-  encouragement: string;
-}
-
-export interface ConversationContext {
-  userId: number;
-  languageId: number;
-  currentTopic: string;
-  conversationHistory: ConversationTurn[];
-  learnerLevel: string;
-  weakAreas: string[];
-  preferences: {
-    pace: 'slow' | 'normal' | 'fast';
-    style: 'formal' | 'casual' | 'encouraging';
-    focusAreas: string[];
-  };
-}
-
-export interface ConversationTurn {
-  timestamp: Date;
-  speaker: 'learner' | 'teacher';
-  content: string;
-  audioTranscript?: string;
-  confidence?: number;
-  feedback?: string;
-}
+const whisperService = new WhisperService();
 
 /**
- * AI-powered voice teaching service that handles all verbal instruction
+ * Voice Teaching Service for interactive voice-based lessons
+ * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7
  */
 export class VoiceTeachingService extends BaseService {
-  private geminiService: GeminiService;
-  private activeConversations: Map<string, ConversationContext> = new Map();
-
-  constructor(geminiService: GeminiService) {
+  constructor() {
     super();
-    this.geminiService = geminiService;
-    this.log("Voice Teaching service initialized", "info");
+    this.log("VoiceTeachingService initialized", "info");
   }
 
   /**
-   * Generate a complete voice-based lesson
+   * Start a new voice teaching session
+   * Requirements: 7.1, 7.2
    */
-  async generateVoiceLesson(
-    language: string,
-    topic: string,
-    level: string,
-    duration: number,
-    learnerProfile: {
-      weakAreas: string[];
-      preferences: any;
-      previousLessons: string[];
-    }
-  ): Promise<VoiceLesson> {
-    try {
-      const prompt = `Create a comprehensive voice-based language lesson for ${language}.
-
-Topic: ${topic}
-Level: ${level}
-Duration: ${duration} minutes
-Learner weak areas: ${learnerProfile.weakAreas.join(', ')}
-Previous lessons: ${learnerProfile.previousLessons.join(', ')}
-
-Design a complete spoken lesson with:
-1. Engaging introduction with clear objectives
-2. Step-by-step explanations with natural speech patterns
-3. Interactive practice segments with pauses for responses
-4. Vocabulary introduction with proper pronunciation guides
-5. Guided exercises with immediate audio feedback
-6. Assessment through conversation and repetition
-7. Encouraging conclusion with progress reinforcement
-
-For each section, provide:
-- Natural, conversational audio scripts
-- Strategic interaction points for learner engagement
-- Expected response patterns and alternatives
-- Adaptive feedback based on different learner responses
-- Pronunciation guides in phonetic notation
-- Cultural context and real-world usage examples
-
-Return comprehensive JSON structure with all audio scripts and interaction flows.`;
-
-      const response = await this.geminiService.generateContent(prompt);
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "VoiceTeachingService.generateVoiceLesson");
-      return this.getDefaultVoiceLesson(language, topic, level);
-    }
-  }
-
-  /**
-   * Start an interactive voice conversation session
-   */
-  async startVoiceConversation(
-    userId: number,
-    languageId: number,
-    topic: string,
-    level: string
-  ): Promise<{
+  async startVoiceSession(params: {
+    profileId: string;
+    targetLanguage: string;
+    proficiencyLevel: string;
+    topic: string;
+  }): Promise<{
     sessionId: string;
-    initialGreeting: string;
-    audioScript: string;
-    suggestedResponses: string[];
+    initialPrompt: string;
   }> {
     try {
-      const sessionId = `voice_${userId}_${Date.now()}`;
-      
-      const context: ConversationContext = {
-        userId,
-        languageId,
-        currentTopic: topic,
+      this.log(`Starting voice session for profile ${params.profileId}`, "info");
+
+      // Create voice session
+      const [session] = await db.insert(voiceSessions).values({
+        profileId: params.profileId,
+        startedAt: new Date(),
         conversationHistory: [],
-        learnerLevel: level,
-        weakAreas: [],
-        preferences: {
-          pace: 'normal',
-          style: 'encouraging',
-          focusAreas: [topic]
+        totalTurns: 0,
+        xpAwarded: 0
+      }).returning();
+
+      // Generate initial prompt using AI
+      const initialPrompt = await aiServiceMonitor.executeWithMonitoring(
+        'gemini',
+        async () => {
+          const response = await geminiService.generateConversationResponse({
+            conversationHistory: [],
+            userInput: `START_SESSION: ${params.topic}`,
+            proficiencyLevel: params.proficiencyLevel,
+            language: params.targetLanguage
+          });
+          return response;
         }
-      };
+      );
 
-      this.activeConversations.set(sessionId, context);
-
-      const prompt = `Start a voice conversation for ${level} level learner about ${topic}.
-
-Create an engaging opening that:
-1. Welcomes the learner warmly in the target language
-2. Introduces the conversation topic clearly
-3. Sets expectations for the interaction
-4. Provides initial phrases to help them start
-5. Uses encouraging, patient tone
-6. Includes proper pronunciation guidance
-
-Provide both the greeting text and a natural audio script with:
-- Proper pacing markers [PAUSE]
-- Emphasis markers [EMPHASIZE: word]
-- Tone guidance [ENCOURAGING] [PATIENT]
-- Speed adjustments [SLOW] [NORMAL]
-
-Return JSON with greeting, audioScript, and 3-5 suggested learner responses.`;
-
-      const response = await this.geminiService.generateContent(prompt);
-      const result = JSON.parse(response);
-
-      // Add initial greeting to conversation history
-      context.conversationHistory.push({
-        timestamp: new Date(),
-        speaker: 'teacher',
-        content: result.initialGreeting,
-        audioTranscript: result.audioScript
-      });
-
-      return {
-        sessionId,
-        ...result
-      };
-    } catch (error) {
-      this.handleError(error, "VoiceTeachingService.startVoiceConversation");
-      return {
-        sessionId: 'fallback',
-        initialGreeting: "Hello! Let's practice together.",
-        audioScript: "[ENCOURAGING] Hello! [PAUSE] Let's practice together. [PAUSE] How are you today?",
-        suggestedResponses: ["I'm good, thank you", "I'm ready to learn", "Hello teacher"]
-      };
-    }
-  }
-
-  /**
-   * Process learner's voice input and provide intelligent response
-   */
-  async processVoiceInput(
-    sessionId: string,
-    audioTranscript: string,
-    confidence: number,
-    audioData?: string
-  ): Promise<{
-    response: string;
-    audioScript: string;
-    feedback: string;
-    nextPrompt: string;
-    corrections?: Array<{
-      original: string;
-      corrected: string;
-      explanation: string;
-    }>;
-    encouragement: string;
-  }> {
-    try {
-      const context = this.activeConversations.get(sessionId);
-      if (!context) {
-        throw new Error('Conversation session not found');
-      }
-
-      // Add learner's input to history
-      context.conversationHistory.push({
-        timestamp: new Date(),
-        speaker: 'learner',
-        content: audioTranscript,
-        confidence
-      });
-
-      const recentHistory = context.conversationHistory.slice(-6); // Last 3 exchanges
-
-      const prompt = `As an AI language teacher, respond to the learner's voice input.
-
-Current topic: ${context.currentTopic}
-Learner level: ${context.learnerLevel}
-Confidence: ${confidence}%
-
-Conversation history:
-${recentHistory.map(turn => `${turn.speaker}: ${turn.content}`).join('\n')}
-
-Learner just said: "${audioTranscript}"
-
-Provide a comprehensive response that:
-1. Acknowledges what they said positively
-2. Corrects any errors gently and naturally
-3. Expands on their response with related vocabulary
-4. Asks an engaging follow-up question
-5. Provides pronunciation feedback if needed
-6. Maintains encouraging, supportive tone
-7. Adapts complexity to their demonstrated level
-
-If confidence is low (<70%), provide extra encouragement and simpler alternatives.
-If they made errors, correct them naturally within conversation flow.
-
-Return JSON with:
-- response: Natural conversational response
-- audioScript: Detailed script with pacing and emphasis
-- feedback: Specific feedback on their pronunciation/grammar
-- nextPrompt: Question or prompt to continue conversation
-- corrections: Array of any corrections made
-- encouragement: Positive reinforcement message`;
-
-      const result = await this.geminiService.generateContent(prompt);
-      const response = JSON.parse(result);
-
-      // Add teacher's response to history
-      context.conversationHistory.push({
-        timestamp: new Date(),
-        speaker: 'teacher',
-        content: response.response,
-        audioTranscript: response.audioScript,
-        feedback: response.feedback
-      });
-
-      return response;
-    } catch (error) {
-      this.handleError(error, "VoiceTeachingService.processVoiceInput");
-      return {
-        response: "That's great! Keep practicing.",
-        audioScript: "[ENCOURAGING] That's great! [PAUSE] Keep practicing.",
-        feedback: "Good effort!",
-        nextPrompt: "What would you like to talk about next?",
-        encouragement: "You're doing well!"
-      };
-    }
-  }
-
-  /**
-   * Generate pronunciation coaching for specific words/phrases
-   */
-  async generatePronunciationCoaching(
-    language: string,
-    targetPhrase: string,
-    userAttempt: string,
-    difficulty: string
-  ): Promise<{
-    coaching: string;
-    audioScript: string;
-    breakdown: Array<{
-      sound: string;
-      pronunciation: string;
-      tips: string[];
-      commonMistakes: string[];
-    }>;
-    practiceExercises: string[];
-  }> {
-    try {
-      const prompt = `Provide detailed pronunciation coaching for ${language}.
-
-Target phrase: "${targetPhrase}"
-User's attempt: "${userAttempt}"
-Difficulty level: ${difficulty}
-
-Create comprehensive coaching that includes:
-1. Phonetic breakdown of each sound
-2. Mouth position and tongue placement instructions
-3. Common mistakes for English speakers
-4. Step-by-step pronunciation guide
-5. Practice exercises and repetition drills
-6. Cultural pronunciation variations
-7. Confidence-building encouragement
-
-Make the coaching:
-- Clear and easy to follow
-- Encouraging and supportive
-- Technically accurate but accessible
-- Progressive from simple to complex
-- Includes audio script with detailed timing
-
-Return detailed JSON structure with all coaching elements.`;
-
-      const response = await this.geminiService.generateContent(prompt);
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "VoiceTeachingService.generatePronunciationCoaching");
-      return {
-        coaching: "Let's work on pronunciation together.",
-        audioScript: "[PATIENT] Let's work on pronunciation together. [PAUSE]",
-        breakdown: [],
-        practiceExercises: ["Repeat after me slowly", "Try breaking it into syllables"]
-      };
-    }
-  }
-
-  /**
-   * Generate adaptive listening comprehension exercises
-   */
-  async generateListeningExercise(
-    language: string,
-    level: string,
-    topic: string,
-    duration: number
-  ): Promise<{
-    exercise: {
-      title: string;
-      instructions: string;
-      audioScript: string;
-      content: string;
-      questions: Array<{
-        question: string;
-        options?: string[];
-        correctAnswer: string;
-        explanation: string;
-      }>;
-    };
-    followUp: {
-      discussion: string[];
-      vocabulary: string[];
-      expressions: string[];
-    };
-  }> {
-    try {
-      const prompt = `Create a listening comprehension exercise for ${language} at ${level} level.
-
-Topic: ${topic}
-Duration: ${duration} minutes
-
-Design an engaging listening exercise with:
-1. Natural, conversational content about the topic
-2. Appropriate speed and complexity for the level
-3. Comprehension questions that test understanding
-4. Follow-up discussion prompts
-5. Key vocabulary and expressions highlighted
-6. Cultural context and real-world relevance
-
-The audio should sound natural with:
-- Proper pacing and pauses
-- Natural intonation patterns
-- Background context setting
-- Clear pronunciation examples
-- Interactive elements
-
-Return complete exercise structure with audio script and assessment.`;
-
-      const response = await this.geminiService.generateContent(prompt);
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "VoiceTeachingService.generateListeningExercise");
-      return {
-        exercise: {
-          title: "Listening Practice",
-          instructions: "Listen and answer the questions",
-          audioScript: "[CLEAR] Listen carefully to this conversation. [PAUSE]",
-          content: "Sample listening content",
-          questions: []
-        },
-        followUp: {
-          discussion: ["What did you understand?"],
-          vocabulary: [],
-          expressions: []
-        }
-      };
-    }
-  }
-
-  /**
-   * End conversation session and provide summary
-   */
-  async endVoiceSession(sessionId: string): Promise<{
-    summary: string;
-    progress: {
-      topicsDiscussed: string[];
-      pronunciationImprovements: string[];
-      areasForPractice: string[];
-      overallAssessment: string;
-    };
-    nextSessionRecommendations: string[];
-  }> {
-    try {
-      const context = this.activeConversations.get(sessionId);
-      if (!context) {
-        throw new Error('Session not found');
-      }
-
-      const prompt = `Analyze this voice learning session and provide comprehensive summary.
-
-Session details:
-- Topic: ${context.currentTopic}
-- Level: ${context.learnerLevel}
-- Total exchanges: ${context.conversationHistory.length}
-
-Conversation history:
-${context.conversationHistory.map(turn => 
-  `${turn.speaker}: ${turn.content} ${turn.confidence ? `(confidence: ${turn.confidence}%)` : ''}`
-).join('\n')}
-
-Provide:
-1. Encouraging session summary
-2. Progress assessment with specific improvements noticed
-3. Areas that need more practice
-4. Pronunciation feedback summary
-5. Recommendations for next session
-6. Confidence and motivation boost
-
-Keep tone positive and constructive, focusing on growth and achievements.`;
-
-      const response = await this.geminiService.generateContent(prompt);
-      const result = JSON.parse(response);
-
-      // Clean up session
-      this.activeConversations.delete(sessionId);
-
-      return result;
-    } catch (error) {
-      this.handleError(error, "VoiceTeachingService.endVoiceSession");
-      return {
-        summary: "Great practice session!",
-        progress: {
-          topicsDiscussed: [],
-          pronunciationImprovements: [],
-          areasForPractice: [],
-          overallAssessment: "Making good progress"
-        },
-        nextSessionRecommendations: ["Continue practicing"]
-      };
-    }
-  }
-
-  /**
-   * Get active conversation context
-   */
-  getConversationContext(sessionId: string): ConversationContext | null {
-    return this.activeConversations.get(sessionId) || null;
-  }
-
-  /**
-   * Default fallback lesson
-   */
-  private getDefaultVoiceLesson(language: string, topic: string, level: string): VoiceLesson {
-    return {
-      id: `default_${Date.now()}`,
-      title: `${topic} - ${language}`,
-      description: `Basic ${topic} lesson for ${level} learners`,
-      language,
-      level,
-      duration: 30,
-      sections: [
+      // Update session with initial prompt
+      const conversationHistory = [
         {
-          id: 'intro',
-          type: 'introduction',
-          title: 'Welcome',
-          content: `Welcome to your ${topic} lesson`,
-          audioScript: "[WELCOMING] Welcome to your lesson about " + topic,
-          interactionPoints: [],
-          expectedResponses: []
+          role: 'assistant',
+          content: initialPrompt,
+          timestamp: new Date().toISOString()
         }
-      ],
-      vocabulary: [],
-      exercises: []
+      ];
+
+      await db.update(voiceSessions)
+        .set({ conversationHistory })
+        .where(eq(voiceSessions.id, session.id));
+
+      this.log(`Voice session ${session.id} started`, "info");
+
+      return {
+        sessionId: session.id,
+        initialPrompt
+      };
+    } catch (error) {
+      throw this.handleError(error, "VoiceTeachingService.startVoiceSession");
+    }
+  }
+
+  /**
+   * Process voice input from learner
+   * Requirements: 7.3, 7.4, 7.5, 7.6
+   */
+  async processVoiceInput(params: {
+    sessionId: string;
+    audioData: Buffer;
+    targetLanguage: string;
+    proficiencyLevel: string;
+  }): Promise<{
+    transcript: string;
+    response: string;
+    corrections: string[];
+    feedback: string;
+  }> {
+    try {
+      this.log(`Processing voice input for session ${params.sessionId}`, "info");
+
+      // Get session
+      const session = await db.query.voiceSessions.findFirst({
+        where: eq(voiceSessions.id, params.sessionId)
+      });
+
+      if (!session) {
+        throw new Error("Voice session not found");
+      }
+
+      // Transcribe audio using Whisper
+      let transcript = "";
+      try {
+        const transcription = await whisperService.transcribeAudio(params.audioData, {
+          language: this.getLanguageCode(params.targetLanguage),
+          responseFormat: 'text'
+        });
+        transcript = transcription.text;
+      } catch (error) {
+        this.log("Whisper transcription failed, using fallback", "warn");
+        transcript = "[Audio transcription unavailable]";
+      }
+
+      // Get conversation history
+      const conversationHistory = (session.conversationHistory as any[]) || [];
+
+      // Generate AI response
+      const aiResponse = await aiServiceMonitor.executeWithMonitoring(
+        'gemini',
+        async () => {
+          return await geminiService.generateConversationResponse({
+            conversationHistory: conversationHistory.map((msg: any) => ({
+              role: msg.role,
+              content: msg.content
+            })),
+            userInput: transcript,
+            proficiencyLevel: params.proficiencyLevel,
+            language: params.targetLanguage
+          });
+        }
+      );
+
+      // Extract corrections from response
+      const corrections = this.extractCorrections(aiResponse);
+
+      // Generate feedback
+      const feedback = this.generateFeedback(transcript, params.proficiencyLevel);
+
+      // Update conversation history
+      const updatedHistory = [
+        ...conversationHistory,
+        {
+          role: 'user',
+          content: transcript,
+          timestamp: new Date().toISOString()
+        },
+        {
+          role: 'assistant',
+          content: aiResponse,
+          timestamp: new Date().toISOString()
+        }
+      ];
+
+      // Update session
+      await db.update(voiceSessions)
+        .set({
+          conversationHistory: updatedHistory,
+          totalTurns: session.totalTurns + 1
+        })
+        .where(eq(voiceSessions.id, params.sessionId));
+
+      this.log("Voice input processed successfully", "info");
+
+      return {
+        transcript,
+        response: aiResponse,
+        corrections,
+        feedback
+      };
+    } catch (error) {
+      throw this.handleError(error, "VoiceTeachingService.processVoiceInput");
+    }
+  }
+
+  /**
+   * End voice session and calculate XP
+   * Requirements: 7.7, 10.3, 19.4, 19.6
+   * Uses transaction to ensure session end, XP gain, and profile update are atomic
+   */
+  async endVoiceSession(params: {
+    sessionId: string;
+    profileId: string;
+  }): Promise<{
+    transcript: Array<{ role: string; content: string; timestamp: string }>;
+    xpAwarded: number;
+    totalTurns: number;
+    duration: number;
+  }> {
+    try {
+      this.log(`Ending voice session ${params.sessionId}`, "info");
+
+      // Get session
+      const session = await db.query.voiceSessions.findFirst({
+        where: eq(voiceSessions.id, params.sessionId)
+      });
+
+      if (!session) {
+        throw new Error("Voice session not found");
+      }
+
+      // Get profile to get userId
+      const profile = await db.query.learningProfiles.findFirst({
+        where: eq(learningProfiles.id, params.profileId)
+      });
+
+      if (!profile) {
+        throw new Error("Profile not found");
+      }
+
+      // Calculate duration in minutes
+      const duration = session.startedAt 
+        ? Math.round((Date.now() - new Date(session.startedAt).getTime()) / 60000)
+        : 0;
+
+      // Calculate XP based on session length and turns
+      const baseXP = 50;
+      const turnBonus = session.totalTurns * 10;
+      const xpAwarded = baseXP + turnBonus;
+
+      // Use transaction with retry to ensure atomic operation
+      await withTransactionAndRetry(async (tx) => {
+        // Update session
+        await tx.update(voiceSessions)
+          .set({
+            endedAt: new Date(),
+            xpAwarded
+          })
+          .where(eq(voiceSessions.id, params.sessionId));
+
+        // Record XP gain
+        await tx.insert(xpGains).values({
+          userId: profile.userId,
+          profileId: params.profileId,
+          amount: xpAwarded,
+          source: 'voice',
+          sourceId: params.sessionId,
+          timestamp: new Date()
+        });
+
+        // Update profile XP
+        await tx.update(learningProfiles)
+          .set({
+            currentXP: profile.currentXP + xpAwarded,
+            lastActivityDate: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(learningProfiles.id, params.profileId));
+      });
+
+      this.log(`Voice session ended, awarded ${xpAwarded} XP`, "info");
+
+      return {
+        transcript: (session.conversationHistory as any[]) || [],
+        xpAwarded,
+        totalTurns: session.totalTurns,
+        duration
+      };
+    } catch (error) {
+      throw this.handleError(error, "VoiceTeachingService.endVoiceSession");
+    }
+  }
+
+  /**
+   * Get session history for a profile
+   */
+  async getSessionHistory(profileId: string, limit: number = 10): Promise<VoiceSession[]> {
+    try {
+      const sessions = await db.query.voiceSessions.findMany({
+        where: eq(voiceSessions.profileId, profileId),
+        limit,
+        orderBy: (voiceSessions, { desc }) => [desc(voiceSessions.startedAt)]
+      });
+
+      return sessions;
+    } catch (error) {
+      throw this.handleError(error, "VoiceTeachingService.getSessionHistory");
+    }
+  }
+
+  /**
+   * Get a specific session by ID
+   */
+  async getSessionById(sessionId: string): Promise<VoiceSession | undefined> {
+    try {
+      const session = await db.query.voiceSessions.findFirst({
+        where: eq(voiceSessions.id, sessionId)
+      });
+
+      return session;
+    } catch (error) {
+      throw this.handleError(error, "VoiceTeachingService.getSessionById");
+    }
+  }
+
+  /**
+   * Extract corrections from AI response
+   */
+  private extractCorrections(response: string): string[] {
+    // Look for correction patterns in the response
+    const corrections: string[] = [];
+    const correctionPatterns = [
+      /\(correct: ([^)]+)\)/gi,
+      /should be "([^"]+)"/gi,
+      /better to say "([^"]+)"/gi
+    ];
+
+    for (const pattern of correctionPatterns) {
+      let match: RegExpExecArray | null = pattern.exec(response);
+      while (match) {
+        if (match[1]) {
+          corrections.push(match[1]);
+        }
+        match = pattern.exec(response);
+      }
+    }
+
+    return corrections;
+  }
+
+  /**
+   * Generate feedback for learner's response
+   */
+  private generateFeedback(transcript: string, proficiencyLevel: string): string {
+    if (transcript.includes("[Audio transcription unavailable]")) {
+      return "Please try speaking more clearly.";
+    }
+
+    const wordCount = transcript.split(' ').length;
+    
+    if (wordCount < 3) {
+      return "Try to speak in complete sentences.";
+    }
+
+    if (proficiencyLevel === 'Beginner') {
+      return "Good effort! Keep practicing your pronunciation.";
+    } else if (proficiencyLevel === 'Intermediate') {
+      return "Well done! Your fluency is improving.";
+    } else {
+      return "Excellent! Your language skills are advanced.";
+    }
+  }
+
+  /**
+   * Get language code for Whisper
+   */
+  private getLanguageCode(language: string): string {
+    const languageMap: { [key: string]: string } = {
+      'Spanish': 'es',
+      'Mandarin Chinese': 'zh',
+      'English': 'en',
+      'Hindi': 'hi',
+      'Arabic': 'ar'
     };
+    return languageMap[language] || 'en';
   }
 }
+
+export const voiceTeachingService = new VoiceTeachingService();

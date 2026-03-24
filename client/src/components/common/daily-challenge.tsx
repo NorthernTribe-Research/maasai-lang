@@ -6,12 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Mic } from "lucide-react";
 
+interface DailyChallenge {
+  isCompleted: boolean;
+  challenge: {
+    id: number;
+    type: string;
+    prompt: string;
+    answer: string;
+  };
+}
+
 export default function DailyChallenge() {
   const [answer, setAnswer] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const { data: dailyChallenge, isLoading } = useQuery({
+  const { data: dailyChallenge, isLoading } = useQuery<DailyChallenge>({
     queryKey: ["/api/user/daily-challenge"],
     refetchInterval: false,
   });

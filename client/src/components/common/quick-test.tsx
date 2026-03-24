@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequestJson } from '@/lib/queryClient';
 import { Brain, Mic, Users, Zap } from 'lucide-react';
 
 export default function QuickTest() {
@@ -18,7 +18,7 @@ export default function QuickTest() {
       name: 'Vocabulary Generation',
       icon: Brain,
       mutation: useMutation({
-        mutationFn: () => apiRequest('POST', '/api/ai/vocabulary', {
+        mutationFn: () => apiRequestJson<unknown>('POST', '/api/ai/vocabulary', {
           language: selectedLanguage,
           theme: 'technology',
           level: 'intermediate',
@@ -31,7 +31,7 @@ export default function QuickTest() {
       name: 'Grammar Explanation',
       icon: Users,
       mutation: useMutation({
-        mutationFn: () => apiRequest('POST', '/api/ai/grammar', {
+        mutationFn: () => apiRequestJson<unknown>('POST', '/api/ai/grammar', {
           language: selectedLanguage,
           topic: 'subjunctive mood',
           level: 'advanced'
@@ -43,7 +43,7 @@ export default function QuickTest() {
       name: 'Voice Conversation',
       icon: Mic,
       mutation: useMutation({
-        mutationFn: () => apiRequest('POST', '/api/ai/voice/conversation/start', {
+        mutationFn: () => apiRequestJson<unknown>('POST', '/api/ai/voice/conversation/start', {
           languageId: 1,
           topic: 'job interview',
           level: 'advanced'
@@ -55,7 +55,7 @@ export default function QuickTest() {
       name: 'Cultural Content',
       icon: Zap,
       mutation: useMutation({
-        mutationFn: () => apiRequest('POST', '/api/ai/cultural-content', {
+        mutationFn: () => apiRequestJson<unknown>('POST', '/api/ai/cultural-content', {
           language: selectedLanguage,
           topic: 'business etiquette',
           level: 'professional'
@@ -114,19 +114,24 @@ export default function QuickTest() {
         {quickTests.some(test => test.mutation.data) && (
           <ScrollArea className="h-32 mt-4 border rounded p-2">
             <div className="space-y-2 text-xs">
-              {quickTests.map((test, i) => 
-                test.mutation.data && (
+              {quickTests.map((test, i) => {
+                if (test.mutation.data === undefined || test.mutation.data === null) {
+                  return null;
+                }
+
+                const serialized = typeof test.mutation.data === "string"
+                  ? test.mutation.data
+                  : JSON.stringify(test.mutation.data);
+
+                return (
                   <div key={i} className="flex items-center gap-2">
                     <Badge variant="outline">{test.name}</Badge>
                     <span className="text-muted-foreground">
-                      {typeof test.mutation.data === 'object' 
-                        ? JSON.stringify(test.mutation.data).substring(0, 40) + '...'
-                        : test.mutation.data.toString().substring(0, 40) + '...'
-                      }
+                      {(serialized ?? String(test.mutation.data)).substring(0, 40) + "..."}
                     </span>
                   </div>
-                )
-              )}
+                );
+              })}
             </div>
           </ScrollArea>
         )}

@@ -1,436 +1,374 @@
 import { BaseService } from './BaseService';
-import { GeminiService } from './GeminiService';
-import { User, UserLanguage, Language } from '../../shared/schema';
-import { storage } from '../storage';
-
-export interface LearningProfile {
-  userId: number;
-  languageId: number;
-  knowledgeState: KnowledgeState;
-  learningStyle: LearningStyle;
-  performance: PerformanceMetrics;
-  preferences: LearningPreferences;
-  adaptations: AdaptationHistory[];
-}
-
-export interface KnowledgeState {
-  masteredConcepts: string[];
-  strugglingConcepts: string[];
-  recentMistakes: MistakeRecord[];
-  skillLevels: { [skill: string]: number }; // 0-100
-  confidenceScores: { [topic: string]: number }; // 0-100
-  lastAssessment: Date;
-}
-
-export interface LearningStyle {
-  visual: number; // 0-100
-  auditory: number; // 0-100
-  kinesthetic: number; // 0-100
-  reading: number; // 0-100
-  preferredPace: 'slow' | 'medium' | 'fast';
-  sessionLength: number; // preferred minutes
-}
-
-export interface PerformanceMetrics {
-  accuracy: number; // 0-100
-  speed: number; // responses per minute
-  retention: number; // 0-100
-  engagement: number; // 0-100
-  streak: number;
-  totalSessions: number;
-  averageSessionTime: number;
-}
-
-export interface LearningPreferences {
-  interests: string[];
-  goals: string[];
-  motivations: string[];
-  timeOfDay: 'morning' | 'afternoon' | 'evening';
-  difficulty: 'easy' | 'medium' | 'challenging';
-  feedbackStyle: 'encouraging' | 'neutral' | 'detailed';
-}
-
-export interface MistakeRecord {
-  concept: string;
-  mistake: string;
-  correction: string;
-  timestamp: Date;
-  repeated: number;
-}
-
-export interface AdaptationHistory {
-  timestamp: Date;
-  trigger: string;
-  adaptation: string;
-  effectiveness: number; // 0-100
-}
-
-export interface ContentRecommendation {
-  type: 'lesson' | 'exercise' | 'review' | 'challenge';
-  content: any;
-  reasoning: string;
-  priority: number; // 1-10
-  estimatedTime: number;
-  difficulty: number; // 1-5
-}
+import { db } from '../db';
+import { 
+  learningProfiles, 
+  lessonCompletions,
+  exercises,
+  exerciseSubmissions,
+  voiceSessions,
+  pronunciationAnalyses,
+  activitySummaries,
+  LearningProfile
+} from '../../shared/schema';
+import { eq, and, desc, gte, sql } from 'drizzle-orm';
 
 /**
- * AI-powered adaptive learning service that personalizes content based on user performance
+ * Adaptive Learning Service for analyzing performance and adjusting content
+ * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
  */
 export class AdaptiveLearningService extends BaseService {
-  private geminiService: GeminiService;
-  private learningProfiles: Map<string, LearningProfile> = new Map();
-
-  constructor(geminiService: GeminiService) {
+  constructor() {
     super();
-    this.geminiService = geminiService;
-    this.log("Adaptive Learning service initialized", "info");
+    this.log("AdaptiveLearningService initialized", "info");
   }
 
   /**
-   * Get or create learning profile for user
+   * Analyze performance after a learning activity
+   * Requirements: 4.1, 4.2
    */
-  async getLearningProfile(userId: number, languageId: number): Promise<LearningProfile> {
-    const key = `${userId}_${languageId}`;
-    
-    if (!this.learningProfiles.has(key)) {
-      const profile = await this.createLearningProfile(userId, languageId);
-      this.learningProfiles.set(key, profile);
-    }
-    
-    return this.learningProfiles.get(key)!;
-  }
-
-  /**
-   * Create initial learning profile
-   */
-  private async createLearningProfile(userId: number, languageId: number): Promise<LearningProfile> {
-    return {
-      userId,
-      languageId,
-      knowledgeState: {
-        masteredConcepts: [],
-        strugglingConcepts: [],
-        recentMistakes: [],
-        skillLevels: {
-          vocabulary: 0,
-          grammar: 0,
-          listening: 0,
-          speaking: 0,
-          reading: 0,
-          writing: 0
-        },
-        confidenceScores: {},
-        lastAssessment: new Date()
-      },
-      learningStyle: {
-        visual: 50,
-        auditory: 50,
-        kinesthetic: 25,
-        reading: 50,
-        preferredPace: 'medium',
-        sessionLength: 30
-      },
-      performance: {
-        accuracy: 50,
-        speed: 5,
-        retention: 50,
-        engagement: 50,
-        streak: 0,
-        totalSessions: 0,
-        averageSessionTime: 0
-      },
-      preferences: {
-        interests: [],
-        goals: [],
-        motivations: [],
-        timeOfDay: 'evening',
-        difficulty: 'medium',
-        feedbackStyle: 'encouraging'
-      },
-      adaptations: []
+  async analyzePerformance(params: {
+    profileId: string;
+    activityType: 'lesson' | 'exercise' | 'voice' | 'pronunciation' | 'tutor';
+    metrics: {
+      accuracy: number;
+      completionTime: number;
+      errorsCount: number;
+      errorPatterns: string[];
     };
+  }): Promise<{
+    performanceLevel: 'excellent' | 'good' | 'average' | 'needs_improvement';
+    recommendations: string[];
+    difficultyAdjustment: number;
+  }> {
+    try {
+      this.log(`Analyzing performance for profile ${params.profileId}`, "info");
+
+      const { accuracy, completionTime, errorsCount, errorPatterns } = params.metrics;
+
+      // Determine performance level
+      let performanceLevel: 'excellent' | 'good' | 'average' | 'needs_improvement';
+      if (accuracy >= 90) {
+        performanceLevel = 'excellent';
+      } else if (accuracy >= 75) {
+        performanceLevel = 'good';
+      } else if (accuracy >= 60) {
+        performanceLevel = 'average';
+      } else {
+        performanceLevel = 'needs_improvement';
+      }
+
+      // Generate recommendations
+      const recommendations: string[] = [];
+      if (accuracy < 70) {
+        recommendations.push("Review fundamental concepts before moving forward");
+        recommendations.push("Practice more exercises on weak areas");
+      }
+      if (errorsCount > 5) {
+        recommendations.push("Focus on accuracy over speed");
+      }
+      if (errorPatterns.length > 0) {
+        recommendations.push(`Pay special attention to: ${errorPatterns.join(', ')}`);
+      }
+
+      // Calculate difficulty adjustment
+      let difficultyAdjustment = 0;
+      if (accuracy >= 90 && errorsCount < 2) {
+        difficultyAdjustment = 1; // Increase difficulty
+      } else if (accuracy < 60 || errorsCount > 8) {
+        difficultyAdjustment = -1; // Decrease difficulty
+      }
+
+      // Update activity summary
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      await db.insert(activitySummaries).values({
+        profileId: params.profileId,
+        date: today,
+        activityType: params.activityType,
+        count: 1,
+        xpEarned: 0, // Will be updated by other services
+        averageAccuracy: Math.round(accuracy)
+      }).onConflictDoUpdate({
+        target: [activitySummaries.profileId, activitySummaries.date, activitySummaries.activityType],
+        set: {
+          count: sql`${activitySummaries.count} + 1`,
+          averageAccuracy: sql`(${activitySummaries.averageAccuracy} + ${Math.round(accuracy)}) / 2`
+        }
+      });
+
+      return {
+        performanceLevel,
+        recommendations,
+        difficultyAdjustment
+      };
+    } catch (error) {
+      throw this.handleError(error, "AdaptiveLearningService.analyzePerformance");
+    }
   }
 
   /**
-   * Update learning profile based on session data
+   * Update proficiency level based on performance
+   * Requirements: 4.6
    */
-  async updateLearningProfile(
-    userId: number,
-    languageId: number,
-    sessionData: {
-      responses: Array<{
-        question: string;
-        userAnswer: string;
-        correctAnswer: string;
-        isCorrect: boolean;
-        responseTime: number;
-        concept: string;
-      }>;
-      sessionDuration: number;
-      engagement: number;
-    }
-  ): Promise<void> {
+  async updateProficiencyLevel(profileId: string): Promise<string> {
     try {
-      const profile = await this.getLearningProfile(userId, languageId);
-      
-      // Update performance metrics
-      const accuracy = sessionData.responses.reduce((acc, r) => acc + (r.isCorrect ? 1 : 0), 0) / sessionData.responses.length * 100;
-      profile.performance.accuracy = (profile.performance.accuracy + accuracy) / 2;
-      profile.performance.totalSessions++;
-      profile.performance.averageSessionTime = (profile.performance.averageSessionTime + sessionData.sessionDuration) / 2;
-      profile.performance.engagement = (profile.performance.engagement + sessionData.engagement) / 2;
-      
-      // Update knowledge state
-      sessionData.responses.forEach(response => {
-        if (response.isCorrect) {
-          if (!profile.knowledgeState.masteredConcepts.includes(response.concept)) {
-            profile.knowledgeState.masteredConcepts.push(response.concept);
+      this.log(`Updating proficiency level for profile ${profileId}`, "info");
+
+      const profile = await db.query.learningProfiles.findFirst({
+        where: eq(learningProfiles.id, profileId)
+      });
+
+      if (!profile) {
+        throw new Error("Learning profile not found");
+      }
+
+      // Get recent performance data
+      const recentCompletions = await db.query.lessonCompletions.findMany({
+        where: eq(lessonCompletions.profileId, profileId),
+        limit: 10,
+        orderBy: desc(lessonCompletions.completedAt)
+      });
+
+      if (recentCompletions.length < 5) {
+        return profile.proficiencyLevel; // Not enough data
+      }
+
+      // Calculate average accuracy
+      const totalAccuracy = recentCompletions.reduce((sum, completion) => {
+        const metrics = completion.performanceMetrics as any;
+        return sum + (metrics.accuracy || 0);
+      }, 0);
+      const avgAccuracy = totalAccuracy / recentCompletions.length;
+
+      // Determine if level should change
+      let newLevel = profile.proficiencyLevel;
+      const currentLevel = profile.proficiencyLevel;
+
+      if (currentLevel === 'Beginner' && avgAccuracy >= 85 && recentCompletions.length >= 10) {
+        newLevel = 'Intermediate';
+      } else if (currentLevel === 'Intermediate' && avgAccuracy >= 90 && recentCompletions.length >= 20) {
+        newLevel = 'Advanced';
+      } else if (currentLevel === 'Advanced' && avgAccuracy >= 95 && recentCompletions.length >= 30) {
+        newLevel = 'Fluent';
+      }
+
+      // Update if changed
+      if (newLevel !== currentLevel) {
+        await db.update(learningProfiles)
+          .set({ 
+            proficiencyLevel: newLevel,
+            updatedAt: new Date()
+          })
+          .where(eq(learningProfiles.id, profileId));
+
+        this.log(`Proficiency level updated from ${currentLevel} to ${newLevel}`, "info");
+      }
+
+      return newLevel;
+    } catch (error) {
+      throw this.handleError(error, "AdaptiveLearningService.updateProficiencyLevel");
+    }
+  }
+
+  /**
+   * Identify weakness areas from performance patterns
+   * Requirements: 4.5
+   */
+  async identifyWeaknesses(profileId: string): Promise<Array<{
+    topic: string;
+    category: 'vocabulary' | 'grammar' | 'pronunciation' | 'listening';
+    severity: number;
+    identifiedAt: Date;
+    improvementRate: number;
+  }>> {
+    try {
+      this.log(`Identifying weaknesses for profile ${profileId}`, "info");
+
+      const profile = await db.query.learningProfiles.findFirst({
+        where: eq(learningProfiles.id, profileId)
+      });
+
+      if (!profile) {
+        throw new Error("Learning profile not found");
+      }
+
+      // Get recent exercise submissions
+      const recentExercises = await db.query.exerciseSubmissions.findMany({
+        where: eq(exerciseSubmissions.profileId, profileId),
+        limit: 50,
+        orderBy: desc(exerciseSubmissions.submittedAt)
+      });
+
+      // Analyze error patterns
+      const errorsByTopic: Map<string, { count: number; total: number }> = new Map();
+
+      for (const submission of recentExercises) {
+        const exercise = await db.query.exercises.findFirst({
+          where: eq(exercises.id, submission.exerciseId)
+        });
+
+        if (exercise && exercise.targetWeakness) {
+          const topic = exercise.targetWeakness;
+          const stats = errorsByTopic.get(topic) || { count: 0, total: 0 };
+          stats.total++;
+          if (!submission.isCorrect) {
+            stats.count++;
           }
-          // Remove from struggling if now mastered
-          const index = profile.knowledgeState.strugglingConcepts.indexOf(response.concept);
-          if (index > -1) {
-            profile.knowledgeState.strugglingConcepts.splice(index, 1);
-          }
-        } else {
-          if (!profile.knowledgeState.strugglingConcepts.includes(response.concept)) {
-            profile.knowledgeState.strugglingConcepts.push(response.concept);
-          }
-          
-          // Record mistake
-          profile.knowledgeState.recentMistakes.push({
-            concept: response.concept,
-            mistake: response.userAnswer,
-            correction: response.correctAnswer,
-            timestamp: new Date(),
-            repeated: profile.knowledgeState.recentMistakes.filter(m => 
-              m.concept === response.concept && m.mistake === response.userAnswer
-            ).length
+          errorsByTopic.set(topic, stats);
+        }
+      }
+
+      // Convert to weakness areas
+      const weaknesses: Array<any> = [];
+      errorsByTopic.forEach((stats, topic) => {
+        const errorRate = stats.count / stats.total;
+        if (errorRate > 0.3) { // More than 30% error rate
+          weaknesses.push({
+            topic,
+            category: this.categorizeWeakness(topic),
+            severity: Math.round(errorRate * 100),
+            identifiedAt: new Date(),
+            improvementRate: 0 // Would be calculated from historical data
           });
         }
       });
-      
-      // Keep only recent mistakes (last 50)
-      profile.knowledgeState.recentMistakes = profile.knowledgeState.recentMistakes
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-        .slice(0, 50);
-      
-      this.learningProfiles.set(`${userId}_${languageId}`, profile);
+
+      // Update profile with weaknesses
+      await db.update(learningProfiles)
+        .set({ 
+          weaknesses: weaknesses,
+          updatedAt: new Date()
+        })
+        .where(eq(learningProfiles.id, profileId));
+
+      return weaknesses;
     } catch (error) {
-      this.handleError(error, "AdaptiveLearningService.updateLearningProfile");
+      throw this.handleError(error, "AdaptiveLearningService.identifyWeaknesses");
     }
   }
 
   /**
-   * Get personalized content recommendations
+   * Adjust difficulty based on recent performance
+   * Requirements: 4.3, 4.4
    */
-  async getRecommendations(
-    userId: number,
-    languageId: number,
-    sessionType: 'lesson' | 'practice' | 'review' | 'assessment'
-  ): Promise<ContentRecommendation[]> {
-    try {
-      const profile = await this.getLearningProfile(userId, languageId);
-      const language = await storage.getLanguageByCode('en'); // This would be dynamic
-      
-      const prompt = `
-        Generate personalized learning recommendations for a language learner.
-        
-        User Profile:
-        - Session Type: ${sessionType}
-        - Mastered Concepts: ${profile.knowledgeState.masteredConcepts.join(', ')}
-        - Struggling Concepts: ${profile.knowledgeState.strugglingConcepts.join(', ')}
-        - Recent Mistakes: ${profile.knowledgeState.recentMistakes.map(m => `${m.concept}: ${m.mistake} -> ${m.correction}`).join(', ')}
-        - Accuracy: ${profile.performance.accuracy}%
-        - Learning Style: Visual(${profile.learningStyle.visual}%), Auditory(${profile.learningStyle.auditory}%), Reading(${profile.learningStyle.reading}%)
-        - Preferred Session Length: ${profile.learningStyle.sessionLength} minutes
-        - Interests: ${profile.preferences.interests.join(', ')}
-        
-        Generate 3-5 personalized recommendations with:
-        1. Focus on struggling concepts
-        2. Reinforce recent mistakes
-        3. Match learning style preferences
-        4. Consider session length and difficulty preferences
-        
-        Return JSON array:
-        [
-          {
-            "type": "lesson|exercise|review|challenge",
-            "content": {
-              "title": "content_title",
-              "description": "what_this_covers",
-              "concepts": ["concept1", "concept2"],
-              "activities": ["activity_type1", "activity_type2"]
-            },
-            "reasoning": "why_this_is_recommended",
-            "priority": 1-10,
-            "estimatedTime": minutes,
-            "difficulty": 1-5
-          }
-        ]
-      `;
-
-      const response = await this.geminiService.generateContent(prompt);
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "AdaptiveLearningService.getRecommendations");
-      return [];
-    }
-  }
-
-  /**
-   * Analyze user performance and suggest difficulty adjustments
-   */
-  async analyzeDifficultyAdjustment(
-    userId: number,
-    languageId: number,
-    recentSessions: number = 5
-  ): Promise<{
+  async adjustDifficulty(params: {
     currentDifficulty: number;
-    suggestedDifficulty: number;
+    recentPerformance: Array<{ accuracy: number; completionTime: number }>;
+  }): Promise<number> {
+    try {
+      this.log("Adjusting difficulty based on performance", "info");
+
+      if (params.recentPerformance.length === 0) {
+        return params.currentDifficulty;
+      }
+
+      // Calculate average accuracy
+      const avgAccuracy = params.recentPerformance.reduce((sum, p) => sum + p.accuracy, 0) / params.recentPerformance.length;
+
+      let newDifficulty = params.currentDifficulty;
+
+      // Adjust based on accuracy
+      if (avgAccuracy >= 90) {
+        newDifficulty = Math.min(10, params.currentDifficulty + 1);
+      } else if (avgAccuracy >= 80) {
+        newDifficulty = Math.min(10, params.currentDifficulty + 0.5);
+      } else if (avgAccuracy < 60) {
+        newDifficulty = Math.max(1, params.currentDifficulty - 1);
+      } else if (avgAccuracy < 70) {
+        newDifficulty = Math.max(1, params.currentDifficulty - 0.5);
+      }
+
+      this.log(`Difficulty adjusted from ${params.currentDifficulty} to ${newDifficulty}`, "info");
+      return Math.round(newDifficulty * 10) / 10; // Round to 1 decimal
+    } catch (error) {
+      throw this.handleError(error, "AdaptiveLearningService.adjustDifficulty");
+    }
+  }
+
+  /**
+   * Recommend next activity based on profile
+   */
+  async recommendNextActivity(profileId: string): Promise<{
+    activityType: 'lesson' | 'exercise' | 'voice' | 'pronunciation' | 'review';
     reasoning: string;
-    adjustmentType: 'increase' | 'decrease' | 'maintain';
+    priority: number;
   }> {
     try {
-      const profile = await this.getLearningProfile(userId, languageId);
-      
-      const prompt = `
-        Analyze user performance and suggest difficulty adjustment.
-        
-        Performance Data:
-        - Current Accuracy: ${profile.performance.accuracy}%
-        - Recent Mistakes: ${profile.knowledgeState.recentMistakes.length}
-        - Engagement Level: ${profile.performance.engagement}%
-        - Mastered Concepts: ${profile.knowledgeState.masteredConcepts.length}
-        - Struggling Concepts: ${profile.knowledgeState.strugglingConcepts.length}
-        
-        Difficulty Guidelines:
-        - If accuracy > 85% and high engagement: increase difficulty
-        - If accuracy < 60% or low engagement: decrease difficulty
-        - If accuracy 60-85%: maintain current difficulty
-        
-        Return JSON:
-        {
-          "currentDifficulty": 1-5,
-          "suggestedDifficulty": 1-5,
-          "reasoning": "explanation_for_adjustment",
-          "adjustmentType": "increase|decrease|maintain"
-        }
-      `;
+      this.log(`Recommending next activity for profile ${profileId}`, "info");
 
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "AdaptiveLearningService.analyzeDifficultyAdjustment");
+      const profile = await db.query.learningProfiles.findFirst({
+        where: eq(learningProfiles.id, profileId)
+      });
+
+      if (!profile) {
+        throw new Error("Learning profile not found");
+      }
+
+      // Get recent activity
+      const recentLessons = await db.query.lessonCompletions.findMany({
+        where: eq(lessonCompletions.profileId, profileId),
+        limit: 5,
+        orderBy: desc(lessonCompletions.completedAt)
+      });
+
+      const recentExercises = await db.query.exerciseSubmissions.findMany({
+        where: eq(exerciseSubmissions.profileId, profileId),
+        limit: 5,
+        orderBy: desc(exerciseSubmissions.submittedAt)
+      });
+
+      // Determine recommendation
+      if (recentLessons.length === 0) {
+        return {
+          activityType: 'lesson',
+          reasoning: "Start with a structured lesson to build foundation",
+          priority: 10
+        };
+      }
+
+      if (recentExercises.length < recentLessons.length) {
+        return {
+          activityType: 'exercise',
+          reasoning: "Practice what you've learned with exercises",
+          priority: 8
+        };
+      }
+
+      const weaknesses = profile.weaknesses as any[];
+      if (weaknesses && weaknesses.length > 0) {
+        return {
+          activityType: 'review',
+          reasoning: "Review weak areas to improve understanding",
+          priority: 9
+        };
+      }
+
       return {
-        currentDifficulty: 3,
-        suggestedDifficulty: 3,
-        reasoning: "Unable to analyze performance data",
-        adjustmentType: 'maintain'
+        activityType: 'lesson',
+        reasoning: "Continue learning with the next lesson",
+        priority: 7
       };
+    } catch (error) {
+      throw this.handleError(error, "AdaptiveLearningService.recommendNextActivity");
     }
   }
 
   /**
-   * Generate spaced repetition schedule
+   * Helper to categorize weakness
    */
-  async generateSpacedRepetition(
-    userId: number,
-    languageId: number
-  ): Promise<Array<{
-    concept: string;
-    nextReview: Date;
-    interval: number; // days
-    repetitions: number;
-    easiness: number;
-  }>> {
-    try {
-      const profile = await this.getLearningProfile(userId, languageId);
-      const now = new Date();
-      
-      const items = [];
-      
-      // Add struggling concepts for more frequent review
-      profile.knowledgeState.strugglingConcepts.forEach(concept => {
-        items.push({
-          concept,
-          nextReview: new Date(now.getTime() + (1 * 24 * 60 * 60 * 1000)), // 1 day
-          interval: 1,
-          repetitions: 0,
-          easiness: 1.3
-        });
-      });
-      
-      // Add mastered concepts for spaced review
-      profile.knowledgeState.masteredConcepts.forEach(concept => {
-        items.push({
-          concept,
-          nextReview: new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)), // 7 days
-          interval: 7,
-          repetitions: 1,
-          easiness: 2.5
-        });
-      });
-      
-      return items;
-    } catch (error) {
-      this.handleError(error, "AdaptiveLearningService.generateSpacedRepetition");
-      return [];
-    }
-  }
-
-  /**
-   * Get learning insights for user
-   */
-  async getLearningInsights(userId: number, languageId: number): Promise<{
-    strengths: string[];
-    weaknesses: string[];
-    recommendations: string[];
-    progress: number;
-    nextMilestone: string;
-  }> {
-    try {
-      const profile = await this.getLearningProfile(userId, languageId);
-      
-      const prompt = `
-        Generate learning insights for a language learner.
-        
-        Profile Data:
-        - Mastered: ${profile.knowledgeState.masteredConcepts.length} concepts
-        - Struggling: ${profile.knowledgeState.strugglingConcepts.length} concepts
-        - Accuracy: ${profile.performance.accuracy}%
-        - Engagement: ${profile.performance.engagement}%
-        - Sessions: ${profile.performance.totalSessions}
-        - Streak: ${profile.performance.streak}
-        
-        Provide insights on:
-        1. Key strengths (what they're doing well)
-        2. Areas for improvement
-        3. Actionable recommendations
-        4. Overall progress assessment
-        5. Next learning milestone
-        
-        Return JSON:
-        {
-          "strengths": ["strength1", "strength2"],
-          "weaknesses": ["weakness1", "weakness2"],
-          "recommendations": ["recommendation1", "recommendation2"],
-          "progress": 0-100,
-          "nextMilestone": "description_of_next_goal"
-        }
-      `;
-
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "AdaptiveLearningService.getLearningInsights");
-      return {
-        strengths: ["Consistent practice"],
-        weaknesses: ["Need more vocabulary work"],
-        recommendations: ["Focus on daily vocabulary practice"],
-        progress: 50,
-        nextMilestone: "Complete beginner level"
-      };
+  private categorizeWeakness(topic: string): 'vocabulary' | 'grammar' | 'pronunciation' | 'listening' {
+    const lowerTopic = topic.toLowerCase();
+    if (lowerTopic.includes('vocab') || lowerTopic.includes('word')) {
+      return 'vocabulary';
+    } else if (lowerTopic.includes('grammar') || lowerTopic.includes('tense') || lowerTopic.includes('conjugation')) {
+      return 'grammar';
+    } else if (lowerTopic.includes('pronunc') || lowerTopic.includes('sound')) {
+      return 'pronunciation';
+    } else {
+      return 'listening';
     }
   }
 }
+
+export const adaptiveLearningService = new AdaptiveLearningService();

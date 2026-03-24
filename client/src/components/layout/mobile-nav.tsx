@@ -8,7 +8,7 @@ export default function MobileNav() {
     { path: "/", label: "Home", icon: "bx-dashboard" },
     { path: "/lessons", label: "Lessons", icon: "bx-book-open" },
     { path: "/practice", label: "Practice", icon: "bx-cycling" },
-    { path: "/leaderboard", label: "Leaders", icon: "bx-bar-chart-alt-2" },
+    { path: "/progress", label: "Progress", icon: "bx-line-chart" },
     { path: "/profile", label: "Profile", icon: "bx-user" },
   ];
 

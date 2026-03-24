@@ -47,7 +47,7 @@ const PronunciationChallenge = ({ language, text, onComplete }: PronunciationCha
     try {
       setIsProcessing(true);
       
-      const response = await apiRequest('POST', '/api/gemini/pronunciation', {
+      const response = await apiRequest('POST', '/api/practice/pronunciation', {
         language,
         originalText: text,
         audioTranscription
@@ -69,12 +69,19 @@ const PronunciationChallenge = ({ language, text, onComplete }: PronunciationCha
   };
 
   const speakText = () => {
-    // Text-to-speech functionality
+    // Text-to-speech functionality with proper language codes
     const utterance = new SpeechSynthesisUtterance(text);
-    // Set language code appropriately
-    utterance.lang = language === 'Spanish' ? 'es-ES' : 
-                     language === 'French' ? 'fr-FR' : 
-                     language === 'German' ? 'de-DE' : 'en-US';
+    
+    // Map language names to proper language codes
+    const languageCodes: Record<string, string> = {
+      'Spanish': 'es-ES',
+      'Mandarin Chinese': 'zh-CN',
+      'English': 'en-US',
+      'Hindi': 'hi-IN',
+      'Arabic': 'ar-SA',
+    };
+    
+    utterance.lang = languageCodes[language] || 'en-US';
     window.speechSynthesis.speak(utterance);
   };
 

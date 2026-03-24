@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,17 +9,15 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Loader2, Globe2, BookOpen, Trophy, Sparkles, Flame, ChevronLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
 
-// Extended schemas with validation
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -30,285 +28,174 @@ const registerSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   displayName: z.string().optional().or(z.literal("")),
-}).refine((data) => data.password === data.confirmPassword, {
+}).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
+const inputCls =
+  "h-14 px-4 text-base border-2 rounded-xl bg-neutral-50 dark:bg-neutral-900 focus-visible:ring-0 focus-visible:border-primary transition-colors placeholder:text-muted-foreground/60";
+const btnCls =
+  "w-full h-14 text-base font-black uppercase tracking-wide rounded-xl shadow-lg border-b-4 border-primary/70 active:border-b-0 active:translate-y-1 transition-all";
+
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  const [activeTab, setActiveTab] = useState("login");
-  const [location, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState<"login" | "register">("register");
+  const [, navigate] = useLocation();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
+    defaultValues: { username: "", password: "" },
   });
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-      confirmPassword: "",
-      email: "",
-      displayName: "",
-    },
+    defaultValues: { username: "", password: "", confirmPassword: "", email: "", displayName: "" },
   });
 
-  // If the user is logged in, redirect to dashboard
   useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
+    if (user) navigate("/");
   }, [user, navigate]);
 
-  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
-    try {
-      loginMutation.mutate(values);
-    } catch (error) {
-      console.error("Login form submission error:", error);
-    }
+  const onLoginSubmit = (values: z.infer<typeof loginSchema>) => {
+    loginMutation.mutate(values);
   };
 
-  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
-    try {
-      const { confirmPassword, ...userValues } = values;
-      registerMutation.mutate(userValues);
-    } catch (error) {
-      console.error("Registration form submission error:", error);
-    }
+  const onRegisterSubmit = (values: z.infer<typeof registerSchema>) => {
+    const { confirmPassword, ...userValues } = values;
+    registerMutation.mutate(userValues);
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Authentication Form Side */}
-      <div className="flex-1 flex flex-col justify-center items-center p-6 md:p-12 bg-background">
-        <div className="mb-8 flex items-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-12 w-12 rounded-lg mr-2 text-primary"
-          >
-            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-            <path d="M7.5 12h9M12 7.5v9" />
-          </svg>
-          <h1 className="text-3xl font-bold text-primary dark:text-primary">
-            LinguaMaster
-          </h1>
+    <div className="min-h-screen flex w-full bg-background overflow-hidden">
+      {/* ── FORM SIDE ── */}
+      <div className="w-full lg:w-[48%] flex flex-col justify-center items-center p-6 sm:p-12 relative z-10">
+        <div className="absolute top-6 left-6">
+          <Link href="/landing">
+            <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground font-semibold rounded-xl">
+              <ChevronLeft className="w-4 h-4" /> Back
+            </Button>
+          </Link>
         </div>
 
-        <div className="w-full max-w-md">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
+        <div className="w-full max-w-sm">
+          <div className="flex items-center justify-center lg:justify-start gap-3 mb-10">
+            <img src="/logo-icon.png" alt="LinguaMaster" className="h-14 w-14 object-contain drop-shadow-md" />
+            <h1 className="text-3xl font-black tracking-tight text-foreground">LinguaMaster</h1>
+          </div>
+
+          <div className="mb-8">
+            <h2 className="text-3xl font-extrabold mb-2">
+              {activeTab === "login" ? "Welcome back!" : "Join for free"}
+            </h2>
+            <p className="text-muted-foreground font-medium">
+              {activeTab === "login"
+                ? "Continue your language learning journey."
+                : "Start mastering a new language today."}
+            </p>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8 bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1">
+              <TabsTrigger value="login" className="rounded-lg font-bold text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-900 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">Sign In</TabsTrigger>
+              <TabsTrigger value="register" className="rounded-lg font-bold text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-900 data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">Create Account</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="login" className="space-y-4">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold">Welcome back</h2>
-                <p className="text-muted-foreground">
-                  Enter your credentials to continue your language journey
-                </p>
-              </div>
-
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
-                  <FormField
-                    control={loginForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter your username" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-primary"
-                    disabled={loginMutation.isPending}
-                  >
-                    {loginMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Sign In
-                  </Button>
-                </form>
-              </Form>
+            <TabsContent value="login">
+              <AnimatePresence mode="wait">
+                <motion.div key="login" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.25 }}>
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                      <FormField control={loginForm.control} name="username" render={({ field }) => (
+                        <FormItem><FormControl><Input placeholder="Username" className={inputCls} {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={loginForm.control} name="password" render={({ field }) => (
+                        <FormItem><FormControl><Input type="password" placeholder="Password" className={inputCls} {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <Button type="submit" className={btnCls} disabled={loginMutation.isPending}>
+                        {loginMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
+                      </Button>
+                    </form>
+                  </Form>
+                </motion.div>
+              </AnimatePresence>
             </TabsContent>
 
-            <TabsContent value="register" className="space-y-4">
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold">Create an account</h2>
-                <p className="text-muted-foreground">
-                  Join LinguaMaster and start your language learning journey
-                </p>
-              </div>
-
-              <Form {...registerForm}>
-                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                  <FormField
-                    control={registerForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Choose a username" {...field} value={field.value ?? ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={registerForm.control}
-                    name="displayName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Display Name (optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="How others will see you" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={registerForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email (optional)</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="your.email@example.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={registerForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                          At least 6 characters
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={registerForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button
-                    type="submit"
-                    className="w-full bg-primary"
-                    disabled={registerMutation.isPending}
-                  >
-                    {registerMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Create Account
-                  </Button>
-                </form>
-              </Form>
+            <TabsContent value="register">
+              <AnimatePresence mode="wait">
+                <motion.div key="register" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.25 }}>
+                  <Form {...registerForm}>
+                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-3">
+                      <FormField control={registerForm.control} name="username" render={({ field }) => (
+                        <FormItem><FormControl><Input placeholder="Username" className={inputCls} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={registerForm.control} name="email" render={({ field }) => (
+                        <FormItem><FormControl><Input type="email" placeholder="Email (optional)" className={inputCls} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={registerForm.control} name="password" render={({ field }) => (
+                        <FormItem><FormControl><Input type="password" placeholder="Password" className={inputCls} {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={registerForm.control} name="confirmPassword" render={({ field }) => (
+                        <FormItem><FormControl><Input type="password" placeholder="Confirm Password" className={inputCls} {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <Button type="submit" className={btnCls} disabled={registerMutation.isPending}>
+                        {registerMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create Account"}
+                      </Button>
+                    </form>
+                  </Form>
+                </motion.div>
+              </AnimatePresence>
             </TabsContent>
           </Tabs>
         </div>
       </div>
 
-      {/* Hero Section Side */}
-      <div className="flex-1 bg-primary p-12 hidden md:flex flex-col justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/90 to-primary"></div>
-        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-primary-foreground rounded-full opacity-10"></div>
-        <div className="absolute top-16 -left-16 w-64 h-64 bg-primary-foreground rounded-full opacity-10"></div>
-        
-        <div className="relative z-10 text-primary-foreground max-w-md">
-          <h2 className="text-4xl font-bold mb-6">Master Languages with LinguaMaster</h2>
-          <p className="text-xl mb-8">
-            Your journey to fluency in the world's top languages starts here. Learn through
-            gamification, AI-personalized lessons, and track your progress.
-          </p>
-          
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="mr-4 bg-primary-foreground/20 p-2 rounded-full">
-                <i className="bx bx-check text-xl"></i>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">Gamified Learning</h3>
-                <p>Make learning fun with points, streaks, and achievements</p>
-              </div>
+      {/* ── HERO SIDE ── */}
+      <div className="hidden lg:flex flex-1 relative bg-gradient-to-br from-primary via-primary to-primary/80 items-center justify-center p-12 overflow-hidden">
+        <div className="absolute top-16 left-16 w-40 h-40 bg-white/10 rounded-3xl rotate-12 blur-sm" />
+        <div className="absolute bottom-24 right-16 w-56 h-56 bg-white/10 rounded-full blur-md" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_40%,_rgba(255,255,255,0.08)_0%,_transparent_70%)]" />
+
+        <div className="relative z-10 w-full max-w-md text-primary-foreground">
+          <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }} className="flex justify-center mb-10">
+            <div className="relative">
+              <div className="absolute inset-0 bg-white/20 rounded-full blur-2xl scale-125" />
+              <img src="/logo-icon.png" alt="LinguaMaster" className="relative w-40 h-40 object-contain drop-shadow-2xl" />
+              <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="absolute -top-3 -right-3 bg-yellow-400 text-yellow-900 font-black text-xs px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1">
+                <Flame className="w-3.5 h-3.5" /> 7-day streak!
+              </motion.div>
             </div>
-            
-            <div className="flex items-start">
-              <div className="mr-4 bg-primary-foreground/20 p-2 rounded-full">
-                <i className="bx bx-check text-xl"></i>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">AI Personalization</h3>
-                <p>Lessons adapt to your learning pace and style</p>
-              </div>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}>
+            <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full font-bold uppercase tracking-widest text-xs mb-5 border border-white/30">
+              <Sparkles className="w-3.5 h-3.5" /> The ultimate learning adventure
             </div>
-            
-            <div className="flex items-start">
-              <div className="mr-4 bg-primary-foreground/20 p-2 rounded-full">
-                <i className="bx bx-check text-xl"></i>
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">Focus on Top Languages</h3>
-                <p>Specialize in Mandarin, Spanish, English, Hindi and Arabic</p>
-              </div>
-            </div>
-          </div>
+            <h2 className="text-4xl lg:text-5xl font-black leading-[1.1] mb-5 drop-shadow">
+              Master Languages with <span className="text-emerald-300">LinguaMaster</span>
+            </h2>
+            <p className="text-lg font-medium text-primary-foreground/85 leading-relaxed mb-8">
+              AI-personalized lessons, voice coaching, gamified streaks, and cultural immersion — all in one place.
+            </p>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.7 }} className="grid gap-4">
+            {[
+              { icon: BookOpen, title: "AI Personalization", desc: "Adapts to your pace and style", color: "text-blue-400" },
+              { icon: Trophy, title: "Gamified Progress", desc: "XP, streaks, and achievements", color: "text-yellow-400" },
+              { icon: Globe2, title: "5 Top Languages", desc: "Mandarin, Spanish, English, Hindi, Arabic", color: "text-emerald-400" },
+            ].map((f, i) => (
+              <motion.div key={i} whileHover={{ x: 8 }} className="flex items-center gap-4 bg-white/10 p-4 rounded-2xl border border-white/20 backdrop-blur-sm cursor-default">
+                <div className="bg-white/20 p-2.5 rounded-xl shrink-0">
+                  <f.icon className={`w-5 h-5 ${f.color}`} />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">{f.title}</p>
+                  <p className="text-primary-foreground/70 text-xs font-medium">{f.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </div>
     </div>

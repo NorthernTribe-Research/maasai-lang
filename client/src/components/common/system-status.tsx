@@ -5,18 +5,18 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 export default function SystemStatus() {
-  const { data: health } = useQuery({
+  const { data: health } = useQuery<{ status: string }>({
     queryKey: ['/api/health'],
     refetchInterval: 30000
   });
 
-  const { data: languages } = useQuery({
+  const { data: languages } = useQuery<Array<{ id: number; name: string }>>({
     queryKey: ['/api/languages']
   });
 
   const services = [
     { name: 'API Server', status: health?.status === 'ok' ? 'operational' : 'checking', icon: CheckCircle },
-    { name: 'Database', status: languages?.length > 0 ? 'operational' : 'checking', icon: CheckCircle },
+    { name: 'Database', status: (languages && languages.length > 0) ? 'operational' : 'checking', icon: CheckCircle },
     { name: 'AI Services', status: 'operational', icon: CheckCircle },
     { name: 'Voice Engine', status: 'operational', icon: CheckCircle }
   ];

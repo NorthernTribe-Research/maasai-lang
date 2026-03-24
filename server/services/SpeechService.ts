@@ -1,405 +1,263 @@
 import { BaseService } from './BaseService';
-import { GeminiService } from './GeminiService';
+import { WhisperService } from './WhisperService';
+import { db } from '../db';
+import { pronunciationAnalyses, pronunciationTrends } from '../../shared/schema';
+import { eq, sql } from 'drizzle-orm';
 
-export interface PronunciationFeedback {
-  accuracy: number; // 0-100
-  feedback: string;
-  specificIssues: Array<{
-    phoneme: string;
-    issue: string;
-    suggestion: string;
-    timestamp: number; // position in audio
-  }>;
-  overallScore: number; // 0-100
-  improvements: string[];
-}
-
-export interface SpeechAnalysis {
-  transcript: string;
-  confidence: number;
-  pronunciation: PronunciationFeedback;
-  fluency: {
-    pace: number; // words per minute
-    pauses: number; // number of pauses
-    rhythm: string; // description
-    score: number; // 0-100
-  };
-  grammar: {
-    errors: Array<{
-      type: string;
-      error: string;
-      correction: string;
-      position: number;
-    }>;
-    score: number; // 0-100
-  };
-}
-
-export interface VoiceProfile {
-  userId: number;
-  languageCode: string;
-  baselineRecording?: string;
-  strengths: string[];
-  challenges: string[];
-  progress: {
-    phonemes: { [phoneme: string]: number }; // 0-100 accuracy
-    overallAccuracy: number;
-    fluencyScore: number;
-    confidenceLevel: number;
-  };
-  lastAssessment: Date;
-}
+const whisperService = new WhisperService();
 
 /**
- * AI-powered speech and pronunciation service
+ * Speech Service for pronunciation analysis and coaching
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7
  */
 export class SpeechService extends BaseService {
-  private geminiService: GeminiService;
-  private voiceProfiles: Map<string, VoiceProfile> = new Map();
-
-  constructor(geminiService: GeminiService) {
+  constructor() {
     super();
-    this.geminiService = geminiService;
-    this.log("Speech service initialized", "info");
+    this.log("SpeechService initialized", "info");
   }
 
   /**
-   * Generate text-to-speech audio (conceptual - would integrate with speech API)
+   * Analyze pronunciation and provide detailed feedback
+   * Requirements: 8.1, 8.2, 8.3, 8.4
    */
-  async generateSpeech(
-    text: string,
-    languageCode: string,
-    voice: 'male' | 'female' | 'child' = 'female',
-    speed: number = 1.0
-  ): Promise<{
-    audioUrl: string;
-    duration: number;
-    phonemes: Array<{
+  async analyzePronunciation(params: {
+    audioData: Buffer;
+    targetText: string;
+    language: string;
+    proficiencyLevel: string;
+  }): Promise<{
+    score: number;
+    feedback: string;
+    problematicPhonemes: Array<{
       phoneme: string;
-      start: number;
-      end: number;
+      accuracy: number;
+      position: number;
+      feedback: string;
     }>;
+    audioExamples: string[];
   }> {
     try {
-      // This would integrate with a TTS service like OpenAI's TTS, Google TTS, etc.
-      // For now, we'll simulate the response
-      
-      const prompt = `
-        Analyze the text for speech synthesis: "${text}"
-        Language: ${languageCode}
-        
-        Provide phonetic breakdown and timing estimates.
-        
-        Return JSON:
-        {
-          "audioUrl": "simulated_audio_url",
-          "duration": estimated_seconds,
-          "phonemes": [
-            {
-              "phoneme": "phoneme_symbol",
-              "start": start_time_ms,
-              "end": end_time_ms
-            }
-          ]
-        }
-      `;
+      this.log("Analyzing pronunciation", "info");
 
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "SpeechService.generateSpeech");
+      // Use Whisper to analyze pronunciation
+      const analysis = await whisperService.analyzePronunciation(
+        params.audioData,
+        params.targetText,
+        this.getLanguageCode(params.language)
+      );
+
+      // Calculate pronunciation score (0-100)
+      const score = analysis.pronunciation.accuracy;
+
+      // Generate detailed feedback
+      const feedback = this.generatePronunciationFeedback(
+        score,
+        analysis.pronunciation.issues,
+        params.proficiencyLevel
+      );
+
+      // Extract problematic phonemes
+      const problematicPhonemes = analysis.pronunciation.issues.map(issue => ({
+        phoneme: issue.word,
+        accuracy: 100 - (issue.expected === issue.actual ? 0 : 50),
+        position: 0,
+        feedback: issue.suggestion
+      }));
+
+      // Generate audio examples (URLs would point to pronunciation guides)
+      const audioExamples = this.generateAudioExampleUrls(
+        params.targetText,
+        params.language
+      );
+
+      this.log(`Pronunciation analyzed, score: ${score}`, "info");
+
       return {
-        audioUrl: "/api/tts/placeholder",
-        duration: text.length * 0.1, // rough estimate
-        phonemes: []
+        score,
+        feedback,
+        problematicPhonemes,
+        audioExamples
       };
+    } catch (error) {
+      throw this.handleError(error, "SpeechService.analyzePronunciation");
     }
   }
 
   /**
-   * Analyze pronunciation from audio input
+   * Generate pronunciation exercises for problematic sounds
+   * Requirements: 8.7
    */
-  async analyzePronunciation(
-    audioData: string, // base64 encoded audio
-    expectedText: string,
-    languageCode: string,
-    userId: number
-  ): Promise<PronunciationFeedback> {
-    try {
-      // This would integrate with speech recognition and pronunciation analysis
-      // For now, we'll use AI to simulate detailed feedback
-      
-      const prompt = `
-        Analyze pronunciation quality for language learning.
-        
-        Expected text: "${expectedText}"
-        Language: ${languageCode}
-        
-        Simulate detailed pronunciation feedback including:
-        1. Overall accuracy (0-100)
-        2. Specific phoneme issues
-        3. Actionable suggestions
-        4. Improvements to focus on
-        
-        Return JSON:
-        {
-          "accuracy": 0-100,
-          "feedback": "detailed_feedback_text",
-          "specificIssues": [
-            {
-              "phoneme": "phoneme_symbol",
-              "issue": "description_of_issue",
-              "suggestion": "how_to_improve",
-              "timestamp": position_in_audio_ms
-            }
-          ],
-          "overallScore": 0-100,
-          "improvements": ["improvement1", "improvement2"]
-        }
-      `;
-
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      const feedback = JSON.parse(response);
-      
-      // Update user's voice profile
-      await this.updateVoiceProfile(userId, languageCode, feedback);
-      
-      return feedback;
-    } catch (error) {
-      this.handleError(error, "SpeechService.analyzePronunciation");
-      return {
-        accuracy: 70,
-        feedback: "Good attempt! Keep practicing to improve your pronunciation.",
-        specificIssues: [],
-        overallScore: 70,
-        improvements: ["Practice more", "Focus on clarity"]
-      };
-    }
-  }
-
-  /**
-   * Comprehensive speech analysis
-   */
-  async analyzeSpeech(
-    audioData: string,
-    context: string,
-    languageCode: string,
-    userId: number
-  ): Promise<SpeechAnalysis> {
-    try {
-      const prompt = `
-        Perform comprehensive speech analysis for language learning.
-        
-        Context: "${context}"
-        Language: ${languageCode}
-        
-        Analyze:
-        1. Transcript accuracy
-        2. Pronunciation quality
-        3. Fluency (pace, pauses, rhythm)
-        4. Grammar correctness
-        
-        Return JSON:
-        {
-          "transcript": "recognized_text",
-          "confidence": 0-100,
-          "pronunciation": {
-            "accuracy": 0-100,
-            "feedback": "feedback_text",
-            "specificIssues": [],
-            "overallScore": 0-100,
-            "improvements": []
-          },
-          "fluency": {
-            "pace": words_per_minute,
-            "pauses": number_of_pauses,
-            "rhythm": "description",
-            "score": 0-100
-          },
-          "grammar": {
-            "errors": [
-              {
-                "type": "error_type",
-                "error": "incorrect_part",
-                "correction": "correct_version",
-                "position": word_position
-              }
-            ],
-            "score": 0-100
-          }
-        }
-      `;
-
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "SpeechService.analyzeSpeech");
-      return {
-        transcript: "Could not analyze speech",
-        confidence: 0,
-        pronunciation: {
-          accuracy: 50,
-          feedback: "Please try again",
-          specificIssues: [],
-          overallScore: 50,
-          improvements: []
-        },
-        fluency: {
-          pace: 0,
-          pauses: 0,
-          rhythm: "Unknown",
-          score: 50
-        },
-        grammar: {
-          errors: [],
-          score: 50
-        }
-      };
-    }
-  }
-
-  /**
-   * Generate pronunciation exercises
-   */
-  async generatePronunciationExercises(
-    languageCode: string,
-    difficulty: 'beginner' | 'intermediate' | 'advanced',
-    focusPhonemes: string[] = []
-  ): Promise<Array<{
-    id: string;
-    text: string;
-    audioUrl: string;
-    phonemes: string[];
-    difficulty: number;
-    tips: string[];
+  async generatePronunciationExercises(params: {
+    problematicPhonemes: string[];
+    language: string;
+  }): Promise<Array<{
+    targetPhoneme: string;
+    practiceWords: string[];
+    exampleAudioUrl: string;
+    instructions: string;
   }>> {
     try {
-      const prompt = `
-        Generate pronunciation exercises for ${languageCode} at ${difficulty} level.
-        ${focusPhonemes.length > 0 ? `Focus on phonemes: ${focusPhonemes.join(', ')}` : ''}
-        
-        Create 5-8 exercises with:
-        1. Carefully chosen text (words, phrases, sentences)
-        2. Progressive difficulty
-        3. Target phonemes
-        4. Specific pronunciation tips
-        
-        Return JSON array:
-        [
-          {
-            "id": "unique_id",
-            "text": "text_to_pronounce",
-            "audioUrl": "reference_audio_url",
-            "phonemes": ["target_phonemes"],
-            "difficulty": 1-5,
-            "tips": ["tip1", "tip2"]
-          }
-        ]
-      `;
+      this.log("Generating pronunciation exercises", "info");
 
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      return JSON.parse(response);
-    } catch (error) {
-      this.handleError(error, "SpeechService.generatePronunciationExercises");
-      return [];
-    }
-  }
+      const exercises = [];
 
-  /**
-   * Get voice profile for user
-   */
-  async getVoiceProfile(userId: number, languageCode: string): Promise<VoiceProfile> {
-    const key = `${userId}_${languageCode}`;
-    
-    if (!this.voiceProfiles.has(key)) {
-      const profile: VoiceProfile = {
-        userId,
-        languageCode,
-        strengths: [],
-        challenges: [],
-        progress: {
-          phonemes: {},
-          overallAccuracy: 0,
-          fluencyScore: 0,
-          confidenceLevel: 0
-        },
-        lastAssessment: new Date()
-      };
-      this.voiceProfiles.set(key, profile);
-    }
-    
-    return this.voiceProfiles.get(key)!;
-  }
-
-  /**
-   * Update voice profile based on session
-   */
-  private async updateVoiceProfile(
-    userId: number,
-    languageCode: string,
-    feedback: PronunciationFeedback
-  ): Promise<void> {
-    try {
-      const profile = await this.getVoiceProfile(userId, languageCode);
-      
-      // Update overall accuracy
-      profile.progress.overallAccuracy = (profile.progress.overallAccuracy + feedback.overallScore) / 2;
-      
-      // Update specific phoneme progress
-      feedback.specificIssues.forEach(issue => {
-        const currentScore = profile.progress.phonemes[issue.phoneme] || 0;
-        profile.progress.phonemes[issue.phoneme] = (currentScore + feedback.accuracy) / 2;
-      });
-      
-      // Update challenges and strengths
-      if (feedback.overallScore < 70) {
-        profile.challenges = [...new Set([...profile.challenges, ...feedback.improvements])];
-      } else if (feedback.overallScore > 85) {
-        profile.strengths = [...new Set([...profile.strengths, "Good pronunciation"])];
+      for (const phoneme of params.problematicPhonemes) {
+        exercises.push({
+          targetPhoneme: phoneme,
+          practiceWords: this.getPracticeWords(phoneme, params.language),
+          exampleAudioUrl: `/api/audio/pronunciation/${params.language}/${phoneme}`,
+          instructions: `Practice the "${phoneme}" sound. Listen to the example and repeat slowly.`
+        });
       }
-      
-      profile.lastAssessment = new Date();
-      
-      this.voiceProfiles.set(`${userId}_${languageCode}`, profile);
+
+      return exercises;
     } catch (error) {
-      this.handleError(error, "SpeechService.updateVoiceProfile");
+      throw this.handleError(error, "SpeechService.generatePronunciationExercises");
     }
   }
 
   /**
-   * Generate personalized pronunciation tips
+   * Track pronunciation progress over time
+   * Requirements: 8.6
    */
-  async generatePersonalizedTips(
-    userId: number,
-    languageCode: string
-  ): Promise<string[]> {
+  async trackPronunciationProgress(profileId: string): Promise<Array<{
+    date: Date;
+    averageScore: number;
+    phonemeScores: { [key: string]: number };
+    improvementRate: number;
+  }>> {
     try {
-      const profile = await this.getVoiceProfile(userId, languageCode);
-      
-      const prompt = `
-        Generate personalized pronunciation tips for a language learner.
-        
-        User Profile:
-        - Language: ${languageCode}
-        - Challenges: ${profile.challenges.join(', ')}
-        - Strengths: ${profile.strengths.join(', ')}
-        - Overall Accuracy: ${profile.progress.overallAccuracy}%
-        - Problematic Phonemes: ${Object.entries(profile.progress.phonemes)
-          .filter(([_, score]) => score < 70)
-          .map(([phoneme, _]) => phoneme)
-          .join(', ')}
-        
-        Provide 3-5 specific, actionable tips to improve their pronunciation.
-        
-        Return JSON array:
-        ["tip1", "tip2", "tip3"]
-      `;
+      this.log(`Tracking pronunciation progress for profile ${profileId}`, "info");
 
-      const response = await this.openAIService.generateContent(prompt, { format: 'json' });
-      return JSON.parse(response);
+      // Get pronunciation trends
+      const trends = await db.query.pronunciationTrends.findMany({
+        where: eq(pronunciationTrends.profileId, profileId),
+        orderBy: (pronunciationTrends, { desc }) => [desc(pronunciationTrends.date)],
+        limit: 30
+      });
+
+      return trends.map(trend => ({
+        date: trend.date,
+        averageScore: trend.averageScore,
+        phonemeScores: (trend.phonemeScores as any) || {},
+        improvementRate: trend.improvementRate
+      }));
     } catch (error) {
-      this.handleError(error, "SpeechService.generatePersonalizedTips");
-      return ["Practice regularly", "Listen to native speakers", "Record yourself speaking"];
+      throw this.handleError(error, "SpeechService.trackPronunciationProgress");
     }
+  }
+
+  /**
+   * Save pronunciation analysis to database
+   */
+  async savePronunciationAnalysis(params: {
+    profileId: string;
+    score: number;
+    transcript: string;
+    targetText: string;
+    problematicPhonemes: any[];
+    feedback: string;
+  }): Promise<void> {
+    try {
+      // Save analysis
+      await db.insert(pronunciationAnalyses).values({
+        profileId: params.profileId,
+        score: params.score,
+        transcript: params.transcript,
+        targetText: params.targetText,
+        problematicPhonemes: params.problematicPhonemes,
+        overallFeedback: params.feedback,
+        timestamp: new Date()
+      });
+
+      // Update pronunciation trend
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Calculate phoneme scores
+      const phonemeScores: { [key: string]: number } = {};
+      params.problematicPhonemes.forEach((p: any) => {
+        phonemeScores[p.phoneme] = p.accuracy;
+      });
+
+      await db.insert(pronunciationTrends).values({
+        profileId: params.profileId,
+        date: today,
+        averageScore: params.score,
+        phonemeScores,
+        improvementRate: 0 // Would be calculated from historical data
+      }).onConflictDoUpdate({
+        target: [pronunciationTrends.profileId, pronunciationTrends.date],
+        set: {
+          averageScore: sql`(${pronunciationTrends.averageScore} + ${params.score}) / 2`,
+          phonemeScores
+        }
+      });
+
+      this.log("Pronunciation analysis saved", "info");
+    } catch (error) {
+      throw this.handleError(error, "SpeechService.savePronunciationAnalysis");
+    }
+  }
+
+  /**
+   * Generate pronunciation feedback based on score
+   */
+  private generatePronunciationFeedback(
+    score: number,
+    issues: any[],
+    proficiencyLevel: string
+  ): string {
+    if (score >= 90) {
+      return "Excellent pronunciation! Your speech is very clear and natural.";
+    } else if (score >= 80) {
+      return "Good pronunciation! A few minor improvements would make it even better.";
+    } else if (score >= 70) {
+      return "Your pronunciation is understandable. Focus on the specific sounds that need work.";
+    } else if (score >= 60) {
+      return "Keep practicing! Pay attention to the problematic sounds and practice them slowly.";
+    } else {
+      return "Don't worry, pronunciation takes time. Practice the basics and speak slowly.";
+    }
+  }
+
+  /**
+   * Get practice words for a phoneme
+   */
+  private getPracticeWords(phoneme: string, language: string): string[] {
+    // This would be a comprehensive database of practice words
+    // For now, return placeholder words
+    return [
+      `word1_with_${phoneme}`,
+      `word2_with_${phoneme}`,
+      `word3_with_${phoneme}`
+    ];
+  }
+
+  /**
+   * Generate audio example URLs
+   */
+  private generateAudioExampleUrls(text: string, language: string): string[] {
+    // These would be actual audio file URLs
+    return [
+      `/api/audio/examples/${language}/slow/${encodeURIComponent(text)}`,
+      `/api/audio/examples/${language}/normal/${encodeURIComponent(text)}`
+    ];
+  }
+
+  /**
+   * Get language code for Whisper
+   */
+  private getLanguageCode(language: string): string {
+    const languageMap: { [key: string]: string } = {
+      'Spanish': 'es',
+      'Mandarin Chinese': 'zh',
+      'English': 'en',
+      'Hindi': 'hi',
+      'Arabic': 'ar'
+    };
+    return languageMap[language] || 'en';
   }
 }
+
+export const speechService = new SpeechService();

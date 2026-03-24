@@ -4,10 +4,19 @@ import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface LeaderboardEntry {
+  id: string;
+  username: string;
+  displayName?: string;
+  xp: number;
+  languageId?: number;
+  languageName?: string;
+}
+
 export default function LeaderboardPreview() {
   const { user } = useAuth();
   
-  const { data: leaderboard, isLoading } = useQuery({
+  const { data: leaderboard, isLoading } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
   });
   

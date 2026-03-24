@@ -22,7 +22,7 @@ export class ChallengeService extends BaseService {
   /**
    * Get daily challenge for a user
    */
-  async getDailyChallenge(userId: number): Promise<(DailyChallenge & { challenge: Challenge }) | null> {
+  async getDailyChallenge(userId: string): Promise<(DailyChallenge & { challenge: Challenge }) | null> {
     try {
       // Get today's date at midnight
       const today = startOfDay(new Date());
@@ -74,7 +74,7 @@ export class ChallengeService extends BaseService {
         challenge: randomChallenge
       };
     } catch (error) {
-      this.handleError(error, "ChallengeService.getDailyChallenge");
+      throw this.handleError(error, "ChallengeService.getDailyChallenge");
     }
   }
 
@@ -82,7 +82,7 @@ export class ChallengeService extends BaseService {
    * Complete a daily challenge
    */
   async completeDailyChallenge(
-    userId: number,
+    userId: string,
     challengeId: number,
     isCorrect: boolean
   ): Promise<{ success: boolean; xpEarned: number }> {
@@ -137,7 +137,7 @@ export class ChallengeService extends BaseService {
       
       return { success: true, xpEarned };
     } catch (error) {
-      this.handleError(error, "ChallengeService.completeDailyChallenge");
+      throw this.handleError(error, "ChallengeService.completeDailyChallenge");
     }
   }
 
@@ -145,7 +145,7 @@ export class ChallengeService extends BaseService {
    * Get leaderboard
    */
   async getLeaderboard(): Promise<{ 
-    id: number; 
+    id: string; 
     username: string; 
     displayName: string | null; 
     xp: number; 
@@ -157,8 +157,8 @@ export class ChallengeService extends BaseService {
       const result = await this.db
         .select({
           id: users.id,
-          username: users.username,
-          displayName: users.displayName,
+          username: sql<string>`COALESCE(${users.username}, '')`,
+          displayName: sql<string | null>`NULLIF(TRIM(CONCAT(COALESCE(${users.firstName}, ''), ' ', COALESCE(${users.lastName}, ''))), '')`,
           xp: users.xp
         })
         .from(users)
@@ -167,7 +167,7 @@ export class ChallengeService extends BaseService {
       
       return result;
     } catch (error) {
-      this.handleError(error, "ChallengeService.getLeaderboard");
+      throw this.handleError(error, "ChallengeService.getLeaderboard");
     }
   }
 
@@ -183,7 +183,7 @@ export class ChallengeService extends BaseService {
       
       return result[0];
     } catch (error) {
-      this.handleError(error, "ChallengeService.addChallenge");
+      throw this.handleError(error, "ChallengeService.addChallenge");
     }
   }
 }

@@ -1,5 +1,7 @@
 # LinguaMaster - AI-Powered Language Learning Platform
 
+**Developed by NorthernTribe Research**
+
 A comprehensive language learning application powered by advanced AI technologies including Google Gemini and OpenAI, featuring adaptive learning, voice interaction, and personalized curriculum generation.
 
 ## 🚀 Features
@@ -74,13 +76,18 @@ cp .env.example .env
 DATABASE_URL=postgresql://username:password@localhost:5432/linguamaster
 
 # AI Services
-GOOGLE_API_KEY=your_google_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 
 # Application
 NODE_ENV=development
 PORT=5000
 SESSION_SECRET=your_super_secret_session_key_here
+JWT_SECRET=your_super_secret_jwt_secret_here
+APP_BASE_URL=http://localhost:5000
+
+# Stripe (optional - enables real checkout for hearts/subscriptions)
+STRIPE_SECRET_KEY=sk_test_your_secret_key_here
 ```
 
 4. Initialize the database:
@@ -119,7 +126,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SESSION_SECRET=${SESSION_SECRET}
     depends_on:
@@ -236,9 +243,12 @@ npm run dev          # Start development server
 npm run build        # Build for production
 npm run start        # Start production server
 npm run db:push      # Push database schema
+npm run check        # TypeScript type checking
 npm run test         # Run tests
-npm run lint         # Lint code
-npm run typecheck    # TypeScript type checking
+npm run staging:deploy     # Deploy staging container locally
+npm run staging:rollback   # Roll back staging container
+npm run backup:db          # Create compressed PostgreSQL backup
+npm run monitor:uptime     # Check health endpoint and alert webhook on failure
 ```
 
 ### Contributing

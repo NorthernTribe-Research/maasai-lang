@@ -13,33 +13,53 @@ const FILTER_OPTIONS = {
   LOCKED: "locked",
 };
 
+type AchievementData = {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+  condition: string;
+};
+
+type UserAchievementData = {
+  id: number;
+  userId: string;
+  achievementId: number;
+  earnedAt: string | Date;
+  achievement: AchievementData;
+};
+
+type FilteredAchievementItem = {
+  achievement: AchievementData;
+  earned: boolean;
+  earnedAt?: string | Date;
+};
+
 export default function Achievements() {
   const { user } = useAuth();
   
   // Fetch user achievements
-  const { data: userAchievements, isLoading: isLoadingUserAchievements } = useQuery({
+  const { data: userAchievements = [], isLoading: isLoadingUserAchievements } = useQuery<UserAchievementData[]>({
     queryKey: ["/api/user/achievements"],
     enabled: !!user,
   });
   
   // Fetch all achievements
-  const { data: allAchievements, isLoading: isLoadingAllAchievements } = useQuery({
+  const { data: allAchievements = [], isLoading: isLoadingAllAchievements } = useQuery<AchievementData[]>({
     queryKey: ["/api/achievements"],
   });
   
   // Calculate completion percentage
   const getCompletionPercentage = () => {
-    if (!userAchievements || !allAchievements) return 0;
+    if (allAchievements.length === 0) return 0;
     return Math.round((userAchievements.length / allAchievements.length) * 100);
   };
   
   // Filter achievements by tab
-  const getFilteredAchievements = (filter: string) => {
-    if (!allAchievements) return [];
-    
+  const getFilteredAchievements = (filter: string): FilteredAchievementItem[] => {
     // Create a map of earned achievements
-    const earnedMap = new Map();
-    userAchievements?.forEach(ua => {
+    const earnedMap = new Map<number, UserAchievementData>();
+    userAchievements.forEach((ua) => {
       earnedMap.set(ua.achievementId, ua);
     });
     
@@ -47,21 +67,22 @@ export default function Achievements() {
     switch (filter) {
       case FILTER_OPTIONS.EARNED:
         return allAchievements
-          .filter(achievement => earnedMap.has(achievement.id))
-          .map(achievement => ({
+          .filter((achievement) => earnedMap.has(achievement.id))
+          .map((achievement) => ({
             achievement,
             earned: true,
             earnedAt: earnedMap.get(achievement.id)?.earnedAt
           }));
       case FILTER_OPTIONS.LOCKED:
         return allAchievements
-          .filter(achievement => !earnedMap.has(achievement.id))
-          .map(achievement => ({
+          .filter((achievement) => !earnedMap.has(achievement.id))
+          .map((achievement) => ({
             achievement,
-            earned: false
+            earned: false,
+            earnedAt: undefined
           }));
       default: // ALL
-        return allAchievements.map(achievement => ({
+        return allAchievements.map((achievement) => ({
           achievement,
           earned: earnedMap.has(achievement.id),
           earnedAt: earnedMap.get(achievement.id)?.earnedAt
@@ -122,7 +143,7 @@ export default function Achievements() {
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-32 w-full" />
-            ) : userAchievements && userAchievements.length > 0 ? (
+            ) : userAchievements.length > 0 ? (
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 bg-primary-light dark:bg-primary/20 rounded-full flex items-center justify-center mb-3">
                   <i className={`bx ${userAchievements[0].achievement.icon} text-3xl text-primary`}></i>
@@ -154,7 +175,7 @@ export default function Achievements() {
             <TabsTrigger value={FILTER_OPTIONS.LOCKED}>Locked</TabsTrigger>
           </TabsList>
           
-          {[FILTER_OPTIONS.ALL, FILTER_OPTIONS.EARNED, FILTER_OPTIONS.LOCKED].map(filter => (
+          {[FILTER_OPTIONS.ALL, FILTER_OPTIONS.EARNED, FILTER_OPTIONS.LOCKED].map((filter) => (
             <TabsContent key={filter} value={filter}>
               {isLoading ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -164,12 +185,12 @@ export default function Achievements() {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {getFilteredAchievements(filter).map(item => (
+                  {getFilteredAchievements(filter).map((item) => (
                     <AchievementCard
                       key={item.achievement.id}
                       achievement={item.achievement}
                       earned={item.earned}
-                      earnedAt={item.earnedAt}
+                      earnedAt={item.earnedAt ? new Date(item.earnedAt) : undefined}
                     />
                   ))}
                 </div>

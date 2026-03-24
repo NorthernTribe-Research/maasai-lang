@@ -2,6 +2,7 @@ import { BaseService } from './BaseService';
 import { OpenAIService } from './OpenAIService';
 import { GeminiService } from './GeminiService';
 import { AITeacherService } from './AITeacherService';
+import { SessionContextService } from './SessionContextService';
 import { UserService } from './UserService';
 import { LanguageService } from './LanguageService';
 import { LessonService } from './LessonService';
@@ -12,7 +13,8 @@ import { AdminService } from './AdminService';
 // Initialize services
 const openAIService = new OpenAIService();
 const geminiService = new GeminiService();
-const aiTeacherService = new AITeacherService(openAIService, geminiService);
+const aiTeacherService = new AITeacherService();
+const sessionContextService = new SessionContextService();
 const userService = new UserService();
 const languageService = new LanguageService();
 const lessonService = new LessonService();
@@ -25,6 +27,7 @@ export {
   openAIService,
   geminiService,
   aiTeacherService,
+  sessionContextService,
   userService,
   languageService,
   lessonService,
@@ -39,6 +42,7 @@ export {
   OpenAIService,
   GeminiService,
   AITeacherService,
+  SessionContextService,
   UserService,
   LanguageService,
   LessonService,

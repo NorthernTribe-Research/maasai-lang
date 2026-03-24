@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, apiRequestJson } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -33,6 +33,21 @@ const lessonSchema = z.object({
 
 type LessonFormValues = z.infer<typeof lessonSchema>;
 
+type LanguageOption = {
+  id: number;
+  name: string;
+};
+
+type AdminLesson = {
+  id: number;
+  title: string;
+  type: string;
+  level: number;
+  duration: number;
+  xpReward: number;
+  order: number;
+};
+
 export default function AdminLessons() {
   const [selectedLanguage, setSelectedLanguage] = useState<number | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -40,16 +55,16 @@ export default function AdminLessons() {
   const { toast } = useToast();
   
   // Fetch languages
-  const { data: languages, isLoading: isLoadingLanguages } = useQuery({
+  const { data: languages = [], isLoading: isLoadingLanguages } = useQuery<LanguageOption[]>({
     queryKey: ['/api/languages'],
     staleTime: 300000, // 5 minutes
   });
   
   // Fetch lessons based on selected language
-  const { data: lessons, isLoading: isLoadingLessons } = useQuery({
+  const { data: lessons = [], isLoading: isLoadingLessons } = useQuery<AdminLesson[]>({
     queryKey: ['/api/languages', selectedLanguage, 'lessons'],
     enabled: !!selectedLanguage,
-    queryFn: () => apiRequest('GET', `/api/languages/${selectedLanguage}/lessons`),
+    queryFn: () => apiRequestJson<AdminLesson[]>('GET', `/api/languages/${selectedLanguage}/lessons`),
   });
   
   // Create lesson mutation
@@ -160,7 +175,7 @@ export default function AdminLessons() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {languages?.map((language: any) => (
+                          {languages.map((language) => (
                             <SelectItem key={language.id} value={language.id.toString()}>
                               {language.name}
                             </SelectItem>
@@ -318,7 +333,7 @@ export default function AdminLessons() {
                 <SelectValue placeholder="Select language" />
               </SelectTrigger>
               <SelectContent>
-                {languages?.map((language: any) => (
+                {languages.map((language) => (
                   <SelectItem key={language.id} value={language.id.toString()}>
                     {language.name}
                   </SelectItem>
@@ -347,8 +362,8 @@ export default function AdminLessons() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lessons?.length ? (
-                    lessons?.map((lesson: any) => (
+                  {lessons.length ? (
+                    lessons.map((lesson) => (
                       <TableRow key={lesson.id}>
                         <TableCell className="font-medium">{lesson.title}</TableCell>
                         <TableCell>

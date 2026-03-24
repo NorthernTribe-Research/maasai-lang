@@ -40,6 +40,11 @@ export interface IStorage {
   getDailyChallenge(userId: string): Promise<(DailyChallenge & { challenge: Challenge }) | null>;
   completeDailyChallenge(userId: string, challengeId: number, isCorrect: boolean): Promise<{ success: boolean; xpEarned: number }>;
   getLeaderboard(): Promise<{ id: string; username: string | null; displayName: string | null; xp: number; languageId?: number; languageName?: string; }[]>;
+  getAllUsers(): Promise<User[]>;
+  getAllLessons(): Promise<Lesson[]>;
+  createLesson(lesson: InsertLesson): Promise<Lesson>;
+  updateLesson(lessonId: number, updates: Partial<InsertLesson>): Promise<Lesson>;
+  deleteLesson(lessonId: number): Promise<void>;
   initializeData(): Promise<void>;
   sessionStore: any;
 }
@@ -326,6 +331,34 @@ export class DatabaseStorage implements IStorage {
         { code: "ar", name: "Arabic", flag: "🇸🇦", description: "The rich language of the Arab world" },
       ]);
     }
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getAllLessons(): Promise<Lesson[]> {
+    return await db.select().from(lessons).orderBy(lessons.languageId, lessons.level, lessons.order);
+  }
+
+  async createLesson(lesson: InsertLesson): Promise<Lesson> {
+    const [newLesson] = await db.insert(lessons).values(lesson).returning();
+    return newLesson;
+  }
+
+  async updateLesson(lessonId: number, updates: Partial<InsertLesson>): Promise<Lesson> {
+    const [updated] = await db
+      .update(lessons)
+      .set(updates)
+      .where(eq(lessons.id, lessonId))
+      .returning();
+    
+    if (!updated) throw new Error("Lesson not found");
+    return updated;
+  }
+
+  async deleteLesson(lessonId: number): Promise<void> {
+    await db.delete(lessons).where(eq(lessons.id, lessonId));
   }
 }
 

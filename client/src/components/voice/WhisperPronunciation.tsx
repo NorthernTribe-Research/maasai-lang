@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequestJson } from '@/lib/queryClient';
 import { Mic, MicOff, Volume2, RotateCcw, Target, TrendingUp } from 'lucide-react';
 
 interface WhisperPronunciationProps {
@@ -37,7 +37,7 @@ export default function WhisperPronunciation({
   // Pronunciation analysis mutation
   const analyzePronunciationMutation = useMutation({
     mutationFn: async (audioData: string) => {
-      return apiRequest('POST', '/api/ai/whisper/coaching', {
+      return apiRequestJson<PronunciationResult>('POST', '/api/ai/whisper/coaching', {
         audioData,
         targetPhrase,
         targetLanguage,
@@ -104,7 +104,12 @@ export default function WhisperPronunciation({
         
         // Convert to base64
         const arrayBuffer = await audioBlob.arrayBuffer();
-        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        const uint8 = new Uint8Array(arrayBuffer);
+        let binary = "";
+        uint8.forEach((byte) => {
+          binary += String.fromCharCode(byte);
+        });
+        const base64Audio = btoa(binary);
         
         // Analyze with Whisper
         analyzePronunciationMutation.mutate(base64Audio);

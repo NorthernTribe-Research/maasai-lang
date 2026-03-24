@@ -4,3 +4,15 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Environment variables (contains secrets)
+.env
+.env.local
+.env.production
+.env.development
+
+# Android local config (contains API keys and secrets)
+android-app/local.properties
+android-app/app/release/
+android-app/*.jks
+android-app/*.keystore

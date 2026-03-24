@@ -1,42 +1,66 @@
-# Use Node.js LTS version
-FROM node:20-alpine
+# Multi-stage Dockerfile for LinguaMaster - Production-Ready
+# Optimized for Google Cloud Run deployment
 
-# Set working directory
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    git
+# Install dependencies only when needed
+COPY package.json package-lock.json ./
+RUN npm ci --only=production && \
+    npm cache clean --force
 
-# Copy package files
-COPY package*.json ./
+# Stage 2: Builder
+FROM node:20-alpine AS builder
+WORKDIR /app
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including dev) for building
+RUN npm ci
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build application
 RUN npm run build
 
-# Create non-root user
+# Stage 3: Runner (Production)
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+    adduser -S linguamaster -u 1001
 
-# Change ownership to non-root user
-RUN chown -R nextjs:nodejs /app
-USER nextjs
+# Copy only production dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./package.json
 
-# Expose port
-EXPOSE 5000
+# Copy built application
+COPY --from=builder /app/dist ./dist
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+# Copy database migrations and scripts
+COPY --from=builder /app/db ./db
 
-# Start the application
-CMD ["npm", "start"]
+# Set ownership to non-root user
+RUN chown -R linguamaster:nodejs /app
+
+# Switch to non-root user
+USER linguamaster
+
+# Expose port (Cloud Run uses PORT env var)
+EXPOSE 8080
+
+# Health check for Cloud Run
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "const http=require('http');const req=http.get('http://localhost:8080/api/health',(res)=>{process.exit(res.statusCode===200?0:1);});req.on('error',()=>{process.exit(1);});req.setTimeout(3000,()=>{req.destroy();process.exit(1);});"
+
+# Start application
+CMD ["node", "dist/index.js"]

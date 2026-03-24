@@ -58,7 +58,7 @@ export interface RealTimeAssessment {
 export class AdvancedAIService extends BaseService {
   private geminiService: GeminiService;
   private whisperService: WhisperService;
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
 
   constructor() {
     super();
@@ -75,7 +75,7 @@ export class AdvancedAIService extends BaseService {
    * Generate comprehensive learning analytics
    */
   async generateLearningAnalytics(
-    userId: number,
+    userId: string,
     languageId: number,
     recentSessions: Array<{
       type: string;
@@ -164,7 +164,7 @@ Generate a comprehensive curriculum with:
 
 Return JSON with learnerProfile, adaptedLessons, and progressionPath.`;
 
-      if (this.geminiService.isServiceAvailable()) {
+      if (this.canUseGemini()) {
         const result = await this.geminiService.generateContent(prompt);
         try {
           return JSON.parse(result);
@@ -290,7 +290,7 @@ Generate adaptive content with:
 
 Return JSON with nextExercises, adjustedDifficulty, and focusShift.`;
 
-      if (this.geminiService.isServiceAvailable()) {
+      if (this.canUseGemini()) {
         const result = await this.geminiService.generateContent(adaptationPrompt);
         try {
           return JSON.parse(result);
@@ -351,7 +351,7 @@ Ensure all modalities work together cohesively for optimal learning.
 
 Return JSON with visualElements, auditoryElements, interactiveElements, and readingMaterials.`;
 
-      if (this.geminiService.isServiceAvailable()) {
+      if (this.canUseGemini()) {
         const result = await this.geminiService.generateContent(prompt);
         try {
           return JSON.parse(result);
@@ -435,6 +435,10 @@ Return JSON with visualElements, auditoryElements, interactiveElements, and read
     }
 
     return recommendations;
+  }
+
+  private canUseGemini(): boolean {
+    return Boolean((this.geminiService as any).model);
   }
 
   // Default fallback methods

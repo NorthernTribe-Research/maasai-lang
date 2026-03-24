@@ -19,12 +19,12 @@ interface HeaderProps {
 }
 
 export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
   const [location] = useLocation();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logout();
   };
 
   return (
@@ -46,19 +46,11 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
         <div className="flex items-center">
           <Link href="/">
             <a className="flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="h-9 w-9 rounded-lg mr-2 text-primary"
-              >
-                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-                <path d="M7.5 12h9M12 7.5v9" />
-              </svg>
+              <img
+                src="/logo-icon.png"
+                alt="LinguaMaster"
+                className="h-12 w-auto object-contain drop-shadow mr-2"
+              />
               <h1 className="text-xl font-bold text-primary dark:text-primary">
                 LinguaMaster
               </h1>
@@ -71,11 +63,11 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
         {user && (
           <div className="hidden md:flex items-center space-x-2 mr-2">
             <div className="px-3 py-1 bg-primary-light dark:bg-neutral-800 text-primary dark:text-primary rounded-full text-sm font-semibold">
-              <span className="mr-1">🔥</span> {user.streak} day streak
+              <span className="mr-1">🔥</span> {user?.streak ?? 0} day streak
             </div>
 
             <div className="px-3 py-1 bg-secondary-light dark:bg-neutral-800 text-secondary dark:text-secondary rounded-full text-sm font-semibold">
-              <span className="mr-1">⭐</span> {user.xp} XP
+              <span className="mr-1">⭐</span> {user?.xp ?? 0} XP
             </div>
           </div>
         )}
@@ -90,7 +82,7 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white dark:text-primary-foreground">
-                  {user.username.charAt(0).toUpperCase()}
+                  {user?.username?.charAt(0).toUpperCase() || 'U'}
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -98,10 +90,12 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">
-                    {user.displayName || user.username}
+                    {user?.firstName && user?.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : user?.username || 'User'}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {user.email || `@${user.username}`}
+                    {user?.email || `@${user?.username || 'user'}`}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -112,11 +106,16 @@ export default function Header({ toggleSidebar, isSidebarOpen }: HeaderProps) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
+                <Link href="/settings">
+                  <a className="cursor-pointer w-full">Settings</a>
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link href="/achievements">
                   <a className="cursor-pointer w-full">Achievements</a>
                 </Link>
               </DropdownMenuItem>
-              {user.isAdmin && (
+              {user?.isAdmin && (
                 <DropdownMenuItem asChild>
                   <Link href="/admin">
                     <a className="cursor-pointer w-full">Admin Dashboard</a>

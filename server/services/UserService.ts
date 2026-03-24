@@ -33,6 +33,18 @@ export class UserService extends BaseService {
   }
 
   /**
+   * Get a user by email
+   */
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const result = await this.db.select().from(users).where(eq(users.email, email));
+      return result[0];
+    } catch (error) {
+      throw this.handleError(error, "UserService.getUserByEmail");
+    }
+  }
+
+  /**
    * Create a new user
    */
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -122,6 +134,36 @@ export class UserService extends BaseService {
       return result[0];
     } catch (error) {
       throw this.handleError(error, "UserService.addUserXp");
+    }
+  }
+
+  /**
+   * Update user profile information
+   * Requirements: 1.5
+   */
+  async updateUserProfile(userId: string, updates: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    profileImageUrl?: string;
+  }): Promise<User> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+
+      const result = await this.db.update(users)
+        .set({
+          ...updates,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      return result[0];
+    } catch (error) {
+      throw this.handleError(error, "UserService.updateUserProfile");
     }
   }
 }
