@@ -18,7 +18,7 @@ from pathlib import Path
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and push the Maasai Kaggle training kernel")
     parser.add_argument("--kernel-slug", default="maasai-daily-hf-training")
-    parser.add_argument("--title", default="Maasai Daily HF Training")
+    parser.add_argument("--title", default=None)
     parser.add_argument("--output-dir", default="dist/kaggle_kernel")
     parser.add_argument("--project-git-url", default="https://github.com/734ai/maasai-lang.git")
     parser.add_argument("--project-branch", default="main")
@@ -50,6 +50,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bible-passage-window", type=int, default=3)
     parser.add_argument("--private-model-repo", action="store_true")
     parser.add_argument("--torch-version", default="2.5.1")
+    parser.add_argument("--torchvision-version", default="0.20.1")
+    parser.add_argument("--torchaudio-version", default="2.5.1")
     parser.add_argument("--torch-index-url", default="https://download.pytorch.org/whl/cu118")
     parser.add_argument(
         "--require-4bit",
@@ -65,6 +67,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--execute", action="store_true", help="Actually push the kernel to Kaggle")
     parser.add_argument("--status", action="store_true", help="Query Kaggle status after push")
     return parser.parse_args()
+
+
+def default_title_from_slug(slug: str) -> str:
+    words = [part for part in slug.replace("_", "-").split("-") if part]
+    return " ".join(word.upper() if word.lower() == "hf" else word.capitalize() for word in words)
 
 
 def load_kaggle_config(project_root: Path) -> dict:
@@ -150,6 +157,8 @@ def build_runtime_config(args: argparse.Namespace, project_root: Path) -> dict:
         "lora_alpha": args.lora_alpha,
         "lora_dropout": args.lora_dropout,
         "torch_version": args.torch_version,
+        "torchvision_version": args.torchvision_version,
+        "torchaudio_version": args.torchaudio_version,
         "torch_index_url": args.torch_index_url,
         "report_to": args.report_to,
         "augment_with_generation_tasks": True,
@@ -166,7 +175,7 @@ def build_runtime_config(args: argparse.Namespace, project_root: Path) -> dict:
 def build_kernel_metadata(username: str, args: argparse.Namespace) -> dict:
     return {
         "id": f"{username}/{args.kernel_slug}",
-        "title": args.title,
+        "title": args.title or default_title_from_slug(args.kernel_slug),
         "code_file": "train_and_push.py",
         "language": "python",
         "kernel_type": "script",

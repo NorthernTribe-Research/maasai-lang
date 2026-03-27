@@ -34,6 +34,8 @@ CORE_TRAINING_REQUIREMENTS = [
     "huggingface_hub>=0.30.0",
 ]
 DEFAULT_TORCH_VERSION = "2.5.1"
+DEFAULT_TORCHVISION_VERSION = "0.20.1"
+DEFAULT_TORCHAUDIO_VERSION = "2.5.1"
 DEFAULT_TORCH_INDEX_URL = "https://download.pytorch.org/whl/cu118"
 
 
@@ -67,6 +69,8 @@ def get_first_available_secret(*names: str) -> str | None:
 
 def install_dependencies(config: dict) -> None:
     torch_version = str(config.get("torch_version") or DEFAULT_TORCH_VERSION).strip()
+    torchvision_version = str(config.get("torchvision_version") or DEFAULT_TORCHVISION_VERSION).strip()
+    torchaudio_version = str(config.get("torchaudio_version") or DEFAULT_TORCHAUDIO_VERSION).strip()
     torch_index_url = str(config.get("torch_index_url") or DEFAULT_TORCH_INDEX_URL).strip()
     run(
         [
@@ -80,6 +84,8 @@ def install_dependencies(config: dict) -> None:
             "--index-url",
             torch_index_url,
             f"torch=={torch_version}",
+            f"torchvision=={torchvision_version}",
+            f"torchaudio=={torchaudio_version}",
         ]
     )
 
