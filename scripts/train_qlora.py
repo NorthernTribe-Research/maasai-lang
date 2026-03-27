@@ -237,14 +237,13 @@ def preferred_torch_dtype() -> torch.dtype:
     return torch.float16
 
 
-def load_model(args: argparse.Namespace):
-    dtype = preferred_torch_dtype()
+def load_model(args: argparse.Namespace, dtype: torch.dtype):
     model_kwargs = {
         "torch_dtype": dtype,
         "trust_remote_code": True,
         "local_files_only": args.local_files_only,
     }
-    use_4bit = torch.cuda.is_available() and BitsAndBytesConfig is not None
+    use_4bit = args.require_4bit and torch.cuda.is_available() and BitsAndBytesConfig is not None
 
     if args.require_4bit and not torch.cuda.is_available():
         raise RuntimeError("--require_4bit requires a CUDA runtime.")
@@ -320,7 +319,9 @@ def main() -> None:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = load_model(args)
+    training_dtype = preferred_torch_dtype()
+    LOGGER.info("Selected training dtype: %s", training_dtype)
+    model = load_model(args, training_dtype)
 
     lora_config = LoraConfig(
         r=args.lora_r,
@@ -367,8 +368,8 @@ def main() -> None:
         save_steps=args.save_steps,
         save_total_limit=args.save_total_limit,
         max_steps=args.max_steps,
-        bf16=torch.cuda.is_available(),
-        fp16=False,
+        bf16=training_dtype == torch.bfloat16,
+        fp16=training_dtype == torch.float16,
         gradient_checkpointing=torch.cuda.is_available(),
         report_to=args.report_to,
         seed=args.seed,
