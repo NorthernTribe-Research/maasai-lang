@@ -105,6 +105,36 @@ def validate_model_directory(model_path: str) -> bool:
     return True
 
 
+def build_download_meta(repo_id: str, model_dir: Path) -> str:
+    """Build lightweight Hub metadata for download counting."""
+    artifact_names = sorted(path.name for path in model_dir.glob("*") if path.is_file())
+    lines = [
+        "project: maasai-en-mt",
+        f"repo_id: {repo_id}",
+        "task: translation",
+        "base_model: google/gemma-3-4b-it",
+        "training_recipe: qlora",
+        "publication_status: weights_available",
+        "download_count_anchor: true",
+        "languages:",
+        "  - en",
+        "  - mas",
+        "related_assets:",
+        "  dataset: NorthernTribe-Research/maasai-translation-corpus",
+        "  space: NorthernTribe-Research/maasai-language-showcase",
+        "artifacts:",
+    ]
+    lines.extend(f"  - {name}" for name in artifact_names)
+    lines.extend(
+        [
+            "notes: >-",
+            "  Lightweight Hub metadata retained in the model repo so download statistics",
+            "  can resolve against meta.yaml alongside the published adapter or merged files.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def create_model_card(model_dir: Path, repo_id: str) -> str:
     """Create comprehensive model card."""
     
@@ -119,6 +149,9 @@ def create_model_card(model_dir: Path, repo_id: str) -> str:
 language:
   - en
   - mas
+library_name: transformers
+pipeline_tag: translation
+base_model: google/gemma-3-4b-it
 tags:
   - translation
   - low-resource
@@ -421,10 +454,15 @@ def push_model_to_hub(
         # Step 2: Create model card
         logger.info("📝 Creating model card...")
         model_card_content = create_model_card(model_dir, repo_id)
-        model_card_path = model_dir / "ModelCard.md"
+        model_card_path = model_dir / "README.md"
         with open(model_card_path, "w") as f:
             f.write(model_card_content)
         logger.info("✅ Model card created")
+
+        meta_path = model_dir / "meta.yaml"
+        with open(meta_path, "w") as f:
+            f.write(build_download_meta(repo_id, model_dir))
+        logger.info("✅ Hub metadata anchor created")
         
         # Step 3: Upload all files
         logger.info(f"📤 Uploading model files to {repo_id}...")

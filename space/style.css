@@ -639,10 +639,6 @@ select:focus {
     letter-spacing: 0.02em;
 }
 
-footer {
-    display: none !important;
-}
-
 .gr-audio {
     background: rgba(20, 24, 28, 0.92) !important;
     border: 1px dashed var(--border-strong) !important;

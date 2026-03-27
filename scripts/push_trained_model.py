@@ -50,6 +50,27 @@ def merge_adapter_to_base(adapter_dir: str, output_dir: str) -> None:
     print(f"✅ Merge complete: {output_dir}")
 
 
+def build_download_meta(repo_id: str) -> str:
+    """Build lightweight Hub metadata for download counting."""
+    return f"""project: maasai-en-mt
+repo_id: {repo_id}
+task: translation
+base_model: google/gemma-3-4b-it
+training_recipe: qlora
+publication_status: weights_available
+download_count_anchor: true
+languages:
+  - en
+  - mas
+related_assets:
+  dataset: NorthernTribe-Research/maasai-translation-corpus
+  space: NorthernTribe-Research/maasai-language-showcase
+notes: >-
+  Lightweight Hub metadata retained in the model repo so download statistics
+  can resolve against meta.yaml alongside the released weights.
+"""
+
+
 def push_to_hub(
     model_dir: str,
     repo_id: str = "NorthernTribe-Research/maasai-en-mt",
@@ -66,13 +87,15 @@ language:
 - en
 - mas
 library_name: transformers
+pipeline_tag: translation
+base_model: google/gemma-3-4b-it
 tags:
 - translation
 - maasai
 - english
 - low-resource
 - language-preservation
-- qjora
+- qlora
 - gemma
 license: apache-2.0
 ---
@@ -254,6 +277,15 @@ We welcome corrections and feedback from native Maasai speakers! Please open an 
         repo_id=repo_id,
         repo_type="model",
         commit_message="📝 Add comprehensive model card",
+    )
+
+    print("✓ Uploading Hub metadata anchor...")
+    api.upload_file(
+        path_or_fileobj=build_download_meta(repo_id).encode("utf-8"),
+        path_in_repo="meta.yaml",
+        repo_id=repo_id,
+        repo_type="model",
+        commit_message="Add Hub download metadata anchor",
     )
     
     print(f"✅ Model pushed to https://huggingface.co/{repo_id}")
