@@ -237,6 +237,24 @@ def preferred_torch_dtype() -> torch.dtype:
     return torch.float16
 
 
+def validate_cuda_runtime() -> None:
+    if not torch.cuda.is_available():
+        return
+
+    capability = torch.cuda.get_device_capability(0)
+    current_arch = f"sm_{capability[0]}{capability[1]}"
+    supported_arches = {arch for arch in torch.cuda.get_arch_list() if arch.startswith("sm_")}
+    if supported_arches and current_arch not in supported_arches:
+        gpu_name = torch.cuda.get_device_name(0)
+        supported = ", ".join(sorted(supported_arches))
+        raise RuntimeError(
+            "The current PyTorch CUDA build does not support the assigned GPU "
+            f"{gpu_name} ({current_arch}). Supported CUDA architectures: {supported}. "
+            "On Kaggle this usually means a Tesla P100 / Pascal runtime was assigned; "
+            "rerun until Kaggle assigns a T4/L4-class GPU, or use Colab/self-hosted training."
+        )
+
+
 def load_model(args: argparse.Namespace, dtype: torch.dtype):
     model_kwargs = {
         "torch_dtype": dtype,
@@ -295,6 +313,7 @@ def main() -> None:
     if args.push_to_hub and not args.hub_model_id:
         raise ValueError("--hub_model_id is required when --push_to_hub is enabled")
 
+    validate_cuda_runtime()
     os.makedirs(args.output_dir, exist_ok=True)
     LOGGER.info("Loading dataset")
     dataset = load_data(args.train_file, args.valid_file)

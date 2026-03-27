@@ -75,6 +75,23 @@ def install_dependencies(config: dict) -> None:
     run([sys.executable, "-m", "pip", "install", "-q", "--upgrade", *requirements])
 
 
+def log_runtime_gpu() -> None:
+    try:
+        import torch
+    except Exception:
+        return
+
+    if not torch.cuda.is_available():
+        print("No CUDA GPU detected by torch.")
+        return
+
+    capability = torch.cuda.get_device_capability(0)
+    arch = f"sm_{capability[0]}{capability[1]}"
+    supported_arches = ", ".join(torch.cuda.get_arch_list())
+    print(f"Detected GPU: {torch.cuda.get_device_name(0)} ({arch})")
+    print(f"PyTorch CUDA architectures: {supported_arches}")
+
+
 def clone_repo(config: dict) -> None:
     if PROJECT_ROOT.exists():
         run(["rm", "-rf", str(PROJECT_ROOT)])
@@ -105,6 +122,7 @@ def main() -> int:
     os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
     install_dependencies(config)
+    log_runtime_gpu()
     clone_repo(config)
 
     cmd = [

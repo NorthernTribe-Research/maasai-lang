@@ -100,4 +100,5 @@ Example:
 - The kernel uses the existing `--augment-with-generation-tasks` default.
 - The default base model is `Qwen/Qwen2.5-3B-Instruct` so the Kaggle runtime is not blocked on gated-model approval.
 - The default kernel profile now uses `batch_size=1` and `gradient_accumulation_steps=32`, and it does not require 4-bit unless you explicitly push with `--require-4bit`.
+- If Kaggle assigns a Tesla P100 / Pascal GPU, the current PyTorch build may not support that architecture. The trainer now fails early with an explicit rerun-on-T4/L4 message instead of crashing deep in model load.
 - If Kaggle shows the run as failed immediately, the first thing to check is whether `HF_TOKEN` was added in Kaggle secrets.
