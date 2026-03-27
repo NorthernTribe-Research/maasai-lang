@@ -79,6 +79,8 @@ def main() -> int:
     config = load_config()
     hf_token = get_first_available_secret("HF_TOKEN", "HUGGINGFACE_TOKEN", "HF_API_KEY")
     if not hf_token:
+        hf_token = config.get("hf_token")
+    if not hf_token:
         raise RuntimeError(
             "Missing Kaggle secret for Hugging Face access. Add one of: "
             "HF_TOKEN, HUGGINGFACE_TOKEN, or HF_API_KEY."
