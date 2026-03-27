@@ -1,0 +1,1032 @@
+[
+  {
+    "term_maasai": "Enkai",
+    "term_english": "God",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["Engai", "Ngai"],
+    "preserve": true,
+    "notes": "Supreme deity in Maasai belief. Enkai is dual-natured: Enkai Narok (Black God, benevolent) and Enkai Nanyokie (Red God, vengeful). Central to Maasai philosophy and prayer.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "Enkai Narok",
+    "term_english": "Black God (benevolent God)",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["Engai Narok"],
+    "preserve": true,
+    "notes": "The benevolent aspect of Enkai associated with rain, fertility, and blessing.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "Enkai Nanyokie",
+    "term_english": "Red God (vengeful God)",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["Engai Nanyokie"],
+    "preserve": true,
+    "notes": "The vengeful or punishing aspect of Enkai associated with drought, famine, and death.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkang",
+    "term_english": "homestead",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["enkang'"],
+    "preserve": true,
+    "notes": "A circular compound of houses surrounded by a thornbush fence (olale). Each enkang houses an extended family unit. Do not flatten to 'village'.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkaji",
+    "term_english": "house",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["inkajijik"],
+    "preserve": true,
+    "notes": "A traditional Maasai house made of sticks, mud, grass, cow dung, and urine. Built by women. Loaf-shaped structure.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oloiboni",
+    "term_english": "spiritual leader / ritual expert",
+    "domain": "governance",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["laibon", "olaiboni", "iloibonok"],
+    "preserve": true,
+    "notes": "The Maasai spiritual leader who serves as diviner, healer, and prophet. Not a chief. The oloiboni interprets dreams, performs rituals, and advises on community decisions. The most famous oloiboni lineage traces to Kidongoi.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olaiguenani",
+    "term_english": "spokesperson / community leader",
+    "domain": "governance",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["olaigwanani", "ilaigwanak"],
+    "preserve": true,
+    "notes": "An elected or recognized spokesperson for the community. Not hereditary. Chosen for wisdom, oratory, and fairness.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olpul",
+    "term_english": "meat feast / meat camp",
+    "domain": "ceremony",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["olpuli"],
+    "preserve": true,
+    "notes": "A ceremonial meat feast held by warriors (ilmurran) in the bush. Important social bonding and ritual activity. Only certain age-sets participate.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "ilmurran",
+    "term_english": "warriors",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["ilmuran", "olmurrani"],
+    "preserve": true,
+    "notes": "Young men who have been circumcised and entered the warrior age-set. They serve as protectors of livestock and community. The warrior period lasts approximately 15 years before graduating to elder status.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "e-unoto",
+    "term_english": "warrior graduation ceremony",
+    "domain": "ceremony",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["eunoto"],
+    "preserve": true,
+    "notes": "The ceremony marking the transition of ilmurran from warrior status to junior elder status. Mothers shave their sons' long hair. One of the most important Maasai ceremonies.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "emuratta",
+    "term_english": "circumcision ceremony",
+    "domain": "ceremony",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["emuratare"],
+    "preserve": true,
+    "notes": "Male circumcision ceremony that marks the passage from boyhood to warrior status. Performed without anesthesia; the initiate must not show pain.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkipaata",
+    "term_english": "pre-circumcision ceremony",
+    "domain": "ceremony",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Festival held before circumcision where boys travel from enkang to enkang gathering age-mates. The beginning of age-set formation.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olngesher",
+    "term_english": "junior elder promotion ceremony",
+    "domain": "ceremony",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["olng'esher"],
+    "preserve": true,
+    "notes": "Ceremony where junior elders are promoted to senior elder status with the right to make community decisions.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "iloshon",
+    "term_english": "sections / sub-tribes",
+    "domain": "governance",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["olosho"],
+    "preserve": true,
+    "notes": "Territorial sections of the Maasai nation, each with its own geographic area and slight dialect variations. Major iloshon include Ilkisongo, Ilpurko, Laikipiak, etc.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olporror",
+    "term_english": "age-set",
+    "domain": "governance",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["ilporror"],
+    "preserve": true,
+    "notes": "A named generation of men who were circumcised during the same period. Age-sets govern social hierarchy and responsibilities. Examples: Ilterito, Ilnyangusi, Iseuri, Ilkitoip.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkanyit",
+    "term_english": "respect",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "A core Maasai value. Respect for elders, cattle, land, and the natural order. Violation of enkanyit disrupts social harmony.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "osotua",
+    "term_english": "mutual obligation / bond of trust",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["esotua"],
+    "preserve": true,
+    "notes": "A sacred bond of reciprocal obligation between friends, families, or clans. Osotua gifts cannot be refused and are not debts — they create lasting ties. Central to Maasai social philosophy.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olkeri",
+    "term_english": "dry season pasture",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Reserved grazing land used only during the dry season. Land management is critical to pastoral Maasai life.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olorere",
+    "term_english": "wet season pasture",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Grazing land used during the rainy season when grass is abundant.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olale",
+    "term_english": "thornbush fence",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "The circular fence of thorn branches surrounding an enkang, built to protect livestock from predators.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "inkishu",
+    "term_english": "cattle",
+    "domain": "livestock",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["inkishu"],
+    "preserve": true,
+    "notes": "Cattle are central to Maasai identity, economy, and spiritual life. 'Meishoo iyiook enkai inkishu o-inkujit' — God gave cattle to the Maasai. Wealth is measured in cattle.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olkiteng",
+    "term_english": "bull",
+    "domain": "livestock",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["olkiteŋ"],
+    "preserve": false,
+    "notes": "A mature male bovine.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkirukoto",
+    "term_english": "heifer / young cow",
+    "domain": "livestock",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Young female cattle, important in bride wealth and ceremonies.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olmotoni",
+    "term_english": "donkey",
+    "domain": "livestock",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Used for transport, especially by women moving between camps.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "inkerry",
+    "term_english": "sheep",
+    "domain": "livestock",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["inkerri"],
+    "preserve": false,
+    "notes": "Small stock kept alongside cattle and goats.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "imeit",
+    "term_english": "goats",
+    "domain": "livestock",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["imeiti"],
+    "preserve": false,
+    "notes": "Kept for milk, meat, and trade.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "entito",
+    "term_english": "girl / daughter",
+    "domain": "kinship",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["intoyie"],
+    "preserve": false,
+    "notes": "Young female. Plural: intoyie.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olaiyioni",
+    "term_english": "boy / uncircumcised youth",
+    "domain": "kinship",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["ilaiyiok"],
+    "preserve": false,
+    "notes": "Uncircumcised male youth. Before emuratta they are considered boys.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkaitoyioni",
+    "term_english": "young woman",
+    "domain": "kinship",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "A young woman, typically of marriageable age.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkiok",
+    "term_english": "fire / hearth",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "The central hearth in an enkaji. Symbolizes family, warmth, and continuity.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olpayian",
+    "term_english": "elder",
+    "domain": "governance",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["ilpayiani"],
+    "preserve": true,
+    "notes": "Senior man who has graduated from warrior status. Elders make community decisions, resolve disputes, and perform blessings.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "yeyo",
+    "term_english": "mother",
+    "domain": "kinship",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["yieyo"],
+    "preserve": false,
+    "notes": "Term of respect and endearment for mother.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "papa",
+    "term_english": "father",
+    "domain": "kinship",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["paapa"],
+    "preserve": false,
+    "notes": "Term for father.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "Laikipiak",
+    "term_english": "Laikipiak section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Laikipia", "Il-Laikipiak"],
+    "preserve": true,
+    "notes": "A historically powerful Maasai section based around the Laikipia Plateau in Kenya. Nearly destroyed in 19th-century inter-Maasai wars (Iloikop Wars). Remnants absorbed into other sections or regrouped. Known for their martial prowess.",
+    "subtribe": "Laikipiak"
+  },
+  {
+    "term_maasai": "Samburu",
+    "term_english": "Samburu people / Loikop",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Sampur", "Sambur", "Lokop"],
+    "preserve": true,
+    "notes": "A closely related Maa-speaking group in northern Kenya. Share language (with dialect differences), age-set system, and pastoral traditions with the Maasai. Sometimes called Loikop or Lmomonyot. Retain many archaic Maa linguistic forms.",
+    "subtribe": "Samburu"
+  },
+  {
+    "term_maasai": "Lmomonyot",
+    "term_english": "Samburu / people of the land",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Ilmomonyot"],
+    "preserve": true,
+    "notes": "An alternate name for the Samburu people, meaning 'people of the land'. Emphasizes their connection to the northern rangelands of Kenya.",
+    "subtribe": "Lmomonyot"
+  },
+  {
+    "term_maasai": "Ldikiri",
+    "term_english": "Ldikiri section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Il-Dikiri", "Ildikiri"],
+    "preserve": true,
+    "notes": "A Maasai section. Associated with specific territorial and clan identities within the broader Maasai nation.",
+    "subtribe": "Ldikiri"
+  },
+  {
+    "term_maasai": "Ilkisongo",
+    "term_english": "Kisongo section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Kisongo"],
+    "preserve": true,
+    "notes": "One of the largest Maasai sections, primarily in Tanzania. Known for maintaining strong traditional practices.",
+    "subtribe": "Ilkisongo"
+  },
+  {
+    "term_maasai": "Ilpurko",
+    "term_english": "Purko section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Purko"],
+    "preserve": true,
+    "notes": "A major Maasai section in Kenya. Historically influential in Maasai politics and territorial governance. The Purko dialect is often considered the standard Maa form.",
+    "subtribe": "Ilpurko"
+  },
+  {
+    "term_maasai": "Ilkeekonyokie",
+    "term_english": "Keekonyokie section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Keekonyokie"],
+    "preserve": true,
+    "notes": "A Maasai section based near the Ngong Hills area in Kenya.",
+    "subtribe": "Ilkeekonyokie"
+  },
+  {
+    "term_maasai": "Iloodokilani",
+    "term_english": "Loodokilani section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Loodokilani"],
+    "preserve": true,
+    "notes": "A Maasai section. 'Loo-dokilani' means 'those of the river'.",
+    "subtribe": "Iloodokilani"
+  },
+  {
+    "term_maasai": "Ildamat",
+    "term_english": "Damat section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Dama", "Damat"],
+    "preserve": true,
+    "notes": "A Maasai section, primarily in Narok area of Kenya.",
+    "subtribe": "Ildamat"
+  },
+  {
+    "term_maasai": "Ilkaputiei",
+    "term_english": "Kaputiei section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Kaputiei", "Kapiti"],
+    "preserve": true,
+    "notes": "A Maasai section around the Kitengela plains southeast of Nairobi.",
+    "subtribe": "Ilkaputiei"
+  },
+  {
+    "term_maasai": "Ilmatapato",
+    "term_english": "Matapato section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Matapato"],
+    "preserve": true,
+    "notes": "A Maasai section in Kajiado County, Kenya.",
+    "subtribe": "Ilmatapato"
+  },
+  {
+    "term_maasai": "Ilarusa",
+    "term_english": "Arusha Maasai",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Arusha", "Larusa"],
+    "preserve": true,
+    "notes": "A Maa-speaking group near Arusha, Tanzania. Historically more settled and agricultural compared to other Maasai sections.",
+    "subtribe": "Ilarusa"
+  },
+  {
+    "term_maasai": "Ilparakuyo",
+    "term_english": "Parakuyo / Baraguyu",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Parakuyo", "Baraguyu"],
+    "preserve": true,
+    "notes": "A Maa-speaking pastoral group in central and eastern Tanzania. Distinct from but related to the Maasai proper.",
+    "subtribe": "Ilparakuyo"
+  },
+  {
+    "term_maasai": "Ilwuasinkishu",
+    "term_english": "Uasin Gishu Maasai",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Uasin Gishu", "Sigirshu"],
+    "preserve": true,
+    "notes": "A formerly powerful Maasai section on the Uasin Gishu plateau. Largely displaced during Iloikop Wars and colonial period.",
+    "subtribe": "Ilwuasinkishu"
+  },
+  {
+    "term_maasai": "Isiria",
+    "term_english": "Siria section",
+    "domain": "governance",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Siria"],
+    "preserve": true,
+    "notes": "A Maasai section in the Mara region of Kenya, near the famous Maasai Mara.",
+    "subtribe": "Isiria"
+  },
+  {
+    "term_maasai": "olpiroi",
+    "term_english": "traditional medicine / herbal remedy",
+    "domain": "health",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Herbal and traditional medicine preparation. Knowledge held by elders and oloiboni.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olkaria",
+    "term_english": "hot springs / geothermal place",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Place name associated with geothermal features, e.g. near Lake Naivasha.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oloololo",
+    "term_english": "escarpment / cliff ridge",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "The Oloololo Escarpment overlooks the Maasai Mara.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "orinka",
+    "term_english": "authority stick / elder's staff",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["olrinka"],
+    "preserve": true,
+    "notes": "A carved authority staff carried by elders to signify status and used during meetings and ceremonies.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olelem",
+    "term_english": "blessing / prayer",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Elders give blessings (olelem) through prayer and spitting (a sacred act in Maasai culture).",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkutuk",
+    "term_english": "mouth / language / opening",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Can mean mouth, language (enkutuk oo lMaasai = the Maasai language), or an opening.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "shuka",
+    "term_english": "cloth wrap / traditional garment",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "The iconic red/blue/purple checked cloth worn by Maasai people. Originally made of animal skins, now commonly cotton.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "esoit",
+    "term_english": "stone / hill / mountain",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Used in many place names, e.g. Esoit Oibor (White Mountain).",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "ol-doinyo",
+    "term_english": "mountain",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["oldoinyo", "oloindoinyo"],
+    "preserve": true,
+    "notes": "Mountain. Ol Doinyo Lengai (Mountain of God) is the Maasai sacred volcano in Tanzania.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "Ol Doinyo Lengai",
+    "term_english": "Mountain of God",
+    "domain": "philosophy",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Sacred active volcano in Tanzania. The Maasai believe Enkai resides here. Site of major prayers during drought.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkop",
+    "term_english": "land / earth / country",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Land is sacred to the Maasai. 'Iloshon' (sections) are defined by enkop boundaries.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "kule",
+    "term_english": "milk",
+    "domain": "daily_life",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Milk is a dietary staple. Fresh milk, fermented milk, and blood-milk mixtures are traditional foods.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "osarua",
+    "term_english": "fermented milk / sour milk",
+    "domain": "daily_life",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Fermented milk stored in gourds. A dietary staple often mixed with blood from cattle.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "orkanyit",
+    "term_english": "respect / honor",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["enkanyit"],
+    "preserve": true,
+    "notes": "Respect for elders and social norms. One of the highest Maasai values.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "supai",
+    "term_english": "hello / how are you",
+    "domain": "greetings",
+    "part_of_speech": "interjection",
+    "alternate_spellings": ["supa", "supat"],
+    "preserve": false,
+    "notes": "Common Maasai greeting. Response varies by gender and age of the greeted person.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "ipa",
+    "term_english": "fine / good (response to greeting)",
+    "domain": "greetings",
+    "part_of_speech": "interjection",
+    "alternate_spellings": ["epa"],
+    "preserve": false,
+    "notes": "Standard response to 'supa' from a man.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "nde",
+    "term_english": "yes",
+    "domain": "general",
+    "part_of_speech": "interjection",
+    "alternate_spellings": ["ee"],
+    "preserve": false,
+    "notes": "Affirmative.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "aai",
+    "term_english": "no",
+    "domain": "general",
+    "part_of_speech": "interjection",
+    "alternate_spellings": ["aa"],
+    "preserve": false,
+    "notes": "Negative.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "ashe",
+    "term_english": "thank you",
+    "domain": "greetings",
+    "part_of_speech": "interjection",
+    "alternate_spellings": ["ashe oleng"],
+    "preserve": false,
+    "notes": "'Ashe oleng' = thank you very much.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olesere",
+    "term_english": "story / legend",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["ileseret"],
+    "preserve": false,
+    "notes": "Oral stories passed down through generations. Important for cultural education.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkerai",
+    "term_english": "child",
+    "domain": "kinship",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["inkera"],
+    "preserve": false,
+    "notes": "Child. Plural: inkera.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oreteti",
+    "term_english": "tree",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["ilkeek"],
+    "preserve": false,
+    "notes": "Trees are important for medicine, shade, and ceremony locations.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "osinka",
+    "term_english": "bead necklace / beadwork",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Intricate beadwork is a defining Maasai art form. Colors carry meaning: red (bravery), blue (sky/water), green (land), white (peace), orange (hospitality).",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "esiaai",
+    "term_english": "grass / pasture",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Pasture quality determines migration patterns.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkare",
+    "term_english": "water",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Water sources are communal and critical. Many Maasai place names reference water: Enkare Nairobi (cold water = Nairobi).",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "Enkare Nairobi",
+    "term_english": "cold water (origin of Nairobi city name)",
+    "domain": "environment",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "The Maasai name for a cold water stream that gave Kenya's capital its name.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "osilalei",
+    "term_english": "peace",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Peace is valued highly. Peace-making ceremonies involve sharing milk and blessing.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oltome",
+    "term_english": "love / affection",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Emotional bond, love between family members, spouses.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olkejuado",
+    "term_english": "wide land / Kajiado",
+    "domain": "environment",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Kajiado"],
+    "preserve": true,
+    "notes": "Kajiado County in Kenya, a major Maasai territory. 'Ol-kejuado' means 'a long, wide river' or 'wide land'.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enaiposha",
+    "term_english": "Naivasha / heaving waters",
+    "domain": "environment",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Naivasha"],
+    "preserve": true,
+    "notes": "Lake Naivasha in Kenya. From Maasai 'en-aiposha' meaning 'heaving waters' or 'rough water'.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olarro",
+    "term_english": "swamp / marsh",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Swampy area. Important grazing during dry periods.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olalem",
+    "term_english": "song",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Maasai songs are central to ceremonies and daily life. Call-and-response patterns are common.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "nabo",
+    "term_english": "one",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": ["obo"],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "are",
+    "term_english": "two",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "okuni",
+    "term_english": "three",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": ["uni"],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oonguan",
+    "term_english": "four",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": ["ongwan"],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "imiet",
+    "term_english": "five",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "ile",
+    "term_english": "six",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "naapishana",
+    "term_english": "seven",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": ["napishana"],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "isiet",
+    "term_english": "eight",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "naudo",
+    "term_english": "nine",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "tomon",
+    "term_english": "ten",
+    "domain": "numbers",
+    "part_of_speech": "numeral",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkolong",
+    "term_english": "river",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "River. Many Maasai territories are defined by river boundaries.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "osero",
+    "term_english": "lake",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Lake. E.g. Osero Amboseli.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olchani",
+    "term_english": "rain",
+    "domain": "environment",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["enchani"],
+    "preserve": false,
+    "notes": "Rain is a gift from Enkai and central to pastoral survival.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olmaa",
+    "term_english": "Maa language / Maasai people",
+    "domain": "culture",
+    "part_of_speech": "noun",
+    "alternate_spellings": ["Maa"],
+    "preserve": true,
+    "notes": "The Maa language is shared by Maasai, Samburu, and related groups. 'Olmaa' refers to both the language and the Maasai-speaking nation.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oloorika",
+    "term_english": "ceremony / ritual",
+    "domain": "ceremony",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Generic term for ceremony or ritual gathering.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkiama",
+    "term_english": "meeting / council",
+    "domain": "governance",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "Traditional council meeting under a tree where elders discuss community matters and resolve disputes.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "olamal",
+    "term_english": "curse / oath",
+    "domain": "philosophy",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": true,
+    "notes": "A powerful social mechanism. An elder's curse is deeply feared. Oaths are used to resolve serious disputes.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "enkisoma",
+    "term_english": "school / education",
+    "domain": "education",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Modern education. Many Maasai communities now integrate formal schooling alongside traditional knowledge.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "oltiankali",
+    "term_english": "teacher / instructor",
+    "domain": "education",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Teacher. Traditional and modern.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "endaa",
+    "term_english": "food",
+    "domain": "daily_life",
+    "part_of_speech": "noun",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Food. Traditional Maasai diet consists primarily of milk, blood, and meat.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "sidai",
+    "term_english": "good / beautiful",
+    "domain": "general",
+    "part_of_speech": "adjective",
+    "alternate_spellings": [],
+    "preserve": false,
+    "notes": "Good, beautiful, fine.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "torono",
+    "term_english": "bad / wrong",
+    "domain": "general",
+    "part_of_speech": "adjective",
+    "alternate_spellings": ["torrono"],
+    "preserve": false,
+    "notes": "Bad, wrong, unpleasant.",
+    "subtribe": ""
+  },
+  {
+    "term_maasai": "Iloikop Wars",
+    "term_english": "Maasai civil wars",
+    "domain": "culture",
+    "part_of_speech": "proper noun",
+    "alternate_spellings": ["Iloikop"],
+    "preserve": true,
+    "notes": "A series of inter-Maasai conflicts in the 19th century between pastoral Maasai and agricultural/mixed groups. Led to the decline of sections like Laikipiak and Ilwuasinkishu.",
+    "subtribe": ""
+  }
+]

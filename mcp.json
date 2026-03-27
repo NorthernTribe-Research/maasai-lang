@@ -1,0 +1,39 @@
+{
+  "project": {
+    "name": "maasai-language-showcase",
+    "version": "0.1.0",
+    "description": "English ↔ Maasai translation and Maasai speech transcription showcase for Hugging Face Spaces.",
+    "owner": "NorthernTribe-Research",
+    "license": "TBD",
+    "status": "planning"
+  },
+  "goals": {
+    "primary": [
+      "Build a strong English to Maasai translation model",
+      "Support Maasai to English translation",
+      "Integrate Maasai speech transcription using Microsoft Paza ASR",
+      "Deploy a polished public Hugging Face Space"
+    ],
+    "secondary": [
+      "Create a reusable Maasai glossary layer",
+      "Build a preservation-oriented language technology demo",
+      "Establish a future foundation for Maasai language AI"
+    ]
+  },
+  "models": {
+    "translation_base": {
+      "provider": "google",
+      "model_id": "google/gemma-3-4b-it",
+      "purpose": "Instruction-tuned base for English ↔ Maasai translation fine-tuning",
+      "train_strategy": "QLoRA",
+      "target_artifact": "adapter-first"
+    },
+    "speech_asr": {
+      "provider": "microsoft",
+      "model_id": "microsoft/paza-whisper-large-v3-turbo",
+      "purpose": "Maasai ASR integration",
+      "train_strategy": "none",
+      "target_artifact": "pipeline"
+    }
+  }
+}

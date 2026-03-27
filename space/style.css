@@ -1,0 +1,544 @@
+/* =========================================================
+   Maasai Language Showcase — Cultural Theme
+   Colors inspired by Maasai beadwork and shuka patterns
+   Red (#C0392B) = Bravery, Strength
+   Blue (#2471A3) = Sky, Water, Enkai
+   Green (#1E8449) = Land, Pastures, Life
+   Orange (#E67E22) = Hospitality, Warmth
+   Black (#1C1C1C) = The People, Solidarity
+   White (#FAFAFA) = Peace, Purity
+   Gold (#D4AC0D) = Sun, Fertility
+   ========================================================= */
+
+/* === Root Variables === */
+:root {
+    --maasai-red: #C0392B;
+    --maasai-red-dark: #922B21;
+    --maasai-red-light: #E74C3C;
+    --maasai-blue: #2471A3;
+    --maasai-blue-dark: #1A5276;
+    --maasai-green: #1E8449;
+    --maasai-green-light: #27AE60;
+    --maasai-orange: #E67E22;
+    --maasai-orange-light: #F39C12;
+    --maasai-black: #1C1C1C;
+    --maasai-charcoal: #2C2C2C;
+    --maasai-dark: #121212;
+    --maasai-white: #FAFAFA;
+    --maasai-cream: #FFF8E7;
+    --maasai-gold: #D4AC0D;
+    --maasai-sand: #F5E6CC;
+    --text-primary: #FAFAFA;
+    --text-secondary: #B0B0B0;
+    --text-muted: #888888;
+    --border-color: #3A3A3A;
+    --card-bg: #222222;
+    --card-bg-hover: #2A2A2A;
+}
+
+/* === Global Overrides === */
+.gradio-container {
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    background: var(--maasai-dark) !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif !important;
+}
+
+.dark .gradio-container {
+    background: var(--maasai-dark) !important;
+}
+
+/* === Hero Header === */
+.hero-banner {
+    background: linear-gradient(135deg, var(--maasai-red-dark) 0%, var(--maasai-red) 40%, var(--maasai-orange) 100%);
+    padding: 2rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    border-left: 6px solid var(--maasai-gold);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(212, 172, 13, 0.15));
+    pointer-events: none;
+}
+
+.hero-banner h1 {
+    color: var(--maasai-white) !important;
+    font-size: 2.2rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.5rem !important;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: -0.5px;
+}
+
+.hero-banner p {
+    color: rgba(255,255,255,0.92) !important;
+    font-size: 1.05rem !important;
+    line-height: 1.6 !important;
+    max-width: 700px;
+}
+
+.hero-subtitle {
+    font-size: 0.92rem !important;
+    opacity: 0.85;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+/* === Beadwork Stripe Decoration === */
+.beadwork-stripe {
+    height: 8px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--maasai-red) 0px,
+        var(--maasai-red) 20px,
+        var(--maasai-blue) 20px,
+        var(--maasai-blue) 40px,
+        var(--maasai-green) 40px,
+        var(--maasai-green) 60px,
+        var(--maasai-orange) 60px,
+        var(--maasai-orange) 80px,
+        var(--maasai-gold) 80px,
+        var(--maasai-gold) 100px
+    );
+    border-radius: 4px;
+    margin: 1rem 0;
+}
+
+/* === Tab Navigation === */
+.tab-nav {
+    border-bottom: 3px solid var(--maasai-red) !important;
+}
+
+.tab-nav button {
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    padding: 0.75rem 1.5rem !important;
+    color: var(--text-secondary) !important;
+    border: none !important;
+    background: transparent !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tab-nav button:hover {
+    color: var(--maasai-orange) !important;
+    background: rgba(230, 126, 34, 0.1) !important;
+}
+
+.tab-nav button.selected {
+    color: var(--maasai-red) !important;
+    border-bottom: 3px solid var(--maasai-red) !important;
+    background: rgba(192, 57, 43, 0.08) !important;
+}
+
+/* === Primary Action Buttons === */
+.gr-button.primary, button.primary {
+    background: linear-gradient(135deg, var(--maasai-red) 0%, var(--maasai-red-dark) 100%) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 700 !important;
+    padding: 0.75rem 2rem !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4) !important;
+    transition: all 0.3s ease !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.95rem !important;
+}
+
+.gr-button.primary:hover, button.primary:hover {
+    background: linear-gradient(135deg, var(--maasai-red-light) 0%, var(--maasai-red) 100%) !important;
+    box-shadow: 0 6px 20px rgba(192, 57, 43, 0.5) !important;
+    transform: translateY(-1px);
+}
+
+.gr-button.secondary, button.secondary {
+    background: var(--card-bg) !important;
+    border: 2px solid var(--maasai-blue) !important;
+    color: var(--maasai-blue) !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease !important;
+}
+
+.gr-button.secondary:hover, button.secondary:hover {
+    background: rgba(36, 113, 163, 0.1) !important;
+}
+
+/* === Text Areas / Inputs === */
+textarea, .gr-textbox textarea, .gr-textbox input {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    font-size: 1rem !important;
+    line-height: 1.7 !important;
+    padding: 1rem !important;
+    transition: border-color 0.3s ease !important;
+}
+
+textarea:focus, .gr-textbox textarea:focus {
+    border-color: var(--maasai-red) !important;
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15) !important;
+}
+
+/* === Dropdown / Select === */
+.gr-dropdown, select {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    font-size: 1rem !important;
+}
+
+/* === Content Cards === */
+.story-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+    border-left: 5px solid var(--maasai-orange);
+    transition: all 0.3s ease;
+}
+
+.story-card:hover {
+    border-left-color: var(--maasai-red);
+    background: var(--card-bg-hover);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.story-card h3 {
+    color: var(--maasai-orange) !important;
+    font-size: 1.2rem !important;
+    margin-bottom: 0.75rem !important;
+    font-weight: 700;
+}
+
+.story-card p {
+    color: var(--text-secondary) !important;
+    line-height: 1.8 !important;
+}
+
+/* === Runtime Status === */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
+}
+
+.status-card {
+    background: linear-gradient(180deg, rgba(28, 28, 28, 0.96) 0%, rgba(34, 34, 34, 0.98) 100%);
+    border: 1px solid var(--border-color);
+    border-top: 4px solid var(--maasai-gold);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.status-card.is-loaded {
+    border-top-color: var(--maasai-green-light);
+}
+
+.status-card.is-lazy {
+    border-top-color: var(--maasai-blue);
+}
+
+.status-card.is-unavailable {
+    border-top-color: var(--maasai-orange);
+}
+
+.status-kicker {
+    color: var(--maasai-gold);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.45rem;
+}
+
+.status-head {
+    color: var(--maasai-white);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+}
+
+.status-detail {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    margin: 0 0 0.8rem;
+}
+
+.status-meta {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.status-meta code {
+    color: var(--maasai-sand);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.12rem 0.35rem;
+    border-radius: 6px;
+}
+
+/* === Workflow Guidance === */
+.workflow-note {
+    color: var(--text-secondary);
+    background: rgba(36, 113, 163, 0.1);
+    border: 1px solid rgba(36, 113, 163, 0.35);
+    border-left: 4px solid var(--maasai-blue);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    line-height: 1.65;
+    margin: 0.6rem 0 1rem;
+}
+
+/* === Glossary Output === */
+.glossary-panel {
+    background: rgba(230, 126, 34, 0.08);
+    border: 1px solid rgba(230, 126, 34, 0.28);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    margin-top: 0.9rem;
+}
+
+.glossary-panel h3,
+.glossary-panel p,
+.glossary-panel li {
+    color: var(--text-primary) !important;
+}
+
+.glossary-panel ul {
+    padding-left: 1.2rem;
+}
+
+/* === Voice Panel === */
+.voice-panel {
+    background: rgba(30, 132, 73, 0.12);
+    border: 1px solid rgba(39, 174, 96, 0.3);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    margin-top: 0.9rem;
+}
+
+.voice-panel.is-empty {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.voice-heading {
+    color: var(--maasai-green-light);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+}
+
+.voice-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.voice-button {
+    appearance: none;
+    background: linear-gradient(135deg, var(--maasai-green) 0%, var(--maasai-green-light) 100%);
+    border: none;
+    border-radius: 999px;
+    color: var(--maasai-white);
+    cursor: pointer;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.7rem 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.voice-button:hover {
+    box-shadow: 0 8px 18px rgba(39, 174, 96, 0.22);
+    transform: translateY(-1px);
+}
+
+.voice-button.secondary {
+    background: transparent;
+    border: 1px solid rgba(39, 174, 96, 0.4);
+    color: var(--maasai-sand);
+}
+
+.voice-note {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* === Culture Section === */
+.culture-section {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.culture-section h2 {
+    color: var(--maasai-red) !important;
+    font-size: 1.4rem !important;
+    border-bottom: 2px solid var(--maasai-gold);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem !important;
+}
+
+.culture-section h3 {
+    color: var(--maasai-orange) !important;
+    font-size: 1.15rem !important;
+    margin-top: 1.25rem !important;
+}
+
+/* === Laikipiak Section === */
+.laikipiak-doc {
+    background: linear-gradient(180deg, var(--maasai-charcoal) 0%, var(--card-bg) 100%);
+    border-radius: 14px;
+    padding: 2rem;
+    border: 1px solid var(--border-color);
+    border-top: 4px solid var(--maasai-red);
+}
+
+.laikipiak-doc h2 {
+    color: var(--maasai-gold) !important;
+    font-weight: 800;
+}
+
+.laikipiak-doc h3 {
+    color: var(--maasai-red-light) !important;
+}
+
+.bilingual-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1rem 0;
+}
+
+.bilingual-en {
+    background: rgba(36, 113, 163, 0.08);
+    border-left: 4px solid var(--maasai-blue);
+    padding: 1rem 1.25rem;
+    border-radius: 0 10px 10px 0;
+}
+
+.bilingual-mas {
+    background: rgba(192, 57, 43, 0.08);
+    border-left: 4px solid var(--maasai-red);
+    padding: 1rem 1.25rem;
+    border-radius: 0 10px 10px 0;
+}
+
+.bilingual-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.bilingual-en .bilingual-label {
+    color: var(--maasai-blue);
+}
+
+.bilingual-mas .bilingual-label {
+    color: var(--maasai-red);
+}
+
+/* === Footer === */
+.footer-note {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-color);
+    margin-top: 2rem;
+}
+
+.footer-note a {
+    color: var(--maasai-orange);
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+    .hero-banner h1 {
+        font-size: 1.6rem !important;
+    }
+    .bilingual-block {
+        grid-template-columns: 1fr;
+    }
+    .hero-banner {
+        padding: 1.5rem;
+    }
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--maasai-dark);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--maasai-red-dark);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--maasai-red);
+}
+
+/* === Audio Upload === */
+.gr-audio {
+    border: 2px dashed var(--border-color) !important;
+    border-radius: 12px !important;
+    background: var(--card-bg) !important;
+    transition: border-color 0.3s ease !important;
+}
+
+.gr-audio:hover {
+    border-color: var(--maasai-orange) !important;
+}
+
+/* === Examples Panel === */
+.gr-examples {
+    background: var(--card-bg) !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* === Labels === */
+label {
+    color: var(--text-secondary) !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+}
+
+/* === Accordion === */
+.gr-accordion {
+    border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    background: var(--card-bg) !important;
+}

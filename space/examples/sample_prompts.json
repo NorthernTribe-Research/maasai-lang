@@ -1,0 +1,42 @@
+[
+    {
+        "direction": "English → Maasai",
+        "text": "Hello, how are you?"
+    },
+    {
+        "direction": "English → Maasai",
+        "text": "Please bring water."
+    },
+    {
+        "direction": "English → Maasai",
+        "text": "The children are going to school."
+    },
+    {
+        "direction": "English → Maasai",
+        "text": "Where are the cattle?"
+    },
+    {
+        "direction": "English → Maasai",
+        "text": "This land is important to our community."
+    },
+    {
+        "direction": "English → Maasai",
+        "text": "God has blessed us with rain."
+    },
+    {
+        "direction": "English → Maasai",
+        "text": "The warriors are performing a traditional dance."
+    },
+    {
+        "direction": "Maasai → English",
+        "text": "Supa, ipa eata?"
+    },
+    {
+        "direction": "Maasai → English",
+        "text": "Ashe oleng."
+    },
+    {
+        "direction": "Maasai → English",
+        "text": "Inkishu ia arishata."
+    }
+]

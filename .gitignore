@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.*
+
+# Data artifacts (large files)
+outputs/
+*.bin
+*.pt
+*.safetensors
+*.gguf
+data/interim/
+data/pdf/
+data/processed/
+data/raw/
+training*.log
+*.log
+
+# Keep publishable dataset and glossary assets in git
+!data/final_v3/
+!data/final_v3/*.jsonl
+!data/glossary/
+!data/glossary/*.json
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# HuggingFace
+.cache/
+.hf_cache/
+huggingface-api-key.json

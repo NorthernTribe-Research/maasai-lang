@@ -1,0 +1,46 @@
+# LoRA Configuration for Maasai-English Translation
+# Base model: google/gemma-3-4b-it
+
+model:
+  name: "google/gemma-3-4b-it"
+  quantization: "4bit"
+  bnb_4bit_compute_dtype: "bfloat16"
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: true
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  bias: "none"
+  task_type: "CAUSAL_LM"
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+training:
+  max_seq_length: 2048
+  learning_rate: 0.0002
+  num_train_epochs: 3
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 8
+  warmup_ratio: 0.03
+  weight_decay: 0.01
+  logging_steps: 20
+  eval_steps: 200
+  save_steps: 200
+  save_total_limit: 2
+  bf16: true
+  gradient_checkpointing: true
+  seed: 42
+
+data:
+  train_file: "data/processed/train.jsonl"
+  valid_file: "data/processed/valid.jsonl"
+  output_dir: "outputs/maasai-en-mt-qlora"
