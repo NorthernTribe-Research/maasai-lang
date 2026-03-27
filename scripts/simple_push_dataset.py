@@ -68,7 +68,7 @@ def push_dataset_direct():
         "dataset_summary": "Comprehensive English-Maasai translation dataset (9,194 pairs)",
         "language": ["en", "mas"],
         "license": "CC-BY-4.0",
-        "task_ids": ["machine-translation"],
+        "task_ids": ["translation"],
         "tags": ["translation", "maasai", "low-resource", "cultural-preservation"],
         "size_categories": ["1K<n<10K"],
         "domains": ["religious", "cultural", "synthetic"],

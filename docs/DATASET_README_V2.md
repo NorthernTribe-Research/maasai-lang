@@ -12,8 +12,7 @@ tags:
   - machine-translation
 license: cc-by-4.0
 task_categories:
-  - machine-translation
-  - sequence-to-sequence
+  - translation
 size_categories:
   - 1K<n<10K
 dataset_info:

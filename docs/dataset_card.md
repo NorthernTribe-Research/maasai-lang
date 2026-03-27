@@ -5,7 +5,7 @@ language:
 pretty_name: Maasai-English Translation Corpus
 license: cc-by-4.0
 task_categories:
-  - machine-translation
+  - translation
 size_categories:
   - 1K<n<10K
 tags:
