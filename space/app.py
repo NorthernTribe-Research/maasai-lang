@@ -56,6 +56,59 @@ OPERATIONAL_MESSAGE_PREFIXES = (
     ASR_UNAVAILABLE_PREFIX,
 )
 
+COMPOSITION_LENGTH_GUIDANCE = {
+    "Compact": {
+        "sentence_instruction": "Write 2 to 3 connected Maa sentences.",
+        "devotional_instruction": "Write 4 to 5 Maa sentences as one short devotional paragraph.",
+        "story_instruction": "Write 4 to 6 Maa sentences as a concise oral narrative.",
+        "max_new_tokens": 160,
+    },
+    "Standard": {
+        "sentence_instruction": "Write 4 connected Maa sentences with a clear progression.",
+        "devotional_instruction": "Write 6 to 8 Maa sentences as a steady devotional reflection.",
+        "story_instruction": "Write 7 to 9 Maa sentences with a beginning, middle, and close.",
+        "max_new_tokens": 240,
+    },
+    "Extended": {
+        "sentence_instruction": "Write 5 to 6 connected Maa sentences with richer detail.",
+        "devotional_instruction": "Write 8 to 10 Maa sentences in two short devotional paragraphs.",
+        "story_instruction": "Write 10 to 12 Maa sentences as a short oral story with a moral close.",
+        "max_new_tokens": 320,
+    },
+}
+
+COMPOSITION_REGISTER_GUIDANCE = {
+    "Reflective": "Use calm, clear Maa suited to thoughtful reading.",
+    "Prayerful": "Use reverent Maa appropriate for prayer, blessing, or scripture-adjacent reflection.",
+    "Pastoral": "Use grounded Maa tied to family, cattle, land, rain, and community life.",
+    "Instructional": "Use direct, disciplined Maa that remains natural and respectful.",
+    "Oral Narrative": "Use oral-literature cadence suited to spoken storytelling.",
+}
+
+COMPOSITION_EXAMPLES = [
+    [
+        "A morning blessing for a family before the cattle leave the enkang",
+        "Devotional Reflection",
+        "Prayerful",
+        "Compact",
+        "Enkai, inkishu, enkang",
+    ],
+    [
+        "A few connected Maa sentences about rain returning after drought",
+        "Sentence Composition",
+        "Pastoral",
+        "Standard",
+        "enkare, olameyu",
+    ],
+    [
+        "A short oral story about an elder guiding children during a difficult season",
+        "Short Story",
+        "Oral Narrative",
+        "Standard",
+        "ilpayiani, inkera, enkoitoi",
+    ],
+]
+
 
 def get_translation_pipeline():
     """Lazy-load translation model."""
@@ -586,6 +639,289 @@ def render_glossary_matches(glossary_matches: list[dict[str, Any]], direction: s
         )
 
     return "\n".join(lines)
+
+
+def render_generation_status() -> str:
+    """Render runtime state for Maa composition."""
+    status = get_model_status()
+    mode = str(status.get("mode", "lazy"))
+
+    if mode == "loaded":
+        label = "Live composition"
+        detail = "Sentence, devotional, and story composition are using the configured Hugging Face model."
+    elif mode == "unavailable":
+        label = "Demo fallback"
+        detail = "Model loading failed; composition will use curated Maa fallback outputs until the model is available."
+    else:
+        label = "Loads on demand"
+        detail = "The model will load on the first composition request."
+
+    return f"""
+    <div class="status-grid status-grid-single">
+        <div class="status-card is-{escape(mode)}">
+            <div class="status-kicker">Composition</div>
+            <div class="status-head">{escape(label)}</div>
+            <p class="status-detail">{escape(detail)}</p>
+            <p class="status-meta"><strong>Repo:</strong> <code>{escape(str(status.get('model_id', TRANSLATION_MODEL_ID)))}</code></p>
+        </div>
+    </div>
+    """
+
+
+def parse_composition_terms(raw_terms: str) -> list[str]:
+    """Split optional user terms into a clean, short list."""
+    terms = [term.strip() for term in re.split(r"[,;\n]+", raw_terms or "") if term.strip()]
+    return terms[:8]
+
+
+def build_composition_prompt(
+    theme: str,
+    composition_type: str,
+    register: str,
+    length: str,
+    glossary_matches: list[dict[str, Any]],
+    required_terms: list[str],
+) -> tuple[str, int]:
+    """Build a controlled Maa composition prompt for the existing model."""
+    length_profile = COMPOSITION_LENGTH_GUIDANCE.get(length, COMPOSITION_LENGTH_GUIDANCE["Standard"])
+    register_guidance = COMPOSITION_REGISTER_GUIDANCE.get(
+        register,
+        COMPOSITION_REGISTER_GUIDANCE["Reflective"],
+    )
+
+    if composition_type == "Sentence Composition":
+        task_instruction = length_profile["sentence_instruction"]
+        mode_guidance = (
+            "Keep the writing natural and cohesive. The sentences should feel like one short passage, "
+            "not isolated fragments."
+        )
+    elif composition_type == "Devotional Reflection":
+        task_instruction = length_profile["devotional_instruction"]
+        mode_guidance = (
+            "Keep the tone devotional and biblically grounded. Focus on blessing, prayer, hope, gratitude, "
+            "wisdom, or faithful endurance where appropriate."
+        )
+    else:
+        task_instruction = length_profile["story_instruction"]
+        mode_guidance = (
+            "Write an original short story in oral-literature style with a clear opening, development, and close. "
+            "If it fits naturally, end with a short moral introduced by 'Enaitoti:'."
+        )
+
+    glossary_section = ""
+    if glossary_matches:
+        guidance_lines = []
+        for item in glossary_matches:
+            entry = item["entry"]
+            guidance_lines.append(
+                f"- {entry.get('term_english', '')} ↔ {entry.get('term_maasai', '')} "
+                f"[domain: {entry.get('domain', 'general')}]"
+            )
+        glossary_section = (
+            "Glossary guidance:\n"
+            + "\n".join(guidance_lines)
+            + "\nPreserve protected Maa forms when they fit the brief.\n\n"
+        )
+
+    required_term_section = ""
+    if required_terms:
+        required_term_section = (
+            "Required grounding terms:\n- "
+            + "\n- ".join(required_terms)
+            + "\nUse these terms naturally when appropriate.\n\n"
+        )
+
+    prompt = (
+        "You are a Maasai language writing assistant.\n"
+        "Write original Maa only.\n"
+        "Do not answer in English.\n"
+        "Do not explain the task.\n"
+        "Do not use bullet points or headings.\n"
+        f"Register guidance: {register_guidance}\n"
+        f"Task type: {composition_type}\n"
+        f"Length guidance: {task_instruction}\n"
+        f"Mode guidance: {mode_guidance}\n\n"
+        f"{glossary_section}"
+        f"{required_term_section}"
+        f"Theme or context:\n{theme.strip()}\n\n"
+        "Maa:"
+    )
+    return prompt, int(length_profile["max_new_tokens"])
+
+
+def clean_composition_output(text: str) -> str:
+    """Remove common instruction labels from generated composition text."""
+    cleaned = text.strip().strip('"').strip("'")
+    cleaned = re.sub(
+        r"^(Maa|Maasai|Response|Output|Story|Devotional Reflection|Sentence Composition)\s*:\s*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    for marker in ("\nEnglish:", "\nTranslation:", "\nExplanation:", "\nNotes:"):
+        if marker in cleaned:
+            cleaned = cleaned.split(marker, 1)[0].strip()
+
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
+
+
+def _demo_compose_text(
+    theme: str,
+    composition_type: str,
+    register: str,
+    required_terms: list[str],
+) -> str:
+    """Return curated Maa fallback text when the live model is unavailable."""
+    combined = " ".join([theme, register, " ".join(required_terms)]).lower()
+
+    if composition_type == "Devotional Reflection":
+        if any(token in combined for token in ("rain", "enkare", "drought", "olameyu")):
+            return (
+                "Enkai, iyie oltau sidai. Netii olameyu, kake iyie iton enkolong nabo enkare te sipata. "
+                "Ishoo iyiook engolon pee kitum enkoitoi sidai, ne inkera, ilpayiani, nabo inkishu pooki "
+                "eikashu tenebo. Meishoo iyiook oltau le nkanyit nabo enchipai."
+            )
+        return (
+            "Enkai, iyie oltumurin lenkishui. Kaji iyiook te nkanyit, ne itobir iltung'anak pooki en enkang. "
+            "Ishoo iyiook olng'ur, engolon, nabo enkoitoi sidai pee kintobir inkera, ilpayiani, nabo inkishu "
+            "te sipata. Meishoo iyiook osiligi nabo enchipai."
+        )
+
+    if composition_type == "Short Story":
+        return (
+            "Taata nabo netii olpayian lenkop najo olameyu eton oleng. Kake eidaŋat inkera lenyena ajo, "
+            "\"Metii taata nemeeta enkoitoi.\" Ne eitu tenebo, ne etum enkare te njorin naata metaany. "
+            "Ne eibalayu enkang, ne inkishu epuo sidai, ne iltung'anak eany. Enaitoti: Enkoitoi natii tenebo "
+            "naitobir iltung'anak pooki."
+        )
+
+    if any(token in combined for token in ("elder", "ilpayiani", "greeting", "family")):
+        return (
+            "Supa ilpayiani. Kanyorraa ajo kiata sidai te nkang oo. Kintobir tenebo pee eikashu inkera nabo "
+            "inkishu te sipata."
+        )
+    return (
+        "Enkai etobir enkop sidai. Iltung'anak eikashu tenebo te nkanyit nabo olng'ur. Enkare, inkishu, "
+        "nabo enkang pooki eishoo iyiook enchipai."
+    )
+
+
+def render_composition_brief(
+    theme: str,
+    composition_type: str,
+    register: str,
+    length: str,
+    glossary_matches: list[dict[str, Any]],
+    required_terms: list[str],
+    used_demo: bool,
+) -> str:
+    """Render a concise generation brief for the composition panel."""
+    safe_theme = theme.strip().replace("`", "'").replace("\n", " ")
+    safe_terms = [term.replace("`", "'") for term in required_terms]
+    lines = [
+        "### Composition Brief",
+        f"- Form: `{composition_type}`",
+        f"- Register: `{register}`",
+        f"- Length: `{length}`",
+        f"- Runtime: `{'Demo fallback' if used_demo else 'Live model'}`",
+        "",
+        f"**Theme / context**: {safe_theme}",
+    ]
+
+    if safe_terms:
+        lines.append("")
+        lines.append("**Requested terms**: " + ", ".join(f"`{term}`" for term in safe_terms))
+
+    if glossary_matches:
+        lines.append("")
+        lines.append("**Glossary grounding**:")
+        for item in glossary_matches:
+            entry = item["entry"]
+            preserve_note = " · protected" if entry.get("preserve") else ""
+            lines.append(
+                f"- `{entry.get('term_english', '')}` -> `{entry.get('term_maasai', '')}` "
+                f"({entry.get('domain', 'general')}{preserve_note})"
+            )
+    else:
+        lines.append("")
+        lines.append("**Glossary grounding**: no direct matches detected in the brief.")
+
+    if used_demo:
+        lines.append("")
+        lines.append(
+            "The live model is not currently available in this runtime, so the Space returned a curated Maa fallback sample."
+        )
+
+    return "\n".join(lines)
+
+
+def compose_with_context(
+    theme: str,
+    composition_type: str,
+    register: str,
+    length: str,
+    raw_terms: str,
+) -> tuple[str, str, str, str]:
+    """Generate Maa composition from a user theme and return context panels."""
+    if not theme.strip():
+        return (
+            f"{INPUT_REQUIRED_PREFIX} enter a theme or context to compose from.",
+            "### Composition Brief\nAdd a theme, brief, or contextual prompt to generate Maa text.",
+            render_generation_status(),
+            render_voice_panel("", "English → Maasai"),
+        )
+
+    required_terms = parse_composition_terms(raw_terms)
+    glossary_source = "\n".join(part for part in [theme.strip(), raw_terms.strip()] if part.strip())
+    glossary_matches = find_glossary_matches(glossary_source, "English → Maasai")
+
+    pipeline = get_translation_pipeline()
+    used_demo = pipeline is None
+
+    if used_demo:
+        composition = _demo_compose_text(theme, composition_type, register, required_terms)
+    else:
+        model, tokenizer = pipeline
+        prompt, max_new_tokens = build_composition_prompt(
+            theme=theme,
+            composition_type=composition_type,
+            register=register,
+            length=length,
+            glossary_matches=glossary_matches,
+            required_terms=required_terms,
+        )
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=0.72,
+            top_p=0.92,
+            do_sample=True,
+            repetition_penalty=1.08,
+            pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+        )
+        raw_text = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+        composition = clean_composition_output(raw_text)
+        if not composition:
+            used_demo = True
+            composition = _demo_compose_text(theme, composition_type, register, required_terms)
+
+    return (
+        composition,
+        render_composition_brief(
+            theme=theme,
+            composition_type=composition_type,
+            register=register,
+            length=length,
+            glossary_matches=glossary_matches,
+            required_terms=required_terms,
+            used_demo=used_demo,
+        ),
+        render_generation_status(),
+        render_voice_panel(composition, "English → Maasai"),
+    )
 
 
 def render_voice_panel(text: str, direction: str) -> str:
@@ -1435,6 +1771,119 @@ def build_app() -> gr.Blocks:
                     examples=load_sample_prompts(),
                     inputs=[input_text, direction_dd],
                     label="Reference prompts",
+                )
+
+            with gr.Tab("Composition"):
+                gr.HTML(
+                    render_section_header(
+                        "Composition",
+                        "Generate short Maa passages from a theme, devotional brief, or narrative context using the current project model.",
+                        kicker="Generation workflow",
+                        meta=f"Composition model: <code>{escape(TRANSLATION_MODEL_ID)}</code>",
+                    )
+                )
+                gr.HTML(
+                    "<p class='workflow-note'>"
+                    "This surface is optimized for controlled short-form Maa composition: connected sentences, devotional reflections, and oral-style short stories."
+                    "</p>"
+                )
+                gr.HTML(
+                    """
+                    <div class="composition-capability-grid">
+                        <div class="composition-capability-card">
+                            <div class="section-kicker">Sentence Composition</div>
+                            <p class="panel-copy">Generate connected Maa sentences from a practical or thematic brief.</p>
+                        </div>
+                        <div class="composition-capability-card">
+                            <div class="section-kicker">Devotional Reflection</div>
+                            <p class="panel-copy">Draft reverent Maa reflections grounded in biblical tone, prayer, blessing, and community life.</p>
+                        </div>
+                        <div class="composition-capability-card">
+                            <div class="section-kicker">Short Story</div>
+                            <p class="panel-copy">Compose concise oral-literature style stories with a clear close and optional moral line.</p>
+                        </div>
+                    </div>
+                    """
+                )
+                composition_status = gr.HTML(render_generation_status())
+
+                with gr.Row():
+                    with gr.Column():
+                        composition_theme = gr.Textbox(
+                            label="Theme or Context",
+                            placeholder="Describe the scene, idea, prayer topic, or story brief to write from.",
+                            lines=5,
+                        )
+                        with gr.Row():
+                            composition_type = gr.Dropdown(
+                                choices=[
+                                    "Sentence Composition",
+                                    "Devotional Reflection",
+                                    "Short Story",
+                                ],
+                                value="Sentence Composition",
+                                label="Form",
+                                interactive=True,
+                            )
+                            composition_register = gr.Dropdown(
+                                choices=list(COMPOSITION_REGISTER_GUIDANCE.keys()),
+                                value="Reflective",
+                                label="Register",
+                                interactive=True,
+                            )
+                        with gr.Row():
+                            composition_length = gr.Dropdown(
+                                choices=list(COMPOSITION_LENGTH_GUIDANCE.keys()),
+                                value="Standard",
+                                label="Length",
+                                interactive=True,
+                            )
+                            composition_terms = gr.Textbox(
+                                label="Key Terms",
+                                placeholder="Optional: Enkai, inkishu, enkang...",
+                                lines=1,
+                            )
+                        compose_btn = gr.Button("Compose in Maa", variant="primary", size="lg")
+
+                    with gr.Column():
+                        composition_output = gr.Textbox(
+                            label="Generated Maa Text",
+                            lines=12,
+                            interactive=False,
+                        )
+                        composition_voice = gr.HTML(render_voice_panel("", "English → Maasai"))
+                        composition_brief = gr.Markdown(
+                            value="### Composition Brief\nPrompt details, glossary grounding, and runtime notes will appear here after generation.",
+                            elem_classes=["composition-brief"],
+                        )
+
+                compose_btn.click(
+                    fn=compose_with_context,
+                    inputs=[
+                        composition_theme,
+                        composition_type,
+                        composition_register,
+                        composition_length,
+                        composition_terms,
+                    ],
+                    outputs=[
+                        composition_output,
+                        composition_brief,
+                        composition_status,
+                        composition_voice,
+                    ],
+                )
+
+                gr.Examples(
+                    examples=COMPOSITION_EXAMPLES,
+                    inputs=[
+                        composition_theme,
+                        composition_type,
+                        composition_register,
+                        composition_length,
+                        composition_terms,
+                    ],
+                    label="Composition briefs",
                 )
 
             with gr.Tab("Speech"):

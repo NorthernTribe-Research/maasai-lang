@@ -235,7 +235,8 @@ footer {
 
 .workflow-note,
 .glossary-panel,
-.voice-panel {
+.voice-panel,
+.composition-brief {
     margin: 0.75rem 0 1rem;
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
@@ -385,6 +386,10 @@ select:focus {
     margin: 1rem 0 1.5rem;
 }
 
+.status-grid-single {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .status-card,
 .research-card,
 .insight-card,
@@ -468,23 +473,59 @@ select:focus {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.composition-capability-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 0.85rem 0 1.1rem;
+}
+
 .example-card {
     border-left: 2px solid var(--border-strong);
+}
+
+.composition-capability-card {
+    background: rgba(19, 23, 28, 0.74);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.05rem;
+}
+
+.composition-capability-card .panel-copy {
+    margin: 0.6rem 0 0;
 }
 
 .glossary-panel {
     margin-top: 0.9rem;
 }
 
+.composition-brief {
+    margin-top: 0.9rem;
+}
+
 .glossary-panel h3,
 .glossary-panel p,
 .glossary-panel li,
-.glossary-panel strong {
+.glossary-panel strong,
+.composition-brief h3,
+.composition-brief p,
+.composition-brief li,
+.composition-brief strong {
     color: var(--text-primary) !important;
 }
 
-.glossary-panel ul {
+.glossary-panel ul,
+.composition-brief ul {
     padding-left: 1.2rem;
+}
+
+.composition-brief code {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 0.1rem 0.35rem;
 }
 
 .voice-heading {
@@ -697,6 +738,7 @@ label {
     .research-two-col,
     .insight-grid,
     .example-grid,
+    .composition-capability-grid,
     .about-grid,
     .stats-grid {
         grid-template-columns: 1fr;

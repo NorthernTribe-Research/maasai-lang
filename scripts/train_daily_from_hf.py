@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--work-dir", type=str, default=os.getenv("HF_DAILY_WORKDIR", "/tmp/maasai-daily-hf"))
     parser.add_argument("--token", type=str, default=None)
     parser.add_argument("--private-model-repo", action="store_true")
-    parser.add_argument("--max-length", type=int, default=512)
+    parser.add_argument("--max-length", type=int, default=768)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
     parser.add_argument("--num-train-epochs", type=float, default=1.0)
     parser.add_argument("--max-steps", type=int, default=800)
@@ -58,6 +58,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lora-dropout", type=float, default=0.05)
     parser.add_argument("--report-to", type=str, default="none")
     parser.add_argument("--hub-strategy", type=str, default="checkpoint")
+    parser.add_argument("--story-seed-file", type=str, default="data/raw/maasai_story_generation_seed.jsonl")
+    parser.add_argument("--max-bible-passages", type=int, default=48)
+    parser.add_argument("--bible-passage-window", type=int, default=3)
+    generation_group = parser.add_mutually_exclusive_group()
+    generation_group.add_argument("--augment-with-generation-tasks", dest="augment_with_generation_tasks", action="store_true")
+    generation_group.add_argument("--no-augment-with-generation-tasks", dest="augment_with_generation_tasks", action="store_false")
+    parser.set_defaults(augment_with_generation_tasks=True)
     parser.add_argument("--disconnect-colab", action="store_true")
     return parser.parse_args()
 
@@ -119,6 +126,10 @@ def write_run_manifest(
         "eval_steps": args.eval_steps,
         "report_to": args.report_to,
         "hub_strategy": args.hub_strategy,
+        "augment_with_generation_tasks": args.augment_with_generation_tasks,
+        "story_seed_file": args.story_seed_file,
+        "max_bible_passages": args.max_bible_passages,
+        "bible_passage_window": args.bible_passage_window,
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -202,6 +213,10 @@ def build_train_command(
     output_dir: Path,
     resume_checkpoint: str | None,
 ) -> list[str]:
+    story_seed_file = Path(args.story_seed_file)
+    if not story_seed_file.is_absolute():
+        story_seed_file = project_root / story_seed_file
+
     cmd = [
         sys.executable,
         str(project_root / "scripts" / "train_qlora.py"),
@@ -252,7 +267,15 @@ def build_train_command(
         args.hub_strategy,
         "--report_to",
         args.report_to,
+        "--story_seed_file",
+        str(story_seed_file),
+        "--max_bible_passages",
+        str(args.max_bible_passages),
+        "--bible_passage_window",
+        str(args.bible_passage_window),
     ]
+    if args.augment_with_generation_tasks:
+        cmd.append("--augment_with_generation_tasks")
     if args.private_model_repo:
         cmd.append("--hub_private_repo")
     if resume_checkpoint:

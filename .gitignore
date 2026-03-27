@@ -33,6 +33,8 @@ data/interim/
 data/pdf/
 data/processed/
 data/raw/
+data/external_*.txt
+data/external_*.json
 training*.log
 *.log
 

@@ -12,10 +12,12 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+from pathlib import Path
+import sys
 from typing import Any
 
 import torch
-from datasets import load_dataset
+from datasets import Dataset, DatasetDict, load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from transformers import (
     AutoModelForCausalLM,
@@ -24,6 +26,12 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.generation_data import build_instruction_mixture
 
 try:
     from transformers import BitsAndBytesConfig
@@ -78,6 +86,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--resume_from_checkpoint", type=str, default=None)
     parser.add_argument("--report_to", type=str, default="none")
+    parser.add_argument("--augment_with_generation_tasks", action="store_true")
+    parser.add_argument("--story_seed_file", type=str, default="data/raw/maasai_story_generation_seed.jsonl")
+    parser.add_argument("--max_bible_passages", type=int, default=48)
+    parser.add_argument("--bible_passage_window", type=int, default=3)
     return parser.parse_args()
 
 
@@ -87,6 +99,50 @@ def load_data(train_file: str, valid_file: str):
         "validation": valid_file,
     }
     return load_dataset("json", data_files=data_files)
+
+
+def maybe_augment_instruction_mixture(
+    dataset: DatasetDict,
+    *,
+    enabled: bool,
+    story_seed_file: str,
+    max_bible_passages: int,
+    bible_passage_window: int,
+    seed: int,
+) -> DatasetDict:
+    if not enabled:
+        return dataset
+
+    train_rows = build_instruction_mixture(
+        dataset["train"].to_list(),
+        "train",
+        story_seed_file=Path(story_seed_file),
+        max_bible_passages=max_bible_passages,
+        bible_passage_window=bible_passage_window,
+        seed=seed,
+    )
+    valid_rows = build_instruction_mixture(
+        dataset["validation"].to_list(),
+        "valid",
+        story_seed_file=Path(story_seed_file),
+        max_bible_passages=max(1, max_bible_passages // 6),
+        bible_passage_window=bible_passage_window,
+        seed=seed,
+    )
+
+    LOGGER.info(
+        "Augmented instruction mixture: train %d -> %d, validation %d -> %d",
+        len(dataset["train"]),
+        len(train_rows),
+        len(dataset["validation"]),
+        len(valid_rows),
+    )
+    return DatasetDict(
+        {
+            "train": Dataset.from_list(train_rows),
+            "validation": Dataset.from_list(valid_rows),
+        }
+    )
 
 
 def build_prompt(prompt: str, completion: str) -> str:
@@ -223,6 +279,14 @@ def main() -> None:
     os.makedirs(args.output_dir, exist_ok=True)
     LOGGER.info("Loading dataset")
     dataset = load_data(args.train_file, args.valid_file)
+    dataset = maybe_augment_instruction_mixture(
+        dataset,
+        enabled=args.augment_with_generation_tasks,
+        story_seed_file=args.story_seed_file,
+        max_bible_passages=args.max_bible_passages,
+        bible_passage_window=args.bible_passage_window,
+        seed=args.seed,
+    )
     dataset = maybe_limit_split(dataset, "train", args.max_train_samples)
     dataset = maybe_limit_split(dataset, "validation", args.max_eval_samples)
 

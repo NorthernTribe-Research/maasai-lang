@@ -49,44 +49,47 @@ dataset_info:
 
 ## Overview
 
-This dataset contains **9,194 high-quality English-Maasai translation pairs** specifically designed for building fluent Maasai language models and preservation applications. It features:
+This dataset contains **9,406 high-quality English-Maasai translation pairs** specifically designed for building fluent Maasai language models and preservation applications. It features:
 
-- **Diverse authenticated translations** (9,194 pairs) - From various authoritative sources
+- **Diverse authenticated translations** (9,406 pairs) - From various authoritative sources
 - **Rich cultural coverage** (15+ domains) - Philosophy, ceremonies, governance, education, greetings, and more
+- **Open-source supplement layer** - Public-domain Hollis proverb pairs and CC BY 4.0 ASJP lexical pairs
 - **Perfect 50/50 bidirectional balance** - Both en→mas and mas→en directions
 
 ## Key Features
 
 ### Data Composition
 ```
-Total pairs: 9,194
-├── Train split: 7,814 pairs (85%)
-├── Valid split: 689 pairs (7.5%)
-└── Test split:  691 pairs (7.5%)
+Total pairs: 9,406
+├── Train split: 7,991 pairs (85.0%)
+├── Valid split: 707 pairs (7.5%)
+└── Test split:  708 pairs (7.5%)
 
 Quality tiers:
 ├── Gold (authenticated, high-confidence): 8,444 pairs (91.8%)
-└── Silver (manually authored, knowledge-driven): 750 pairs (8.2%)
+└── Silver (manually authored, knowledge-driven, or open-source supplement): 962 pairs (10.2%)
 
 Language coverage:
-├── English → Maasai: 4,597 pairs
-└── Maasai → English: 4,597 pairs
+├── English → Maasai: 4,703 pairs
+└── Maasai → English: 4,703 pairs
 
 Top domains:
 ├── Religious & Spiritual: 8,444 pairs (91.8%)
+├── Proverbs: 158 pairs
 ├── Philosophy: 100 pairs
 ├── Culture: 84 pairs  
+├── Lexicon: 80 pairs
 ├── Environment: 64 pairs
 ├── Education: 60 pairs
-├── Ceremonies: 58 pairs
+├── Ceremony: 58 pairs
 ├── Greetings: 52 pairs
-└── Other (governance, livestock, health): ~732 pairs
+└── Other (governance, livestock, health, daily life): ~366 pairs
 ```
 
 ### Quality Metrics
 - **Confidence Score**: 0.95-0.98 (high confidence, authenticated sources)
 - **Authenticity**: Sourced from authoritative English-Maasai translation materials
-- **Deduplication**: Aggressive deduplication (9,194 unique pairs from 13,670+ raw sources)
+- **Deduplication**: Aggressive deduplication (9,406 unique pairs from 13,670+ raw sources)
 - **Domain Coverage**: 15+ specialized domains for comprehensive fluency
 
 ## Data Format

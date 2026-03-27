@@ -21,11 +21,11 @@ Parallel English↔Maasai translation pairs for low-resource MT, language preser
 
 ## Overview
 
-- Total pairs: 9,194
-- Splits: 7,814 train / 689 valid / 691 test
-- Directions: 4,597 en→mas and 4,597 mas→en
-- Quality tiers: 8,444 gold and 750 silver
-- Main sources: 8,444 Bible-aligned pairs, 680 cultural manual pairs, 70 knowledge-driven cultural pairs
+- Total pairs: 9,406
+- Splits: 7,991 train / 707 valid / 708 test
+- Directions: 4,703 en→mas and 4,703 mas→en
+- Quality tiers: 8,444 gold and 962 silver
+- Main sources: 8,444 Bible-aligned pairs, 680 cultural manual pairs, 70 knowledge-driven cultural pairs, 132 public-domain Hollis proverb pairs, and 80 ASJP lexical pairs
 
 The public dataset repo publishes the parallel-pair corpus from `data/final_v3/*.jsonl`. Training code may derive instruction prompts at load time, but `prompt` and `completion` are not stored in this public dataset.
 
@@ -72,8 +72,10 @@ Example:
 Top domains in the current release:
 
 - `bible`: 8,444
+- `proverbs`: 158
 - `philosophy`: 100
 - `culture`: 84
+- `lexicon`: 80
 - `environment`: 64
 - `education`: 60
 - `ceremony`: 58
