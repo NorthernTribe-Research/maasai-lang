@@ -20,6 +20,7 @@ import argparse
 import json
 import logging
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -81,6 +82,21 @@ def count_jsonl_entries(filepath: Path) -> int:
         return 0
 
 
+def load_jsonl_rows(filepath: Path) -> list[dict[str, Any]]:
+    """Load JSONL rows from disk."""
+    rows: list[dict[str, Any]] = []
+    try:
+        with open(filepath, encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                rows.append(json.loads(line))
+    except Exception as e:
+        logger.error(f"Error loading {filepath}: {e}")
+    return rows
+
+
 def validate_dataset(data_dir: str) -> Dict[str, Any]:
     """Validate dataset structure and return statistics."""
     
@@ -92,6 +108,12 @@ def validate_dataset(data_dir: str) -> Dict[str, Any]:
         "files": {},
         "total_samples": 0,
         "splits": {},
+        "tier_counts": Counter(),
+        "domain_counts": Counter(),
+        "source_counts": Counter(),
+        "lang_pair_counts": Counter(),
+        "missing_id_count": 0,
+        "missing_quality_assessment_count": 0,
     }
     
     # Check for required splits
@@ -107,7 +129,8 @@ def validate_dataset(data_dir: str) -> Dict[str, Any]:
             logger.error(f"   ❌ Missing: {description} ({filename})")
             stats["valid"] = False
         else:
-            count = count_jsonl_entries(filepath)
+            rows = load_jsonl_rows(filepath)
+            count = len(rows)
             size_mb = filepath.stat().st_size / 1024 / 1024
             stats["files"][filename] = {
                 "size_mb": round(size_mb, 2),
@@ -116,6 +139,17 @@ def validate_dataset(data_dir: str) -> Dict[str, Any]:
             }
             stats["splits"][filename.replace(".jsonl", "")] = count
             stats["total_samples"] += count
+            for row in rows:
+                stats["tier_counts"][str(row.get("tier", "unknown"))] += 1
+                stats["domain_counts"][str(row.get("domain", "unknown"))] += 1
+                stats["source_counts"][str(row.get("source_name", "unknown"))] += 1
+                stats["lang_pair_counts"][
+                    f"{row.get('source_lang', 'unknown')}->{row.get('target_lang', 'unknown')}"
+                ] += 1
+                if "id" not in row:
+                    stats["missing_id_count"] += 1
+                if "quality_assessment" not in row:
+                    stats["missing_quality_assessment_count"] += 1
             logger.info(f"   ✅ {description}: {count} samples ({size_mb:.1f} MB)")
     
     if not stats["valid"]:
@@ -136,9 +170,34 @@ def validate_dataset(data_dir: str) -> Dict[str, Any]:
 
 def create_dataset_card(stats: Dict, repo_id: str) -> str:
     """Create comprehensive dataset card."""
-    
+
+    total_pairs = int(stats.get("total_samples", 0))
+    train_pairs = int(stats.get("splits", {}).get("train", 0))
+    valid_pairs = int(stats.get("splits", {}).get("valid", 0))
+    test_pairs = int(stats.get("splits", {}).get("test", 0))
+    gold_pairs = int(stats.get("tier_counts", {}).get("gold", 0))
+    silver_pairs = int(stats.get("tier_counts", {}).get("silver", 0))
+    glossary_terms = stats.get("glossary_terms", "N/A")
+    en_to_mas = int(stats.get("lang_pair_counts", {}).get("en->mas", 0))
+    mas_to_en = int(stats.get("lang_pair_counts", {}).get("mas->en", 0))
+    missing_id_count = int(stats.get("missing_id_count", 0))
+    missing_quality_assessment_count = int(stats.get("missing_quality_assessment_count", 0))
+
+    def pct(count: int) -> float:
+        return round((count / total_pairs) * 100, 1) if total_pairs else 0.0
+
+    top_domain_lines = "\n".join(
+        f"- `{domain}`: {count}"
+        for domain, count in stats.get("domain_counts", Counter()).most_common(10)
+    ) or "- No domain breakdown available"
+
+    top_source_lines = "\n".join(
+        f"- `{source}`: {count}"
+        for source, count in stats.get("source_counts", Counter()).most_common(5)
+    ) or "- No source breakdown available"
+
     dataset_card = f"""---
-license: cc-by-sa-4.0
+license: cc-by-4.0
 language:
   - en
   - mas
@@ -155,33 +214,34 @@ pretty_name: Maasai-English Translation Corpus
 
 # Maasai-English Translation Corpus
 
-🛡️ **High-quality parallel corpus for English ↔ Maasai translation research**
+Parallel English↔Maasai translation pairs for low-resource MT, language preservation, and culturally grounded tooling.
 
 ![Dataset Size](https://img.shields.io/badge/Samples-{stats.get('total_samples', 'N/A')}-blue)
-![Quality](https://img.shields.io/badge/Quality-91.8%25%20Gold%2C%208.2%25%20Silver-brightgreen)
-![License](https://img.shields.io/badge/License-CC--BY--SA--4.0-orange)
+![Quality](https://img.shields.io/badge/Quality-{pct(gold_pairs)}%25%20Gold%2C%20{pct(silver_pairs)}%25%20Silver-brightgreen)
+![License](https://img.shields.io/badge/License-CC--BY--4.0-orange)
 
 ---
 
 ## Dataset Summary
 
-A carefully curated and validated parallel corpus of English and Maasai (Maa) language pairs, designed for:
-- Training machine translation models for low-resource languages
-- Language preservation and accessibility
-- Research on Maasai linguistics and cultural terminology
-- Supporting the preservation of oral traditions
+- Current local corpus: {total_pairs} pairs from `data/final_v3`
+- Splits: {train_pairs} train / {valid_pairs} valid / {test_pairs} test
+- Directions: {en_to_mas} en→mas and {mas_to_en} mas→en
+- Quality labels in current local metadata: {gold_pairs} gold / {silver_pairs} silver
+- Glossary terms: {glossary_terms}
+- Schema note: {missing_id_count} rows omit `id`; {missing_quality_assessment_count} rows omit `quality_assessment`
 
 ### Key Statistics
 
 | Metric | Value |
 |--------|-------|
-| **Total Pairs** | {stats.get('total_samples', 'N/A')} |
-| **Training Split** | {stats.get('splits', {}).get('train', 'N/A')} pairs (85%) |
-| **Validation Split** | {stats.get('splits', {}).get('valid', 'N/A')} pairs (7.5%) |
-| **Test Split** | {stats.get('splits', {}).get('test', 'N/A')} pairs (7.5%) |
-| **Quality (Gold)** | 91.8% (high confidence) |
-| **Quality (Silver)** | 8.2% (validated) |
-| **Glossary Terms** | {stats.get('glossary_terms', 'N/A')} protected cultural terms |
+| **Total Pairs** | {total_pairs} |
+| **Training Split** | {train_pairs} pairs |
+| **Validation Split** | {valid_pairs} pairs |
+| **Test Split** | {test_pairs} pairs |
+| **Quality (Gold)** | {gold_pairs} pairs ({pct(gold_pairs)}%) |
+| **Quality (Silver)** | {silver_pairs} pairs ({pct(silver_pairs)}%) |
+| **Glossary Terms** | {glossary_terms} protected cultural terms |
 
 ---
 
@@ -189,15 +249,15 @@ A carefully curated and validated parallel corpus of English and Maasai (Maa) la
 
 The dataset is split into three parts for standard machine learning practice:
 
-1. **`train.jsonl`** ({stats.get('files', {}).get('train.jsonl', {}).get('count', 'N/A')} samples)
+1. **`train.jsonl`** ({train_pairs} samples)
    - Used for model training
    - Balanced English→Maasai and Maasai→English pairs
 
-2. **`valid.jsonl`** ({stats.get('files', {}).get('valid.jsonl', {}).get('count', 'N/A')} samples)
+2. **`valid.jsonl`** ({valid_pairs} samples)
    - Used for hyperparameter tuning
    - Representative of test distribution
 
-3. **`test.jsonl`** ({stats.get('files', {}).get('test.jsonl', {}).get('count', 'N/A')} samples)
+3. **`test.jsonl`** ({test_pairs} samples)
    - Held-out test set for final evaluation
    - Never used in training
 
@@ -205,7 +265,7 @@ The dataset is split into three parts for standard machine learning practice:
 
 ## Data Fields
 
-Each record in `.jsonl` format contains:
+Each record in `.jsonl` format contains the common fields below. The current local corpus is not fully schema-normalized, so `id` and `quality_assessment` are not present on every row.
 
 ```json
 {{
@@ -219,7 +279,7 @@ Each record in `.jsonl` format contains:
   "quality_score": 0.98,
   "tier": "gold",
   "confidence": 0.98,
-  "notes": "Aligned Bible sentence chunks",
+  "notes": "Bible-derived sentence chunk pair",
   "quality_assessment": {{
     "overall_score": 0.98,
     "tier": "gold",
@@ -230,47 +290,28 @@ Each record in `.jsonl` format contains:
 
 ### Field Descriptions
 
-- **`id`**: Unique identifier for the pair
+- **`id`**: Optional identifier for the pair; older `cultural_manual` rows currently omit it
 - **`source_lang`** / **`target_lang`**: Language codes (`en` = English, `mas` = Maasai)
 - **`source_text`** / **`target_text`**: Parallel text in both languages
-- **`domain`**: Document domain (bible, cultural, synthetic, etc.)
-- **`source_name`**: Source dataset (bible_aligned, cultural_manual, etc.)
+- **`domain`**: Document domain (bible, culture, proverbs, lexicon, etc.)
+- **`source_name`**: Source dataset (`bible_english_maasai`, `cultural_manual`, etc.)
 - **`quality_score`**: Confidence score (0–1, higher is better)
-- **`tier`**: Quality tier (gold = 90%+ confidence, silver = 70–90%)
-- **`confidence`**: Predicted confidence from validation model
+- **`tier`**: Dataset-internal quality label from the local curation pipeline
+- **`confidence`**: Confidence score carried in the local metadata
 - **`notes`**: Metadata and annotations
-- **`quality_assessment`**: Structured quality metrics
+- **`quality_assessment`**: Optional structured quality metadata
 
 ---
 
-## Data Domains
+## Top Domains
 
-| Domain | # Pairs | % | Source | Notes |
-|--------|---------|---|--------|-------|
-| **Religious** | 8,431 | 91.8% | Bible, liturgy | Primary domain; extensive coverage |
-| **Cultural** | 763 | 8.2% | Manual annotation | Folk stories, traditions, philosophy |
-| **TOTAL** | **9,194** | **100%** | Mixed | Bilingual, bidirectional |
+{top_domain_lines}
 
 ---
 
 ## Data Sources
 
-1. **Bible Alignments** (Primary)
-   - English Bible (public domain) aligned with Maasai Bible translations
-   - High word-for-word alignment quality
-   - 8,000+ unique sentences
-
-2. **Cultural Corpus** (Supplementary)
-   - Traditional folk stories (nkatini) and riddles (oyete)
-   - Philosophy and spiritual terminology
-   - Daily life and ceremonies
-   - Manually collected and validated
-
-3. **Glossary** (Auxiliary)
-   - 103 protected cultural terms
-   - Domain-specific terminology
-   - Pronunciation guides and etymology
-   - Sub-tribe variations
+{top_source_lines}
 
 ---
 
@@ -298,26 +339,17 @@ This corpus represents multiple Maasai iloshon (sections):
 
 ### Quality Tiers
 
-**Gold Tier** (91.8%, ~8,431 pairs)
-- ✅ High-confidence alignments (95%+ confidence)
-- ✅ Manually reviewed samples
-- ✅ Minimal semantic differences
-- ✅ Appropriate for production training
+**Gold Tier** ({pct(gold_pairs)}%, {gold_pairs} pairs)
+- Current local metadata label carried forward from the curation pipeline
+- Dominated by Bible-derived rows
 
-**Silver Tier** (8.2%, ~763 pairs)
-- ⚠️ Medium confidence (70–95%)
-- ⚠️ Automatically validated
-- ⚠️ Some variation acceptable
-- ⚠️ Good for data augmentation
+**Silver Tier** ({pct(silver_pairs)}%, {silver_pairs} pairs)
+- Current local metadata label for curated, knowledge-driven, and open-source supplement rows
+- Useful for maintaining non-Bible coverage in training and evaluation
 
 ### Validation Methodology
 
-Each pair was validated for:
-1. **Language Identification** — Confirms languages are correctly labeled
-2. **Length Ratio** — Ensures similar sentence lengths (0.8–1.2 ratio)
-3. **Semantic Alignment** — Validates text pairs convey similar meaning
-4. **Orthography** — Checks for Maasai spelling consistency
-5. **Cultural Sensitivity** — Ensures respect for terminology
+The local corpus carries forward metadata from earlier validation and curation passes, but the current files are not fully normalized. Before a long production run, spot-check alignment quality and review Bible-derived rows carefully.
 
 ---
 
@@ -326,11 +358,11 @@ Each pair was validated for:
 ⚠️ **Please note:**
 
 - **Orthography Variation:** Maasai orthography is not standardized; this corpus reflects variation found in sources
-- **Domain Bias:** Heavy emphasis on religious texts (91.8%); limited modern technical vocabulary
+- **Domain Bias:** Heavy emphasis on Bible-derived text ({pct(stats.get('domain_counts', {}).get('bible', 0))}%); limited modern technical vocabulary
 - **Vocabulary Coverage:** Limited slang, colloquialisms, and contemporary terms
 - **Dialect Diversity:** While multiple sections represented, not equally distributed
-- **Synthetic Data:** Some augmented pairs generated computationally
-- **Manual Review:** Not all pairs reviewed by native speakers (resource constraints)
+- **Schema Variation:** Some older rows omit `id` and `quality_assessment`
+- **Manual Review:** Do not read the local `tier` labels as proof of native-speaker review for every row
 
 ---
 
@@ -418,7 +450,7 @@ See [Creative Commons BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/
 ## Version History
 
 - **v1.0** (March 27, 2026): Initial public release
-  - 9,194 parallel pairs
+  - 9,406 parallel pairs in the current local snapshot
   - 103-entry glossary
   - 14+ Maasai sections represented
 

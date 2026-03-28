@@ -17,8 +17,6 @@ size_categories:
   - 1K<n<10K
 dataset_info:
   features:
-    - name: id
-      dtype: string
     - name: source_text
       dtype: string
     - name: target_text
@@ -31,8 +29,6 @@ dataset_info:
       dtype: string
     - name: source_name
       dtype: string
-    - name: synthetic
-      dtype: bool
     - name: confidence
       dtype: float32
     - name: tier
@@ -49,9 +45,9 @@ dataset_info:
 
 ## Overview
 
-This dataset contains **9,406 high-quality English-Maasai translation pairs** specifically designed for building fluent Maasai language models and preservation applications. It features:
+This dataset currently contains **9,406 English-Maasai translation pairs** in the local `data/final_v3` workspace snapshot. It features:
 
-- **Diverse authenticated translations** (9,406 pairs) - From various authoritative sources
+- **Bible-derived, curated, and open-source rows** (9,406 pairs)
 - **Rich cultural coverage** (15+ domains) - Philosophy, ceremonies, governance, education, greetings, and more
 - **Open-source supplement layer** - Public-domain Hollis proverb pairs and CC BY 4.0 ASJP lexical pairs
 - **Perfect 50/50 bidirectional balance** - Both en→mas and mas→en directions
@@ -66,15 +62,15 @@ Total pairs: 9,406
 └── Test split:  708 pairs (7.5%)
 
 Quality tiers:
-├── Gold (authenticated, high-confidence): 9,124 pairs (97.0%)
-└── Silver (manually authored, knowledge-driven, or open-source supplement): 282 pairs (3.0%)
+├── Gold (dataset metadata label): 8,444 pairs (89.8%)
+└── Silver (dataset metadata label): 962 pairs (10.2%)
 
 Language coverage:
 ├── English → Maasai: 4,703 pairs
 └── Maasai → English: 4,703 pairs
 
 Top domains:
-├── Religious & Spiritual: 8,444 pairs (89.8%)
+├── Bible-derived: 8,444 pairs (89.8%)
 ├── Proverbs: 158 pairs
 ├── Philosophy: 100 pairs
 ├── Culture: 84 pairs  
@@ -87,10 +83,11 @@ Top domains:
 ```
 
 ### Quality Metrics
-- **Confidence Score**: 0.95-0.98 (high confidence, authenticated sources)
-- **Authenticity**: Sourced from authoritative English-Maasai translation materials
+- **Confidence Score**: 0.92-0.98 in the current local snapshot
+- **Source mix**: Bible-derived extraction, curated cultural rows, and open-source supplements
 - **Deduplication**: Aggressive deduplication (9,406 unique pairs from 13,670+ raw sources)
 - **Domain Coverage**: 15+ specialized domains for comprehensive fluency
+- **Schema Note**: 680 rows currently omit `id`, and 750 rows omit `quality_assessment`
 
 ## Data Format
 
@@ -104,24 +101,23 @@ JSONL format. Each line is a complete translation pair:
   "source_lang": "en",
   "target_lang": "mas",
   "domain": "bible",
-  "source_name": "bible_english_maasai_aligned",
-  "synthetic": false,
+  "source_name": "bible_english_maasai",
   "confidence": 0.98,
   "tier": "gold",
   "quality_score": 0.98,
-  "notes": "Aligned Bible verse"
+  "notes": "Bible-derived sentence chunk pair"
 }
 ```
 
 ### Fields Explained
-- `id`: Unique identifier for pair
+- `id`: Optional unique identifier for pair; 680 older `cultural_manual` rows currently omit it
 - `source_text`: Text in source language
 - `target_text`: Text in target language
 - `source_lang`: Source language (en/mas)
 - `target_lang`: Target language (mas/en)
 - `domain`: Subject domain (bible, philosophy, culture, etc.)
 - `source_name`: Data source identifier
-- `synthetic`: Whether pair was synthetically generated
+- `synthetic`: Optional flag present on some generated rows
 - `confidence`: Confidence score (0-1)
 - `tier`: Quality tier (gold/silver/bronze)
 - `quality_score`: Overall quality metric (0-1)
@@ -129,12 +125,12 @@ JSONL format. Each line is a complete translation pair:
 
 ## Dataset Versions & Timeline
 
-### v2.0 (Current) - March 26, 2026
-- **Major Update**: Full Bible extraction
-- Comprehensive corpus: 9,194 pairs (3x expansion from v1.0)
-- High-quality tiers: 91.8% Gold tier authentication
-- DeepSeek best practices integration
-- Ready for production model training
+### Current Local Workspace Snapshot - March 28, 2026
+- Comprehensive corpus: 9,406 pairs
+- Train / valid / test: 7,991 / 707 / 708
+- Quality labels present in local metadata: 8,444 gold and 962 silver
+- Includes post-release open-source supplement rows from Hollis and ASJP
+- Older smaller-snapshot references describe the pre-supplement dataset state
 
 ### v1.0 (Previous)
 - Initial dataset: 3,010 pairs
@@ -145,7 +141,7 @@ JSONL format. Each line is a complete translation pair:
 ## Use Cases
 
 1. **Machine Translation Training**
-   - LoRA fine-tuning on 4B models (Gemma, Llama)
+   - LoRA fine-tuning on instruction-tuned base models (Qwen, Llama)
    - Low-resource MT with curriculum learning
    - Suggested: 80% Bible (high-confidence) + 20% cultural (diverse domains)
 
@@ -166,17 +162,14 @@ JSONL format. Each line is a complete translation pair:
 
 ## Training Recommendations
 
-Based on DeepSeek best practices for low-resource language models:
+Use the current `data/final_v3` snapshot as the source of truth for counts, but do not assume every row is equally reliable.
 
-### Phase 1: Foundation (Suggested)
+### Recommended Starting Point
 ```
-Data composition:
-- 70% Gold tier (Bible): 5,910 pairs
-- 30% Silver tier (Cultural): 750 pairs
-Total: 6,660 pairs
-
-Curriculum: Start with cultural knowledge (smaller, high-signal)
-then gradually introduce longer Bible passages
+- Start from a spot-checked subset of `data/final_v3`
+- Treat `tier` as dataset metadata from the curation pipeline, not as proof of native-speaker review
+- Keep the curated cultural rows and open-source supplement visible in evaluation slices
+- Audit Bible-derived rows carefully before long production runs
 ```
 
 ### Phase 2: Expansion (Optional)
@@ -185,23 +178,22 @@ then gradually introduce longer Bible passages
 - Boost underrepresented domains (governance, ceremonies)
 
 ### Phase 3: Validation
-- Evaluate on held-out test set (691 pairs)
+- Evaluate on the held-out test split (708 pairs)
 - BLEU / chrF++ metrics
 - Native speaker review (especially philosophy/ceremonies)
 
 ## Quality Assessment
 
-### Data Cleaning Pipeline
-- Language ID validation: 98%+ accuracy
-- Length ratio filtering: Removes misaligned pairs
-- Semantic similarity: Filters low-confidence matches
-- Duplicate detection: 100% deduplication
-- Tier assignment: Gold/Silver/Bronze classification
+### Current Metadata Pipeline
+- The local files preserve tier, confidence, and provenance labels from earlier curation passes
+- Open-source supplement rows were merged deterministically into the existing splits
+- The trainer only requires `source_text`, `target_text`, `source_lang`, and `target_lang`
+- Additional schema cleanup is still advisable before publication refreshes
 
 ### Known Limitations
 
 1. **Limited Specific Domains**: Focus on foundational language coverage
-   - Mitigation: Supplemented with 750+ high-quality culturally-specific pairs
+   - Mitigation: Supplemented with 962 non-gold rows across cultural and open-source sources
    
 2. **Orthography Variation**: Maasai has multiple writing systems
    - Recommendation: Use glossary for term standardization
@@ -209,7 +201,10 @@ then gradually introduce longer Bible passages
 3. **Dialect Variation**: Some Maasai regional differences
    - Status: Using standardized Maasai / Maa (main dialect)
    
-4. **Low-Resource Nature**: Smaller than high-resource MT corpora
+4. **Schema Normalization**: The current local corpus is not fully normalized
+   - Status: 680 rows omit `id`; 750 rows omit `quality_assessment`
+
+5. **Low-Resource Nature**: Smaller than high-resource MT corpora
    - Mitigation: Use curriculum learning + data augmentation strategies
 
 ## Citation

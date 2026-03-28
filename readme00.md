@@ -41,9 +41,9 @@ Input:
     domain, source_name, quality_score, notes
 
 Output:
-- data/processed/train.jsonl
-- data/processed/valid.jsonl
-- data/processed/test.jsonl
+- data/final_v3/train.jsonl
+- data/final_v3/valid.jsonl
+- data/final_v3/test.jsonl
 
 Usage:
 python scripts/prepare_data.py \
@@ -345,14 +345,14 @@ if __name__ == "__main__":
 QLoRA fine-tuning script for English <-> Maasai translation.
 
 Expected input:
-- data/processed/train.jsonl
-- data/processed/valid.jsonl
+- data/final_v3/train.jsonl
+- data/final_v3/valid.jsonl
 
 Usage:
 python scripts/train_qlora.py \
-  --model_name google/gemma-3-4b-it \
-  --train_file data/processed/train.jsonl \
-  --valid_file data/processed/valid.jsonl \
+  --model_name Qwen/Qwen2.5-3B-Instruct \
+  --train_file data/final_v3/train.jsonl \
+  --valid_file data/final_v3/valid.jsonl \
   --output_dir outputs/maasai-en-mt-qlora
 """
 
@@ -388,9 +388,9 @@ def setup_logging() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="google/gemma-3-4b-it")
-    parser.add_argument("--train_file", type=str, default="data/processed/train.jsonl")
-    parser.add_argument("--valid_file", type=str, default="data/processed/valid.jsonl")
+    parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-3B-Instruct")
+    parser.add_argument("--train_file", type=str, default="data/final_v3/train.jsonl")
+    parser.add_argument("--valid_file", type=str, default="data/final_v3/valid.jsonl")
     parser.add_argument("--output_dir", type=str, default="outputs/maasai-en-mt-qlora")
     parser.add_argument("--max_length", type=int, default=512)
     parser.add_argument("--learning_rate", type=float, default=2e-4)
@@ -900,5 +900,4 @@ Change `TRANSLATION_MODEL_ID` if needed.
 * `training/lora_config.yaml`
 * `space/style.css`
 * `.env.example`
-
 

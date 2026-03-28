@@ -23,12 +23,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--project-git-url", default="https://github.com/734ai/maasai-lang.git")
     parser.add_argument("--project-branch", default="main")
     parser.add_argument("--dataset-repo", default="NorthernTribe-Research/maasai-translation-corpus")
-    parser.add_argument("--model-repo", default="NorthernTribe-Research/maasai-en-mt")
+    parser.add_argument("--model-repo", default="NorthernTribe-Research/maasai-en-mt-staging")
     parser.add_argument("--bucket-uri", default="hf://buckets/NorthernTribe-Research/maasai-project-storage")
     parser.add_argument("--bucket-prefix", default="training_runs")
     parser.add_argument("--base-model", default="Qwen/Qwen2.5-3B-Instruct")
     parser.add_argument("--work-dir", default="/kaggle/working/maasai-daily-hf")
-    parser.add_argument("--max-length", type=int, default=768)
+    parser.add_argument("--max-length", type=int, default=512)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
     parser.add_argument("--num-train-epochs", type=float, default=1.0)
     parser.add_argument("--max-steps", type=int, default=800)
@@ -48,6 +48,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--story-seed-file", default="data/raw/maasai_story_generation_seed.jsonl")
     parser.add_argument("--max-bible-passages", type=int, default=48)
     parser.add_argument("--bible-passage-window", type=int, default=3)
+    generation_group = parser.add_mutually_exclusive_group()
+    generation_group.add_argument(
+        "--augment-with-generation-tasks",
+        dest="augment_with_generation_tasks",
+        action="store_true",
+        help="Include Maa generation/story tasks in the Kaggle training mixture",
+    )
+    generation_group.add_argument(
+        "--no-augment-with-generation-tasks",
+        dest="augment_with_generation_tasks",
+        action="store_false",
+        help="Keep the first Kaggle run translation-only",
+    )
+    parser.set_defaults(augment_with_generation_tasks=False)
     parser.add_argument("--private-model-repo", action="store_true")
     parser.add_argument("--torch-version", default="2.5.1")
     parser.add_argument("--torchvision-version", default="0.20.1")
@@ -161,7 +175,7 @@ def build_runtime_config(args: argparse.Namespace, project_root: Path) -> dict:
         "torchaudio_version": args.torchaudio_version,
         "torch_index_url": args.torch_index_url,
         "report_to": args.report_to,
-        "augment_with_generation_tasks": True,
+        "augment_with_generation_tasks": args.augment_with_generation_tasks,
         "story_seed_file": args.story_seed_file,
         "max_bible_passages": args.max_bible_passages,
         "bible_passage_window": args.bible_passage_window,

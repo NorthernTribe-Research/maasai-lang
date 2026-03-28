@@ -23,7 +23,7 @@ def create_mock_training_artifacts():
     
     # 1. adapter_config.json - LoRA configuration
     adapter_config = {
-        "base_model_name_or_path": "google/gemma-3-4b-it",
+        "base_model_name_or_path": "Qwen/Qwen2.5-3B-Instruct",
         "bias": "none",
         "fan_in_fan_out": False,
         "inference_mode": False,
@@ -105,11 +105,13 @@ def create_mock_training_artifacts():
 
 ## Model Details
 
-- **Base Model:** google/gemma-3-4b-it (4B parameters)
+- **Base Model:** Qwen/Qwen2.5-3B-Instruct (3B parameters)
 - **Fine-tuning Method:** QLoRA (Quantized LoRA)
-- **Training Data:** 7,814 parallel English-Maasai pairs
+- **Training Data Snapshot:** 9,406 local pairs (7,991 train / 707 valid / 708 test)
 - **Adapter Rank:** 16 (LoRA)
 - **Adapter Alpha:** 32
+
+> This directory contains placeholder artifacts for deployment testing only. It is not the output of a completed training run.
 
 ## Training Metrics
 
@@ -137,7 +139,7 @@ from transformers import AutoTokenizer
 
 model_id = "NorthernTribe-Research/maasai-en-mt-qlora"
 model = AutoPeftModelForCausalLM.from_pretrained(model_id)
-tokenizer = AutoTokenizer.from_pretrained("google/gemma-3-4b-it")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-3B-Instruct")
 
 prompt = "You are an expert English-to-Maasai translator. Translate: Hello, how are you?\\nMaasai:"
 inputs = tokenizer(prompt, return_tensors="pt")
@@ -172,7 +174,7 @@ CC-BY-SA-4.0 (Please credit NorthernTribe-Research)
         "clean_up_tokenization_spaces": False,
         "eos_token": "<eos>",
         "model_max_length": 2048,
-        "tokenizer_class": "GemmaTokenizer",
+        "tokenizer_class": "Qwen2TokenizerFast",
         "unk_token": "<unk>",
         "use_default_system_prompt": False
     }

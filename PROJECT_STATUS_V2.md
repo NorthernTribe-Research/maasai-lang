@@ -6,6 +6,8 @@
 
 ---
 
+> Note (March 28, 2026): This document captures a March 27 snapshot. The current `data/final_v3` corpus is 9,406 rows (7,991 / 707 / 708) after the Hollis + ASJP supplement merge, and local model outputs remain placeholder-only.
+
 ## ✅ Completed in This Session
 
 ### 1. Space UI/UX Enhancements
@@ -84,7 +86,7 @@
    - Handles versioning and error recovery
 
 3. **[scripts/sync_dataset_to_hf.py](scripts/sync_dataset_to_hf.py)**
-   - Validates dataset integrity (9,194 pairs)
+   - Validates dataset integrity against the current `data/final_v3` snapshot
    - Creates rich dataset card with statistics
    - Uploads train/valid/test splits
    - Synchronizes glossary (103 terms)
@@ -105,15 +107,15 @@
 
 ---
 
-## 📊 Project State Before/After
+## 📊 Current Project Snapshot
 
 ### Dataset Component
-| Aspect | Before | After | Status |
-|--------|--------|-------|--------|
-| **Pairs** | 9,194 | 9,194 | ✅ Verified |
-| **Quality Tiers** | 91.8% Gold, 8.2% Silver | Same | ✅ Documented |
-| **Glossary Terms** | 103 (basic) | 103 (enriched) | ✅ Updated metadata |
-| **HF Repository** | ✅ Live | ✅ Enhanced card | ✅ Ready for sync |
+| Aspect | Current | Status |
+|--------|---------|--------|
+| **Pairs** | 9,406 | ✅ Current local snapshot |
+| **Quality Tiers** | 89.8% Gold, 10.2% Silver | ✅ Updated metadata |
+| **Glossary Terms** | 103 (enriched) | ✅ Updated metadata |
+| **HF Repository** | Enhanced card + refreshed bundle | ✅ Ready for sync |
 
 ### Model Component
 | Aspect | Before | After | Status |
@@ -215,9 +217,9 @@
 | **Total Added** | **6** | **7,000+** | ✅|
 
 ### Dataset
-- **Total Pairs:** 9,194
-- **Gold Tier:** 91.8% (8,431 pairs)
-- **Silver Tier:** 8.2% (763 pairs)
+- **Total Pairs:** 9,406
+- **Gold Tier:** 89.8% (8,444 pairs)
+- **Silver Tier:** 10.2% (962 pairs)
 - **Maasai Sections:** 14+
 - **Protected Terms:** 103
 
@@ -391,7 +393,7 @@ Next:
 - ✅ Comprehensive deployment documentation
 
 **What's Ready:**
-- ✅ 9,194 dataset pairs fully documented
+- ✅ 9,406 dataset pairs reflected in the current metadata
 - ✅ 103 glossary terms searchable in Space
 - ✅ Training pipeline ready for Colab GPU (4-6 hrs)
 - ✅ Automated export → push → deploy workflow

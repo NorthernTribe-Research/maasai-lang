@@ -4,6 +4,8 @@
 **Focus:** Integrate open-source DeepSeek best practices + llama.cpp optimization  
 **Outcome:** Production-ready data pipeline + inference optimization framework
 
+> Note (March 28, 2026): This is a historical March 26 snapshot. The current local corpus is `data/final_v3` with 9,406 pairs, the default base model is `Qwen/Qwen2.5-3B-Instruct`, and local model artifacts are still placeholders.
+
 ---
 
 ## ✅ COMPLETED TASKS
@@ -148,7 +150,7 @@ By Language Direction:
 # ✅ Prerequisites met:
 # - Quality data tiered and organized
 # - Training infrastructure ready (training/lora_config.yaml)
-# - Base model selected (google/gemma-3-4b-it)
+# - Base model selected (Qwen/Qwen2.5-3B-Instruct)
 
 # Start training:
 bash training/run_train.sh

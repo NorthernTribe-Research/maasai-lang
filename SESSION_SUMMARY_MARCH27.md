@@ -6,6 +6,8 @@
 
 ---
 
+> Note (March 28, 2026): This is a historical session summary. The current `data/final_v3` corpus is 9,406 rows (7,991 / 707 / 708) after the open-source supplement merge, and local model outputs are still placeholders.
+
 ## What Was Accomplished
 
 ### 🎨 Space UI/UX Enhancements (COMPLETE)
@@ -23,8 +25,8 @@
 2. **Model Status Dashboard** (NEW in About Tab)
    - Real-time model state: "Production" or "Demo"
    - System architecture overview
-   - Training data statistics (7,814 pairs detailed)
-   - Quality metrics (91.8% gold tier)
+   - Training data statistics (current local snapshot later moved to 7,991 train pairs)
+   - Quality metrics (current local metadata now 89.8% gold / 10.2% silver)
    - Sub-tribes coverage list
    - Citation formats (BibTeX)
 
@@ -142,7 +144,7 @@
 ### Dataset Improvements
 | Metric | Count | Status |
 |--------|-------|--------|
-| Total Pairs | 9,194 | ✅ Verified |
+| Total Pairs | 9,406 | ✅ Current local snapshot |
 | Glossary Terms | 103 | ✅ Searchable |
 | Maasai Sections | 14+ | ✅ Documented |
 | Quality Tiers | 2 (Gold/Silver) | ✅ Explained |
@@ -296,7 +298,7 @@ Result:   🚀 LIVE WITH PRODUCTION MODEL
 - [x] **Documentation** — 6800+ lines added
 
 ### Project Goals ✅ 85% Complete
-- [x] Dataset published (9,194 pairs)
+- [x] Dataset published (current local snapshot: 9,406 pairs)
 - [x] Space published (enhanced this session)
 - [ ] Model trained *(ready for Colab)*
 - [x] Deployment automated *(scripts ready)*

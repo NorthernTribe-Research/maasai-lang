@@ -102,7 +102,7 @@ class MaasaiApp:
         if not text.strip():
             return ""
         
-        result = f"[Translation via Gemma-3-4B+LoRA]\\n\\nInput: {text}\\nDirection: {'EN→MAS' if direction == 'en_to_mas' else 'MAS→EN'}"
+        result = f"[Translation via Qwen2.5-3B+QLoRA]\\n\\nInput: {text}\\nDirection: {'EN→MAS' if direction == 'en_to_mas' else 'MAS→EN'}"
         
         if glossary:
             augmented = glossary.augment_prompt(text, direction)
@@ -137,7 +137,7 @@ with gr.Blocks(title="Maasai Language") as demo:
             mas_out = gr.Textbox(label="English", interactive=False)
             mas_btn.click(translate_mas, mas_in, mas_out)
     
-    gr.Markdown(f"Dataset: 9,194 pairs | Model: Gemma-3-4B+LoRA | Status: {app.stats}")
+    gr.Markdown(f"Dataset: 9,406 pairs | Model: Qwen2.5-3B+QLoRA | Status: {app.stats}")
 
 if __name__ == "__main__":
     demo.launch()

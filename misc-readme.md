@@ -44,7 +44,7 @@ Microsoft's Paza release is strongest for **speech recognition in Maasai**, not 
 For text translation, we will build our own model using a strong modern multilingual-capable base model.
 
 Recommended first base:
-- `google/gemma-3-4b-it`
+- `Qwen/Qwen2.5-3B-Instruct`
 
 Reason:
 - modern and competitive
@@ -593,7 +593,7 @@ Build it as:
 
 ## Phase 4 - Baseline Model Training
 - [ ] Select base model
-- [ ] Default base: `google/gemma-3-4b-it`
+- [ ] Default base: `Qwen/Qwen2.5-3B-Instruct`
 - [ ] Prepare tokenizer and formatting pipeline
 - [ ] Create `training/lora_config.yaml`
 - [ ] Create `scripts/train_qlora.py`
@@ -791,8 +791,8 @@ Build it as:
   },
   "models": {
     "translation_base": {
-      "provider": "google",
-      "model_id": "google/gemma-3-4b-it",
+      "provider": "qwen",
+      "model_id": "Qwen/Qwen2.5-3B-Instruct",
       "purpose": "Instruction-tuned base for English ↔ Maasai translation fine-tuning",
       "train_strategy": "QLoRA",
       "target_artifact": "adapter-first"
@@ -995,4 +995,3 @@ Build it as:
   ]
 }
 ```
-

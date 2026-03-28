@@ -100,7 +100,7 @@ After training, prepare the model for CPU inference (llama.cpp):
 
 ```bash
 python scripts/export_gguf.py \
-  --base_model_id "google/gemma-3-4b-it" \
+  --base_model_id "Qwen/Qwen2.5-3B-Instruct" \
   --adapter_path "outputs/maasai-en-mt-qlora" \
   --output_path "outputs/maasai-en-mt.Q4_K_M.gguf" \
   --quantize_level "Q4_K_M"
@@ -171,7 +171,7 @@ python scripts/sync_dataset_to_hf.py \
 
 **Expected:**
 ```
-✅ Dataset validation passed (9,194 samples)
+✅ Dataset validation passed (9,406 samples)
 ✅ Repository: https://huggingface.co/datasets/NorthernTribe-Research/maasai-translation-corpus
 📤 Uploading data splits...
 ✅ Dataset synchronization complete!
@@ -231,7 +231,7 @@ import torch
 
 model_id = "NorthernTribe-Research/maasai-en-mt-qlora-v1"
 model = AutoPeftModelForCausalLM.from_pretrained(model_id)
-tokenizer = AutoTokenizer.from_pretrained("google/gemma-3-4b-it")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-3B-Instruct")
 
 # Test English → Maasai
 prompt = "Translate: Hello, how are you?\\nMaasai:"
@@ -297,7 +297,7 @@ Use this checklist to track deployment progress:
   - [ ] All splits (train/valid/test) verified
   - [ ] Glossary uploaded
   - [ ] Dataset card generated
-  - [ ] 9,194 samples confirmed
+  - [ ] 9,406 samples confirmed
 
 - [ ] **Space Updated & Live**
   - [ ] Code changes committed
@@ -372,7 +372,7 @@ Deployment is considered **successful** when:
 - No hallucinations on preserved terms
 
 ✅ **Dataset**
-- 9,194 pairs available
+- 9,406 pairs available
 - All splits loadable
 - Glossary searchable
 - Metadata complete

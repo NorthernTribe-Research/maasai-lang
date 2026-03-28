@@ -1712,7 +1712,7 @@ def build_app() -> gr.Blocks:
                 and glossary-backed cultural reference built for language preservation.
             </p>
             <div class="hero-subtitle">
-                Translation with Gemma and QLoRA · Speech with Paza · Coverage spanning protected terms,
+                Translation with Qwen and QLoRA · Speech with Paza · Coverage spanning protected terms,
                 oral literature, and historical reference across major iloshon
             </div>
         </div>

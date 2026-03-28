@@ -5,17 +5,19 @@
 
 ---
 
+> Note (March 28, 2026): `data/final_v3` later grew after the Hollis + ASJP supplement merge. The current local model artifacts are still placeholders, not a completed training run.
+
 ## ✅ Completed
 
 ### 1. Dataset Published to HuggingFace
 - **Repository:** https://huggingface.co/datasets/NorthernTribe-Research/maasai-translation-corpus
-- **Size:** 9,194 unique pairs (91.8% high-confidence)
+- **Current local size:** 9,406 unique pairs
 - **Splits:**
-  - Train: 7,814 pairs (85%)
-  - Valid: 689 pairs (7.5%)
-  - Test: 691 pairs (7.5%)
-- **Quality:** 91.8% Gold tier, 8.2% Silver tier
-- **Domains:** Religious & Spiritual (91.8%), Cultural (8.2%)
+  - Train: 7,991 pairs (85%)
+  - Valid: 707 pairs (7.5%)
+  - Test: 708 pairs (7.5%)
+- **Quality labels in current metadata:** 8,444 gold / 962 silver
+- **Domains:** Bible-derived (89.8%) + cultural / open-source supplement (10.2%)
 - **Files Uploaded:** train.jsonl, valid.jsonl, test.jsonl, README.md, datasetinfo.json
 - **Commit:** https://huggingface.co/datasets/NorthernTribe-Research/maasai-translation-corpus/commit/50a5933a6ada0c41aa744d2baf90ba751c89c817
 
@@ -68,7 +70,7 @@
 ## ⏳ Next Steps: Model Training
 
 ### Training Requirements
-- **Dataset:** ✅ Ready (7,814 pairs at data/final_v3/train.jsonl)
+- **Dataset:** ✅ Ready (7,991 pairs at data/final_v3/train.jsonl)
 - **GPU:** ❌ Not available locally (Intel i5 CPU-only system)
 - **Solution:** Use cloud GPU provider
 
@@ -113,7 +115,7 @@ bash training/run_train.sh
 - Clone repo and run training script
 
 ### Training Configuration
-- **Model:** google/gemma-3-4b-it (4B parameters, instruction-tuned)
+- **Model:** Qwen/Qwen2.5-3B-Instruct (3B parameters, instruction-tuned)
 - **Method:** QLoRA (LoRA r=16, alpha=32, lr=2e-4)
 - **Epochs:** 3
 - **Batch Size:** 4 per device + 8 gradient accumulation
@@ -160,18 +162,18 @@ cd space_repo && git add . && git commit -m "Add trained model" && git push
 ## Project Statistics
 
 ### Dataset Composition
-- **Total Pairs:** 9,194 (deduplicated)
+- **Total Pairs:** 9,406 (deduplicated)
 - **Bidirectional Balance:** 50/50 (en→mas / mas→en)
 - **Source Mix:**
-  - Religious/Spiritual: 8,444 pairs (91.8%)
-  - Cultural Knowledge: 750 pairs (8.2%)
+  - Bible-derived: 8,444 pairs (89.8%)
+  - Cultural/manual/open-source supplement: 962 pairs (10.2%)
 - **Quality Distribution:**
   - Gold (0.6%): 82 high-confidence pairs
   - Silver (0.5%): 64 manually curated pairs
   - Bronze (98.9%): 13,524 exploratory/synthetic pairs
 
 ### Model Specifications
-- **Base:** google/gemma-3-4b-it (4B parameters)
+- **Base:** Qwen/Qwen2.5-3B-Instruct (3B parameters)
 - **Architecture:** Transformer (instruction-tuned variant)
 - **Adapter:** LoRA (Low-Rank Adaptation)
   - Rank: 16
@@ -189,7 +191,7 @@ cd space_repo && git add . && git commit -m "Add trained model" && git push
 
 ## Verification Checklist
 
-- ✅ Dataset published to HF Hub (9,194 pairs, train/valid/test splits)
+- ✅ Dataset published to HF Hub (current local snapshot: 9,406 pairs, train/valid/test splits)
 - ✅ Space updated with Engram glossary layer
 - ✅ Engram layer integrated into inference pipeline
 - ✅ Optimized inference scripts ready (llama.cpp)

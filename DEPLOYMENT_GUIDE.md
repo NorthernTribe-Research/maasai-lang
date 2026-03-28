@@ -44,21 +44,21 @@ Merge and split data according to DeepSeek curriculum learning:
 ```bash
 python scripts/prepare_data.py \
   --input_dir data/raw \
-  --output_dir data/processed_v2 \
+  --output_dir data/final_v3 \
   --train_ratio 0.85 \
   --valid_ratio 0.075 \
   --test_ratio 0.075
 
 # Output:
-# - data/processed_v2/train.jsonl   (85%)
-# - data/processed_v2/valid.jsonl   (7.5%)
-# - data/processed_v2/test.jsonl    (7.5%)
+# - data/final_v3/train.jsonl   (7,991 rows)
+# - data/final_v3/valid.jsonl   (707 rows)
+# - data/final_v3/test.jsonl    (708 rows)
 ```
 
 **Verify dataset stats:**
 ```bash
-wc -l data/processed_v2/*.jsonl
-head -1 data/processed_v2/train.jsonl | python -m json.tool
+wc -l data/final_v3/*.jsonl
+head -1 data/final_v3/train.jsonl | python -m json.tool
 ```
 
 ---
@@ -87,7 +87,7 @@ bash training/run_train.sh
 
 # Expects:
 # - CUDA-capable GPU (tested on V100/A100)
-# - 40GB+ VRAM for 4B model
+# - GPU memory sized for the current Qwen QLoRA configuration
 # - ~24 hours for 3 epochs on single GPU
 # - Multiple GPUs supported via Hugging Face accelerate
 ```
@@ -108,7 +108,7 @@ After training completes:
 # Compute BLEU/chrF++ on test set
 python scripts/evaluate_mt.py \
   --model_path outputs/maasai-en-mt \
-  --test_file data/processed_v2/test.jsonl
+  --test_file data/final_v3/test.jsonl
 
 # Output: BLEU, chrF++, per-domain scores, error analysis
 ```
@@ -268,7 +268,7 @@ Sample translations from test set and review culturally:
 ```bash
 python -c "
 import json
-testfile = 'data/processed_v2/test.jsonl'
+testfile = 'data/final_v3/test.jsonl'
 samples = []
 with open(testfile) as f:
     for i, line in enumerate(f):
@@ -294,7 +294,7 @@ for s in samples:
 # BLEU/chrF++ scores on held-out test set
 python scripts/evaluate_mt.py \
   --model_path outputs/gguf/maasai-en-mt-Q4_K_M.gguf \
-  --test_file data/processed_v2/test.jsonl \
+  --test_file data/final_v3/test.jsonl \
   --report eval_report.json
 
 cat eval_report.json | python -m json.tool

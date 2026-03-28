@@ -144,7 +144,7 @@ def main() -> None:
         import json
         with adapter_config.open() as f:
             config = json.load(f)
-        base_model = config.get("base_model_name_or_path", "google/gemma-3-4b-it")
+        base_model = config.get("base_model_name_or_path", "Qwen/Qwen2.5-3B-Instruct")
         merged_dir = str(model_path.parent / f"{model_path.name}-merged")
         LOGGER.info("Detected LoRA adapter. Base model: %s", base_model)
         model_dir = merge_lora_adapter(base_model, str(model_path), merged_dir)

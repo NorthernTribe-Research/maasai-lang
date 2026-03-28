@@ -60,7 +60,7 @@ Run in project root:
   cat > datasetinfo.json << 'EOF'
 {
   "pretty_name": "Maasai-English Translation Corpus",
-  "description": "Comprehensive Bible + cultural dataset for Maasai language preservation. 9,194 high-quality EN-MAS translation pairs.",
+  "description": "Current data/final_v3 English-Maasai corpus for Maasai language preservation. 9,406 EN-MAS pairs in the local workspace snapshot.",
   "citation": "@dataset{maasai_translation_2026, title={Maasai-English Translation Corpus}, author={NorthernTribe Research}, year={2026}}",
   "homepage": "https://github.com/NorthernTribe/maasai-language-showcase",
   "license": "cc-by-4.0",
@@ -82,7 +82,7 @@ EOF
   
   # Commit and push
   git add -A
-  git commit -m "Add v2.0: Comprehensive Bible + cultural corpus (9,194 pairs)"
+  git commit -m "Update dataset snapshot from local data/final_v3"
   git push
 
 ---
@@ -135,37 +135,37 @@ def create_readme_for_hf():
     
     readme = """# Maasai-English Translation Corpus (v2.0)
 
-Comprehensive Bible + cultural dataset for Maasai language preservation.
+Current `data/final_v3` corpus for Maasai language preservation.
 
-**9,194 high-quality English-Maasai translation pairs** ready for training fluent translation models.
+**9,406 English-Maasai translation pairs** in the current local workspace snapshot.
 
 ## Dataset at a Glance
 
-- **Size**: 9,194 unique pairs (7,814 train / 689 valid / 691 test)
-- **Quality**: 91.8% Gold tier (authentic Bible translation) + 8.2% Silver tier (cultural knowledge)
+- **Size**: 9,406 unique pairs (7,991 train / 707 valid / 708 test)
+- **Quality labels**: 8,444 gold + 962 silver in current local metadata
 - **Languages**: English ↔ Maasai (50/50 bidirectional balance)
-- **Domains**: Bible (91.8%), Philosophy, Culture, Ceremonies, Education, Greetings, Governance, Environment, etc.
+- **Domains**: Bible-derived (89.8%), plus philosophy, culture, ceremonies, education, greetings, governance, environment, and open-source supplement rows
 - **Format**: JSONL with rich metadata (domain, tier, confidence, etc.)
 
 ## Key Statistics
 
 | Metric | Value |
 |--------|-------|
-| Total pairs | 9,194 |
-| Training pairs | 7,814 (85%) |
-| Validation pairs | 689 (7.5%) |
-| Test pairs | 691 (7.5%) |
-| Gold tier | 8,444 pairs (91.8%) |
-| Silver tier | 750 pairs (8.2%) |
+| Total pairs | 9,406 |
+| Training pairs | 7,991 (85%) |
+| Validation pairs | 707 (7.5%) |
+| Test pairs | 708 (7.5%) |
+| Gold tier | 8,444 pairs (89.8%) |
+| Silver tier | 962 pairs (10.2%) |
 | Unique domains | 15+ |
-| EN→MAS direction | 4,597 pairs (50%) |
-| MAS→EN direction | 4,597 pairs (50%) |
+| EN→MAS direction | 4,703 pairs (50%) |
+| MAS→EN direction | 4,703 pairs (50%) |
 
 ## Contents
 
-- `train.jsonl` - Training set (7,814 pairs)
-- `valid.jsonl` - Validation set (689 pairs)
-- `test.jsonl` - Test set (691 pairs)
+- `train.jsonl` - Training set (7,991 pairs)
+- `valid.jsonl` - Validation set (707 pairs)
+- `test.jsonl` - Test set (708 pairs)
 
 ## Use Cases
 
@@ -184,7 +184,7 @@ Comprehensive Bible + cultural dataset for Maasai language preservation.
 
 ## Related Work
 
-- **Base Model**: Google Gemma-3-4B-it
+- **Base Model**: Qwen/Qwen2.5-3B-Instruct
 - **Training Method**: QLoRA (4-bit quantized LoRA)
 - **Inference**: llama.cpp with Q4_K_M quantization
 - **Space Demo**: https://huggingface.co/spaces/NorthernTribe-Research/maasai-language-showcase

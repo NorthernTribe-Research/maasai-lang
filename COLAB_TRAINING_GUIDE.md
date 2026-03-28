@@ -99,7 +99,7 @@ sys.path.insert(0, '/content/repo')
 # Execute training
 %cd /content/repo
 !python scripts/train_qlora.py \
-  --model_name "google/gemma-3-4b-it" \
+  --model_name "Qwen/Qwen2.5-3B-Instruct" \
   --train_file "data/final_v3/train.jsonl" \
   --valid_file "data/final_v3/valid.jsonl" \
   --output_dir "outputs/maasai-en-mt-qlora" \
@@ -118,7 +118,7 @@ sys.path.insert(0, '/content/repo')
 
 | Parameter | Value | Reason |
 |-----------|-------|--------|
-| **model_name** | google/gemma-3-4b-it | Lightweight 4B model suitable for low-resource MT |
+| **model_name** | Qwen/Qwen2.5-3B-Instruct | Open 3B instruct model used by the current training scripts |
 | **max_length** | 512 | Max input + output tokens; matches training data |
 | **learning_rate** | 2e-4 | Conservative for QLoRA fine-tuning |
 | **num_epochs** | 3 | Multiple passes ensure convergence without overfitting |
@@ -134,8 +134,8 @@ sys.path.insert(0, '/content/repo')
 
 ### Phase 1: Setup (5-10 min)
 ```
-Loading model: google/gemma-3-4b-it... ✅
-Loading data: 7,814 training pairs... ✅
+Loading model: Qwen/Qwen2.5-3B-Instruct... ✅
+Loading data: 7,991 training pairs... ✅
 Setting up LoRA... ✅
 Initializing trainer... ✅
 ```
@@ -174,7 +174,7 @@ ls -lh outputs/maasai-en-mt-qlora/
 
 ```bash
 python scripts/infer_translate.py \
-  --model_id "google/gemma-3-4b-it" \
+  --model_id "Qwen/Qwen2.5-3B-Instruct" \
   --lora_weights "outputs/maasai-en-mt-qlora" \
   --text "Hello, how are you?" \
   --direction "en_to_mas"
@@ -190,7 +190,7 @@ Output: Supa, ipa eata?
 
 ```bash
 python scripts/export_gguf.py \
-  --model_id "google/gemma-3-4b-it" \
+  --model_id "Qwen/Qwen2.5-3B-Instruct" \
   --lora_path "outputs/maasai-en-mt-qlora" \
   --output_path "outputs/maasai-en-mt-qlora.gguf" \
   --quantize_level "Q4_K_M"
@@ -224,16 +224,15 @@ CUDA out of memory. Tried to allocate X.XXGiB
 --per_device_train_batch_size 2 --gradient_accumulation_steps 16
 ```
 
-### Model Not Found
+### Model Download Issue
 ```
-OSError: Can't find 'google/gemma-3-4b-it' in model_name
+OSError: Can't find 'Qwen/Qwen2.5-3B-Instruct' in model_name
 ```
 
-**Solution:** Accept model gating on HF
-1. Visit https://huggingface.co/google/gemma-3-4b-it
-2. Click "Access repository"
-3. Wait for acceptance to your account
-4. Re-authenticate in Colab with `notebook_login()`
+**Solution:** Re-authenticate and confirm outbound model download access
+1. Run `notebook_login()` again
+2. Confirm the repo name is exactly `Qwen/Qwen2.5-3B-Instruct`
+3. Retry the cell after clearing the runtime cache if needed
 
 ### Training Hangs
 1. Kill the cell (Colab button: ⏹)
@@ -303,7 +302,7 @@ If Colab queues are full:
 ## Questions?
 
 - **Data issues:** Check `data/final_v3/train.jsonl` format
-- **Model issues:** Visit [google/gemma-3-4b-it](https://huggingface.co/google/gemma-3-4b-it)
+- **Model issues:** Visit [Qwen/Qwen2.5-3B-Instruct](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct)
 - **Training issues:** Check Colab logs for specific error messages
 - **Community:** Post in HuggingFace [Discussions](https://huggingface.co/NorthernTribe-Research/maasai-translation-corpus/discussions)
 

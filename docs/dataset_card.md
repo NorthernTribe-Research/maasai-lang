@@ -24,18 +24,20 @@ Parallel English↔Maasai translation pairs for low-resource MT, language preser
 - Total pairs: 9,406
 - Splits: 7,991 train / 707 valid / 708 test
 - Directions: 4,703 en→mas and 4,703 mas→en
-- Quality tiers: 9,124 gold and 282 silver
-- Main sources: 8,444 Bible-aligned pairs, 680 cultural manual pairs, 70 knowledge-driven cultural pairs, 132 public-domain Hollis proverb pairs, and 80 ASJP lexical pairs
+- Quality tiers: 8,444 gold and 962 silver
+- Main sources: 8,444 Bible-derived pairs, 680 cultural manual pairs, 70 knowledge-driven cultural pairs, 132 public-domain Hollis proverb pairs, and 80 ASJP lexical pairs
 
 The public dataset repo publishes the parallel-pair corpus from `data/final_v3/*.jsonl`. Training code may derive instruction prompts at load time, but `prompt` and `completion` are not stored in this public dataset.
 
+The current local corpus is not fully schema-normalized. In `data/final_v3`, 680 older `cultural_manual` rows currently omit `id`, and 750 rows omit `quality_assessment`. The trainer does not depend on either field.
+
 ## Record Schema
 
-Each JSONL row contains:
+Each JSONL row contains the common fields below:
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | string | Unique example identifier |
+| `id` | string, optional | Present on most rows; 680 older `cultural_manual` rows currently omit it |
 | `source_text` | string | Source sentence |
 | `target_text` | string | Target translation |
 | `source_lang` | string | `en` or `mas` |
@@ -46,7 +48,7 @@ Each JSONL row contains:
 | `notes` | string | Free-form provenance notes |
 | `tier` | string | Quality tier (`gold` or `silver`) |
 | `confidence` | float | Confidence score for the pair |
-| `quality_assessment` | string | Quality assessment label |
+| `quality_assessment` | object, optional | Structured quality metadata when present |
 
 Example:
 
@@ -60,10 +62,14 @@ Example:
   "domain": "bible",
   "source_name": "bible_english_maasai",
   "quality_score": 0.98,
-  "notes": "Aligned Bible verse",
+  "notes": "Bible-derived sentence chunk pair",
   "tier": "gold",
   "confidence": 0.98,
-  "quality_assessment": "authenticated_parallel_text"
+  "quality_assessment": {
+    "overall_score": 0.98,
+    "tier": "gold",
+    "issues": []
+  }
 }
 ```
 
@@ -94,7 +100,9 @@ Top domains in the current release:
 ## Limitations
 
 - Maasai orthography is not fully standardized.
-- Coverage is strongest in Bible-aligned and culturally grounded domains.
+- Coverage is strongest in Bible-derived and culturally grounded domains.
+- The current local schema is not fully normalized across all rows.
+- The `tier` labels are carried forward from the local curation pipeline and should not be read as native-speaker review guarantees for every row.
 - Outputs trained on this corpus should still be reviewed by native Maa speakers for formal use.
 - Dialect and regional variation are only partially represented.
 

@@ -5,7 +5,7 @@ Evaluate a trained Maasai translation model on the test set.
 Usage:
     python scripts/evaluate_mt.py \
         --model_dir outputs/maasai-en-mt-qlora \
-        --test_file data/processed/test.jsonl \
+        --test_file data/final_v3/test.jsonl \
         --glossary_file data/glossary/maasai_glossary.json \
         --output_file data/eval/eval_results.json
 """
@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model_dir", type=str, default="outputs/maasai-en-mt-qlora")
     parser.add_argument("--base_model", type=str, default=None,
                         help="If using adapter, specify the base model name")
-    parser.add_argument("--test_file", type=str, default="data/processed/test.jsonl")
+    parser.add_argument("--test_file", type=str, default="data/final_v3/test.jsonl")
     parser.add_argument("--glossary_file", type=str, default="data/glossary/maasai_glossary.json")
     parser.add_argument("--output_file", type=str, default="data/eval/eval_results.json")
     parser.add_argument("--max_new_tokens", type=int, default=128)

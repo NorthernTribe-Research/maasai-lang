@@ -10,9 +10,9 @@ Input:
     domain, source_name, quality_score, notes
 
 Output:
-- data/processed/train.jsonl
-- data/processed/valid.jsonl
-- data/processed/test.jsonl
+- data/final_v3/train.jsonl
+- data/final_v3/valid.jsonl
+- data/final_v3/test.jsonl
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def setup_logging() -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, default="data/raw")
-    parser.add_argument("--output_dir", type=str, default="data/processed")
+    parser.add_argument("--output_dir", type=str, default="data/final_v3")
     parser.add_argument("--test_size", type=float, default=0.05)
     parser.add_argument("--valid_size", type=float, default=0.05)
     parser.add_argument("--seed", type=int, default=42)

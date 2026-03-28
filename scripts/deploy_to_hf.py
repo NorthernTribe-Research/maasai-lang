@@ -163,7 +163,7 @@ def show_status(project_root: Path) -> None:
     
     print(f"\\n🤖 Model:")
     model_path = project_root / "outputs" / "maasai-en-mt-qlora"
-    print(f"   https://huggingface.co/{username}/maasai-translation-model")
+    print(f"   https://huggingface.co/{username}/maasai-en-mt")
     print(f"   Status: {'✓ Trained' if model_path.exists() else '❌ Not yet trained'}")
     
     if model_path.exists():
@@ -200,7 +200,7 @@ def main():
     print(f"""
 ╔════════════════════════════════════════════════════════════╗
 ║  🦁 Maasai Language Project - HuggingFace Deployment      ║
-║      Version: 2.0 | Dataset: 9,194 pairs                  ║
+║      Version: 2.0 | Dataset: 9,406 pairs                  ║
 ╚════════════════════════════════════════════════════════════╝
 """)
     

@@ -146,7 +146,7 @@ weight_decay: 0.01               # L2 regularization
    ```bash
    .venv/bin/python3 scripts/prepare_data.py \
      --input_dir data/raw \
-     --output_dir data/processed_v2 \
+     --output_dir data/final_v3 \
      --train_ratio 0.85
    ```
    → Splits into train/valid/test
@@ -155,7 +155,7 @@ weight_decay: 0.01               # L2 regularization
    ```bash
    bash training/run_train.sh
    ```
-   → QLoRA training on 4B base model
+   → QLoRA training on the default Qwen base model
 
 5. **⏳ Export to GGUF**
    ```bash

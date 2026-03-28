@@ -277,16 +277,16 @@ EOF
 ```bash
 python scripts/prepare_data.py \
   --input_dir data/raw \
-  --output_dir data/processed_v2 \
+  --output_dir data/final_v3 \
   --test_size 0.10 \
   --valid_size 0.10 \
   --seed 42 \
   --min_quality_score 0.7
 
 # Expected output:
-# - data/processed_v2/train.jsonl (~4,100 pairs)
-# - data/processed_v2/valid.jsonl (~260 pairs)
-# - data/processed_v2/test.jsonl (~260 pairs)
+# - data/final_v3/train.jsonl (7,991 pairs)
+# - data/final_v3/valid.jsonl (707 pairs)
+# - data/final_v3/test.jsonl (708 pairs)
 ```
 
 #### 1.4b: Generate Statistics
@@ -299,7 +299,7 @@ from collections import Counter
 summary = {"total_rows": 0, "splits": {}, "lang_pairs": {}, "top_domains": {}, "top_sources": {}}
 
 for split in ['train', 'valid', 'test']:
-    f = Path(f'data/processed_v2/{split}.jsonl')
+    f = Path(f'data/final_v3/{split}.jsonl')
     if not f.exists():
         continue
     
@@ -326,7 +326,7 @@ for split in ['train', 'valid', 'test']:
 all_domains = Counter()
 all_sources = Counter()
 for split in ['train', 'valid', 'test']:
-    f = Path(f'data/processed_v2/{split}.jsonl')
+    f = Path(f'data/final_v3/{split}.jsonl')
     if f.exists():
         with open(f) as fh:
             for line in fh:
@@ -338,7 +338,7 @@ summary['top_domains'] = dict(all_domains.most_common(10))
 summary['top_source_names'] = dict(all_sources.most_common(10))
 
 # Write summary
-with open('data/processed_v2/summary.json', 'w') as fh:
+with open('data/final_v3/summary.json', 'w') as fh:
     json.dump(summary, fh, indent=2)
 
 # Print
@@ -360,15 +360,15 @@ print(f"\nTop sources:")
 for source, count in summary['top_source_names'].items():
     pct = 100 * count / summary['total_rows']
     print(f"  {source}: {count} ({pct:.1f}%)")
-print("\n✓ Summary written to: data/processed_v2/summary.json")
+print("\n✓ Summary written to: data/final_v3/summary.json")
 EOF
 ```
 
 **Validation Checks:**
-- [ ] Train split: ≥ 4,000 pairs
-- [ ] Valid split: 250-300 pairs
-- [ ] Test split: 250-300 pairs
-- [ ] Total: ≥ 4,500 pairs
+- [ ] Train split: 7,991 pairs
+- [ ] Valid split: 707 pairs
+- [ ] Test split: 708 pairs
+- [ ] Total: 9,406 pairs
 - [ ] Domain distribution includes: philosophy, ceremony, governance (20%+)
 - [ ] Source distribution improved (cultural > 30%)
 - [ ] `summary.json` generated and readable
@@ -405,7 +405,7 @@ Phase 1 Complete Summary:
 **Depends On:** Phase 1 complete
 
 ### Phase 2.1: Pre-Training Setup
-- [ ] Verify `data/processed_v2/*.jsonl` exist and are valid
+- [ ] Verify `data/final_v3/*.jsonl` exist and are valid
 - [ ] Check GPU availability: `nvidia-smi`
 - [ ] Verify `transformers`, `peft`, `torch` installed
 - [ ] Review `training/run_train.sh` configuration
@@ -436,7 +436,7 @@ from transformers import AutoTokenizer
 ```bash
 python scripts/evaluate_mt.py \
   --model_dir outputs/maasai-en-mt-merged \
-  --test_file data/processed_v2/test.jsonl \
+  --test_file data/final_v3/test.jsonl \
   --glossary_file data/glossary/maasai_glossary.json \
   --output_file data/eval/metrics_v1.json
 ```

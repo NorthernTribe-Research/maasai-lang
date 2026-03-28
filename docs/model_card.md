@@ -35,11 +35,11 @@ The training recipe in this repo uses the public parallel corpus from `data/fina
 - 9,406 total pairs
 - 7,991 train / 707 valid / 708 test
 - 4,703 en→mas and 4,703 mas→en
-- 9,124 gold-tier and 282 silver-tier examples
+- 8,444 gold-tier and 962 silver-tier examples
 
-This release now includes a small open-source supplement layer from public-domain Hollis proverbs and the CC BY 4.0 ASJP Maasai wordlist, in addition to the existing Bible-aligned and curated cultural data.
+This release now includes a small open-source supplement layer from public-domain Hollis proverbs and the CC BY 4.0 ASJP Maasai wordlist, in addition to the Bible-derived and curated cultural data already present in the local corpus.
 
-The raw published dataset stores parallel pairs and metadata. The trainer constructs instruction prompts at runtime when needed, so the model can be trained from either prompt/completion records or plain translation pairs.
+The raw published dataset stores parallel pairs and metadata. The trainer constructs instruction prompts at runtime when needed, so the model can be trained from either prompt/completion records or plain translation pairs. The trainer does not require `id` or `quality_assessment`, which matters because some older `cultural_manual` rows still omit those fields.
 
 ## Intended Use
 
@@ -56,8 +56,9 @@ The raw published dataset stores parallel pairs and metadata. The trainer constr
 ## Limitations
 
 - Maasai remains a low-resource language, so quality will vary by domain.
-- The corpus is strongest in Bible-aligned and cultural content.
+- The corpus is strongest in Bible-derived and cultural content.
 - Orthographic and dialectal variation are not fully normalized.
+- The current dataset schema is not fully normalized across every row.
 - Native Maa speaker review remains necessary for formal or sensitive use.
 
 ## Hub Download Metrics

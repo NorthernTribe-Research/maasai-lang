@@ -64,7 +64,7 @@ jobs:
           fi
 
           if [ -z "${HF_MODEL_REPO:-}" ]; then
-            HF_MODEL_REPO="NorthernTribe-Research/maasai-en-mt"
+            HF_MODEL_REPO="NorthernTribe-Research/maasai-en-mt-staging"
             echo "HF_MODEL_REPO var not set; defaulting to $HF_MODEL_REPO"
           fi
 
@@ -103,6 +103,7 @@ jobs:
             --bucket-uri "$HF_BUCKET_URI" \
             --work-dir "$HF_DAILY_WORKDIR" \
             --require-4bit \
+            --max-length 512 \
             --max-steps "$MAX_STEPS" \
             --save-steps "$SAVE_STEPS" \
             --eval-steps "$SAVE_STEPS" \
@@ -110,6 +111,7 @@ jobs:
             --per-device-train-batch-size 2 \
             --per-device-eval-batch-size 2 \
             --gradient-accumulation-steps 16 \
+            --no-augment-with-generation-tasks \
             --report-to "$REPORT_TO"
 
       - name: Upload daily training manifest

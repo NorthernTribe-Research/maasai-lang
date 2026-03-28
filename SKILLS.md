@@ -24,7 +24,7 @@
   - Multiple Maasai sections covered
 
 - **Model:** Not yet trained
-  - Base model ready: `google/gemma-3-4b-it`
+  - Base model ready: `Qwen/Qwen2.5-3B-Instruct`
   - QLoRA config ready (r=16, alpha=32, lr=2e-4)
   - Training infrastructure prepared
 
@@ -230,16 +230,16 @@ Each entry includes:
 ## 2. STRATEGIC ROADMAP: FROM GOOD TO EXCELLENT
 
 ### Phase 1: Dataset Enhancement (Foundation)
-**Goal:** Upgrade dataset from 3K pairs to 5K+ pairs with better diversity and quality
-- ✅ Keep existing 3,010 pairs (validation baseline)
-- ➕ Add 1,500-2,000 new diverse pairs across underrepresented domains
-- ➕ Increase authentic cultural pairs from 12% to 30%
-- 🎯 Rebalance domains: environment/daily_life 50% → 40%, cultural/philosophy/ceremonies 8% → 25%
+**Goal:** Stabilize the 9.4K-pair corpus for trustworthy training
+- ✅ Current local snapshot: 9,406 bidirectional pairs in `data/final_v3`
+- ➕ Backfill stable `id` values for rows that still omit them
+- ➕ Audit Bible-derived chunk alignment before long training runs
+- 🎯 Preserve the 962-pair supplement while reducing noisy Bible supervision
 
 **Rationale:**
-- Synthetic data alone creates formulaic models
-- Cultural terms (philosophy, ceremonies, governance) are highest-value for Maasai language preservation
-- Balanced data improves model transfer learning
+- The corpus now has enough scale to train, but the Bible-derived majority needs alignment review
+- The supplement adds the domain diversity that the Bible-derived slice does not provide
+- Cleaner validation and test slices make later BLEU/chrF++ numbers more credible
 
 ### Phase 2: Model Training & Evaluation (Validation)
 **Goal:** Establish baseline metrics and train production model
@@ -378,16 +378,17 @@ print(f'Merged from {len(all_pairs)} into {len(unique_pairs)} unique pairs')
 ```bash
 python scripts/prepare_data.py \
   --input_dir data/raw \
-  --output_dir data/processed_v2 \
+  --output_dir data/final_v3 \
   --test_size 0.1 \
   --valid_size 0.1 \
   --min_quality_score 0.7
-# Output: data/processed_v2/{train,valid,test}.jsonl (5000+ pairs total)
+# Output: data/final_v3/{train,valid,test}.jsonl (current snapshot: 9,406 pairs total)
 ```
 
 **Success Criteria:**
-- [ ] ≥5,000 total pairs
-- [ ] ≥30% authentic cultural (not synthetic)
+- [ ] 9,406 total pairs preserved after refresh
+- [ ] Supplement retained alongside Bible-derived data
+- [ ] Alignment issues clearly documented before training
 - [ ] ≥20% philosophy/culture/ceremony/governance domains
 - [ ] Zero exact duplicates
 - [ ] All pairs have quality_score ≥ 0.7
@@ -441,7 +442,7 @@ model = AutoPeftModelForCausalLM.from_pretrained(
 model = model.merge_and_unload()
 model.save_pretrained('outputs/maasai-en-mt-merged')
 
-tokenizer = AutoTokenizer.from_pretrained('google/gemma-3-4b-it')
+tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-3B-Instruct')
 tokenizer.save_pretrained('outputs/maasai-en-mt-merged')
 
 print('✓ Merged model saved to outputs/maasai-en-mt-merged')
@@ -452,18 +453,18 @@ print('✓ Merged model saved to outputs/maasai-en-mt-merged')
 ```bash
 python scripts/evaluate_mt.py \
   --model_dir outputs/maasai-en-mt-merged \
-  --test_file data/processed_v2/test.jsonl \
+  --test_file data/final_v3/test.jsonl \
   --glossary_file data/glossary/maasai_glossary.json \
   --output_file data/eval/metrics_v1.json
 
 # Expected output: metrics_v1.json
 # {
-#   "bleu_en2mas": 18.5,
-#   "bleu_mas2en": 22.3,
-#   "chrf_en2mas": 65.2,
-#   "chrf_mas2en": 68.1,
-#   "glossary_accuracy": 0.78,
-#   "hallucination_rate": 0.12
+#   "bleu_en2mas": null,
+#   "bleu_mas2en": null,
+#   "chrf_en2mas": null,
+#   "chrf_mas2en": null,
+#   "glossary_accuracy": null,
+#   "notes": "Populate after the first completed QLoRA training run"
 # }
 ```
 
@@ -472,7 +473,7 @@ python scripts/evaluate_mt.py \
 # Pick 50 random test examples, generate predictions, review manually
 python scripts/infer_translate.py \
   --model_dir outputs/maasai-en-mt-merged \
-  --test_file data/processed_v2/test.jsonl \
+  --test_file data/final_v3/test.jsonl \
   --sample_size 50 \
   --output_file data/eval/sample_predictions.jsonl
 
@@ -648,30 +649,21 @@ Edit `docs/model_card.md`:
 
 ## Model Details
 - **Name:** maasai-en-mt
-- **Base Model:** google/gemma-3-4b-it
-- **Fine-tuning:** QLoRA (4-bit, r=16, lr=2e-4)
-- **Training Data:** 5,125 English ↔ Maasai pairs
+- **Base Model:** Qwen/Qwen2.5-3B-Instruct
+- **Fine-tuning Plan:** QLoRA (4-bit, r=16, lr=2e-4)
+- **Training Data:** 9,406 English ↔ Maasai pairs from `data/final_v3`
 - **Languages:** English (en) ↔ Maasai/Maa (mas)
 
-## Performance
-
-| Metric | en→mas | mas→en |
-|--------|--------|--------|
-| BLEU | 18.5 | 22.3 |
-| chrF++ | 65.2 | 68.1 |
-| Glossary Accuracy | 0.78 | 0.78 |
-
-**Notes:**
-- BLEU scores are lower than high-resource pairs (normal for low-resource)
-- chrF++ more reliable for morphologically rich languages
-- Glossary accuracy measures preservation of 90+ protected terms
+## Current Status
+- No completed fine-tuned model artifact has been produced yet
+- Local model bundles in `dist/hf_publish/model_bundle/` are placeholders
+- Automatic metrics should be published only after a completed train + eval run
 
 ## Known Limitations
+- **Alignment Noise:** Bible-derived chunk pairing needs audit before trusting benchmark numbers
+- **Schema Variation:** 680 rows omit `id`; 750 omit `quality_assessment`
 - **Orthography:** Maasai has non-standardized spelling; outputs may vary
-- **Dialects:** Model weighted toward Ilkisongo/Laikipiak; other sections underrepresented
-- **Hallucinations:** ~12% of outputs may generate plausible-sounding incorrect terms
 - **Formal Use:** Requires native speaker review before legal/medical/formal contexts
-- **Low-Resource:** Training data is limited; quality improves with community feedback
 
 ## Ethical Use
 - This model is **not** a replacement for native speaker expertise
@@ -685,35 +677,23 @@ Edit `docs/dataset_card.md`:
 # Dataset Card: maasai-translation-corpus v1.0
 
 ## Dataset Summary
-- **Total Pairs:** 5,125 (bilingual English ↔ Maasai)
-- **Train/Valid/Test Split:** 4,613 / 256 / 256
+- **Total Pairs:** 9,406 (bilingual English ↔ Maasai)
+- **Train/Valid/Test Split:** 7,991 / 707 / 708
 - **Data Sources:**
-  - Synthetic permutations: 2,646 (52%)
-  - Manual cultural: 1,850 (36%)
-  - Extended cultural: 629 (12%)
-
-## Domains
-| Domain | Count | % |
-|--------|-------|-----|
-| Daily Life | 1,500 | 29% |
-| Environment | 1,200 | 23% |
-| Philosophy/Spirituality | 650 | 13% |
-| Ceremonies/Rituals | 550 | 11% |
-| Education | 350 | 7% |
-| Governance | 300 | 6% |
-| Livestock | 300 | 6% |
-| Health | 175 | 3% |
+  - Bible-derived: 8,444 (89.8%)
+  - Cultural/open-source supplement: 962 (10.2%)
+  - Named source examples: `cultural_manual`, `hollis_1905_public_domain`, `asjp_maasai_cc_by_4`
 
 ## Quality Indicators
-- All pairs quality_score ≥ 0.7
-- Duplicates removed (unique source↔target pairs)
-- Glossary-validated cultural terms ✓
+- Quality labels present for 8,444 `gold` and 962 `silver` rows
+- 680 rows currently omit `id`
+- 750 rows currently omit `quality_assessment`
+- Bible-derived majority should be spot-audited for alignment noise
 
 ## Limitations
-- **Synthetic Bias:** 52% generated from templates (may lack natural variation)
-- **Dialect Coverage:** Weighted toward Ilkisongo/Laikipiak
-- **Orthographic Variation:** Non-standardized Maasai spelling (intentional preservation)
-- **Domain Imbalance:** Daily life + environment overrepresented
+- **Bible Heavy:** Source mix is dominated by Bible-derived material
+- **Schema Variation:** Some metadata fields are optional rather than universal
+- **Orthographic Variation:** Non-standardized Maasai spelling is preserved intentionally
 ```
 
 #### 4c. Create Evaluation Report
@@ -721,33 +701,20 @@ Create `docs/evaluation_report_v1.md`:
 ```markdown
 # Evaluation Report: maasai-en-mt v1.0
 
-## Automatic Metrics (Test Set, n=256)
+## Current Status
+- No completed training run has produced publishable automatic metrics yet
+- Held-out evaluation data exists at `data/final_v3/test.jsonl` (708 rows)
+- Native-speaker review is still pending
 
-### English → Maasai
-- BLEU: 18.5
-- chrF++: 65.2
-- Glossary Accuracy: 0.78
-- Avg Output Length Ratio: 0.92
+## Minimum Evaluation Plan
+- Run BLEU and chrF++ in both directions after the first completed QLoRA run
+- Measure glossary preservation on protected terms
+- Review at least 50 held-out examples manually for alignment-driven failures
 
-### Maasai → English
-- BLEU: 22.3
-- chrF++: 68.1
-- Glossary Accuracy: 0.78
-- Avg Output Length Ratio: 1.05
-
-## Error Analysis (Sample n=50)
-
-### Categories
-| Error Type | Count | Example |
-|----------|-------|---------|
-| Hallucination | 6 | "enkiama" → "community meeting" ✓ but sometimes "enchanted gathering" ✗ |
-| Orthography | 3 | "shuka" → "Shuka" (capitalization inconsistency) |
-| Term Flattening | 2 | "enkang" → "village" instead of "homestead" |
-| Omission | 1 | "Enkai Narok neshuki" → "God will give birth" (missing "Enkai") |
-| Over-generation | 2 | Single source word → 3+ target words |
-
-**Hallucination Rate:** 12% (acceptable for low-resource)
-**Glossary Preservation:** 78% of protected terms correctly preserved
+## Known Review Focus
+- Bible-derived chunk mismatch and omission errors
+- Orthographic variation across Maa spellings
+- Term flattening on culturally loaded vocabulary
 
 ## Human Review (Optional)
 - Pending review by native Maa speakers
@@ -811,8 +778,8 @@ ls -la outputs/maasai-en-mt-merged/
 cat data/eval/metrics_v1.json
 
 # 3. Verify dataset
-wc -l data/processed_v2/*.jsonl
-# train: ~4613, valid: ~256, test: ~256
+wc -l data/final_v3/*.jsonl
+# train: 7991, valid: 707, test: 708
 
 # 4. Verify space files
 ls -la space/
@@ -836,7 +803,7 @@ huggingface-cli upload \
   NorthernTribe-Research/maasai-en-mt \
   outputs/maasai-en-mt-merged/ \
   repo_type=model \
-  commit_message="🚀 v1.0: QLoRA-trained on 5K bilingual corpus"
+  commit_message="🚀 Publish current QLoRA artifacts"
 
 # Verify upload
 curl -s https://huggingface.co/api/models/NorthernTribe-Research/maasai-en-mt | jq '.id'
@@ -849,13 +816,13 @@ curl -s https://huggingface.co/api/models/NorthernTribe-Research/maasai-en-mt | 
 
 huggingface-cli upload \
   NorthernTribe-Research/maasai-translation-corpus \
-  data/processed_v2/train.jsonl \
-  data/processed_v2/valid.jsonl \
-  data/processed_v2/test.jsonl \
+  data/final_v3/train.jsonl \
+  data/final_v3/valid.jsonl \
+  data/final_v3/test.jsonl \
   docs/dataset_card.md \
   data/eval/metrics_v1.json \
   repo_type=dataset \
-  commit_message="v1.0: Expanded to 5,125 pairs with better cultural coverage"
+  commit_message="Refresh dataset snapshot from local data/final_v3"
 
 # Verify
 curl -s https://huggingface.co/api/datasets/NorthernTribe-Research/maasai-translation-corpus | jq '.id'
@@ -887,16 +854,15 @@ Update main `README.md` with:
 
 ## 🎯 What's New
 
-- ✅ **Dataset v1.0:** 5,125 bilingual pairs (up from 3K)
-  - Better cultural representation (36% authentic manual pairs)
-  - Improved domain balance (philosophy/ceremonies expanded)
+- ✅ **Dataset snapshot:** 9,406 bilingual pairs in `data/final_v3`
+  - Current split: 7,991 train / 707 valid / 708 test
+  - Current labels: 8,444 gold / 962 silver
   
-- ✅ **Model v1.0:** QLoRA-trained Gemma-3-4B
-  - BLEU: 18.5 (en→mas), 22.3 (mas→en)
-  - chrF++: 65.2 (en→mas), 68.1 (mas→en)
-  - 78% glossary term preservation
+- ✅ **Model status:** QLoRA pipeline ready on Qwen2.5-3B-Instruct
+  - Local artifacts are placeholders until a real run completes
+  - BLEU/chrF++ remain unpublished
   
-- ✅ **Space v1.0:** Full-featured Gradio app
+- ✅ **Space status:** Gradio prototype with glossary + Paza scaffolding
   - Bidirectional translation
   - Speech transcription (Paza ASR)
   - Searchable glossary
@@ -1067,7 +1033,7 @@ maasai-lang/
 - [Dataset Card Template](https://github.com/huggingface/datasets/blob/main/model_cards/datasets/TEMPLATE.md)
 
 ### Technical Stack
-- **Base Model:** `google/gemma-3-4b-it` (4B params, instruction-tuned)
+- **Base Model:** `Qwen/Qwen2.5-3B-Instruct` (3B params, instruction-tuned)
 - **Fine-tune:** `peft` (4-bit QLoRA)
 - **Eval:** `sacrebleu` (BLEU/chrF++)
 - **UI:** Gradio 5.23+

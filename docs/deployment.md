@@ -39,7 +39,7 @@ python scripts/prepare_data.py --input_dir data/raw --output_dir data/processed
 bash training/run_train.sh
 
 # Or with custom params
-python scripts/train_qlora.py --model_name google/gemma-3-4b-it --num_train_epochs 5
+python scripts/train_qlora.py --model_name Qwen/Qwen2.5-3B-Instruct --num_train_epochs 5
 ```
 
 ## Evaluation
@@ -83,5 +83,5 @@ huggingface-cli login
 huggingface-cli upload NorthernTribe-Research/maasai-en-mt outputs/maasai-en-mt-qlora/
 
 # Push dataset
-huggingface-cli upload NorthernTribe-Research/maasai-translation-corpus data/processed/
+huggingface-cli upload NorthernTribe-Research/maasai-translation-corpus data/final_v3/
 ```

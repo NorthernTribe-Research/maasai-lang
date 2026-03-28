@@ -22,8 +22,8 @@
   },
   "models": {
     "translation_base": {
-      "provider": "google",
-      "model_id": "google/gemma-3-4b-it",
+      "provider": "qwen",
+      "model_id": "Qwen/Qwen2.5-3B-Instruct",
       "purpose": "Instruction-tuned base for English ↔ Maasai translation fine-tuning",
       "train_strategy": "QLoRA",
       "target_artifact": "adapter-first"

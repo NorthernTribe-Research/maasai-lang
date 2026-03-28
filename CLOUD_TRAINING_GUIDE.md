@@ -21,7 +21,7 @@ cp ../docs/DATASET_README_V2.md README.md
 
 # Push to HF
 git add .
-git commit -m "Add v2.0: Comprehensive translation corpus (9,194 pairs, 7814/689/691 splits)"
+git commit -m "Add current translation corpus snapshot (9,406 pairs, 7991/707/708 splits)"
 git push
 ```
 
@@ -126,9 +126,9 @@ python scripts/push_model_to_hf.py outputs/maasai-en-mt-qlora
 ## Dataset Already Prepared
 
 ✅ Training data ready at `data/final_v3/`:
-- 7,814 training pairs (85%)
-- 689 validation pairs (7.5%)
-- 691 test pairs (7.5%)
-- 9,194 total unique pairs (91.8% high-confidence)
+- 7,991 training pairs (85%)
+- 707 validation pairs (7.5%)
+- 708 test pairs (7.5%)
+- 9,406 total unique pairs (8,444 gold / 962 silver in current metadata)
 
 Ready for immediate GPU training!
