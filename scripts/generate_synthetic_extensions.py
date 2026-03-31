@@ -188,8 +188,8 @@ def generate_numbers_time_pairs(n_pairs: int = 200) -> list:
     
     # Template 3: Time actions
     for action_en, action_mas in zip(TIME_ACTIONS["en"], TIME_ACTIONS["mas"]):
-        en = f"The sun will {}".format(action_en)
-        mas = f"Isiata ia {}".format(action_mas)
+        en = "The sun will {}".format(action_en)
+        mas = "Isiata ia {}".format(action_mas)
         pairs.append((en, mas, "numbers"))
     
     # More creative: ordinals and quantities
@@ -197,8 +197,8 @@ def generate_numbers_time_pairs(n_pairs: int = 200) -> list:
     ordinals_mas = ["naibaribari", "are", "okuni", "enkolooŋ"]
     
     for ord_en, ord_mas in zip(ordinals_en, ordinals_mas):
-        en = f"On the {} day..."
-        mas = f"Olaa {} ..."
+        en = "On the {} day..."
+        mas = "Olaa {} ..."
         pairs.append((en.format(ord_en), mas.format(ord_mas), "numbers"))
     
     # Seasons and cycles
@@ -227,14 +227,14 @@ def generate_kinship_pairs(n_pairs: int = 200) -> list:
     
     # Template 2: Age groups
     for age_en, age_mas in zip(AGE_GROUPS["en"][:8], AGE_GROUPS["mas"][:8]):
-        en = f"A {} learns from elders."
-        mas = f"{} ia semuata ti ilpayiani."
+        en = "A {} learns from elders."
+        mas = "{} ia semuata ti ilpayiani."
         pairs.append((en.format(age_en), mas.format(age_mas), "kinship"))
     
     # Template 3: Kinship actions and obligations
     for action_en, action_mas in zip(KINSHIP_ACTIONS["en"], KINSHIP_ACTIONS["mas"]):
-        en = f"We {} our family."
-        mas = f"Oolkinya ia {} ilkera enye."
+        en = "We {} our family."
+        mas = "Oolkinya ia {} ilkera enye."
         pairs.append((en.format(action_en), mas.format(action_mas), "kinship"))
     
     # Template 4: Family relationships
@@ -247,8 +247,8 @@ def generate_kinship_pairs(n_pairs: int = 200) -> list:
     ]
     
     for rel_en, rel_mas in relationships:
-        en = f"The love between {} is eternal."
-        mas = f"Okupenda n {} aidim le taata."
+        en = "The love between {} is eternal."
+        mas = "Okupenda n {} aidim le taata."
         pairs.append((en.format(rel_en), mas.format(rel_mas), "kinship"))
     
     # Extended family scenarios

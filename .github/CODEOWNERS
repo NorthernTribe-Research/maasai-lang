@@ -1,0 +1,16 @@
+# Default ownership for the repository
+* @NorthernTribe-Research/ntr-team
+
+# Core automation and governance
+.github/ @NorthernTribe-Research/ntr-team
+
+# Product and model surfaces
+space/ @NorthernTribe-Research/ntr-team
+src/ @NorthernTribe-Research/ntr-team
+scripts/ @NorthernTribe-Research/ntr-team
+training/ @NorthernTribe-Research/ntr-team
+
+# Governed datasets and documentation
+data/final_v3/ @NorthernTribe-Research/ntr-team
+data/glossary/ @NorthernTribe-Research/ntr-team
+docs/ @NorthernTribe-Research/ntr-team

@@ -1,82 +1,150 @@
-# Maasai Language Showcase
-## English ↔ Maasai Translation + Maasai Speech Transcription
+# Maasai Language Platform
 
-A modern English ↔ Maasai translation and Maasai speech transcription showcase built for language preservation, accessibility, and low-resource AI research.
+[![Daily Training](https://github.com/NorthernTribe-Research/maasai-lang/actions/workflows/daily-train.yml/badge.svg)](https://github.com/NorthernTribe-Research/maasai-lang/actions/workflows/daily-train.yml)
+[![Python](https://img.shields.io/badge/python-3.11+-0f4c81.svg)](#environment)
+[![Hugging Face Space](https://img.shields.io/badge/Hugging%20Face-Space-f9d95c.svg)](https://huggingface.co/spaces/NorthernTribe-Research/maasai-language-showcase)
 
----
+Production-oriented repository for English <-> Maasai translation, Maasai speech transcription, culturally grounded language tooling, and the MLOps workflows required to train, publish, monitor, and operate those assets across GitHub, Hugging Face, Kaggle, and self-hosted GPU infrastructure.
 
-## Features
+> Status
+> Active development. This repository does not currently declare an open-source license. Until a license is added, treat the code and bundled assets as all rights reserved.
 
-- **English → Maasai translation** — powered by a QLoRA fine-tuned model
-- **Maasai → English translation** — bidirectional support
-- **Maasai speech transcription** — via Microsoft Paza ASR
-- **Speech → Translation pipeline** — transcribe then translate
-- **Cultural terminology preservation** — 90+ term glossary with protected terms
-- **Sub-tribe awareness** — covers Ldikiri, Laikipiak, Samburu (Lmomonyot), Ilkisongo, Ilpurko, and more
+## Executive Summary
 
-## Architecture
+This project is an end-to-end low-resource language AI platform focused on Maasai language preservation, accessibility, and operational delivery.
 
-| Component | Model | Purpose |
-|-----------|-------|---------|
-| Translation | `Qwen/Qwen2.5-3B-Instruct` (QLoRA) | English ↔ Maasai text translation and Maa composition |
-| Speech | `microsoft/paza-whisper-large-v3-turbo` | Maasai speech transcription |
-| UI | Gradio | Interactive Hugging Face Space |
+It combines:
+
+- A user-facing Gradio application for translation, speech transcription, glossary-backed exploration, and curated cultural content.
+- A QLoRA fine-tuning stack for English <-> Maasai machine translation and optional Maa generation-oriented tasks.
+- A Hub-centric publication model where Hugging Face stores the canonical dataset, model artifacts, Space bundle, and resumable training checkpoints.
+- A control-plane architecture where GitHub Actions orchestrates scheduled training while Kaggle or self-hosted runners provide GPU execution.
+
+## Platform Scope
+
+### Core Capabilities
+
+- Bidirectional English -> Maasai and Maasai -> English translation.
+- Maasai speech transcription using a dedicated ASR model.
+- Transcribe-then-translate workflows inside the same application surface.
+- Glossary-aware and culturally grounded user experiences for language preservation workflows.
+- Repeatable publication of model, dataset, and Space assets to Hugging Face.
+- Resumable daily training that restores checkpoints from Hugging Face and pushes updated checkpoints back during execution.
+
+### Operating Model
+
+This repository follows a clear control-plane and data-plane split:
+
+- GitHub is the automation and source-control control plane.
+- Hugging Face is the durable system of record for dataset, model, Space, and optional run artifacts.
+- Kaggle and self-hosted GPU runners are execution backends for training workloads.
+- Optional Weights & Biases integration is used for remote experiment tracking.
+
+## System Architecture
+
+| Layer | Primary Components | Responsibility |
+| --- | --- | --- |
+| Experience Layer | `space/app.py`, `space/style.css` | End-user translation, speech, glossary, and research UI |
+| Data Layer | `data/final_v3`, `data/glossary`, `data/registry` | Parallel corpus, glossary assets, and source-traceable data governance |
+| Training Layer | `scripts/train_qlora.py`, `training/run_train.sh`, `scripts/train_daily_from_hf.py` | QLoRA fine-tuning, resumable checkpoint restore, and Hub pushback |
+| Packaging Layer | `scripts/publish_to_hf.py`, `scripts/push_kaggle_kernel.py` | Space, dataset, model, and Kaggle kernel packaging |
+| Orchestration Layer | `.github/workflows/daily-train.yml`, `scripts/run_kaggle_training.py` | Scheduled dispatch, retry behavior, and training monitoring |
+| Monitoring Layer | `scripts/check_space_health.py`, run manifests, optional W&B | Health checks, execution visibility, and operational traceability |
+
+## Managed Assets
+
+| Asset Type | Canonical Target |
+| --- | --- |
+| GitHub repository | `NorthernTribe-Research/maasai-lang` |
+| Hugging Face Space | `NorthernTribe-Research/maasai-language-showcase` |
+| Hugging Face dataset | `NorthernTribe-Research/maasai-translation-corpus` |
+| Hugging Face model repo | `NorthernTribe-Research/maasai-en-mt` |
+| Base translation model | `Qwen/Qwen2.5-3B-Instruct` |
+| ASR model | `microsoft/paza-whisper-large-v3-turbo` |
+
+## Version Snapshot
+
+As of **March 31, 2026**, the active versions and runtime targets are:
+
+| Component | Current Version / Target | Source |
+| --- | --- | --- |
+| Python automation runtime | `3.11` | `.github/workflows/ci.yml`, `.github/workflows/daily-train.yml` |
+| Space SDK | `gradio` `6.10.0` | `space/README.md` |
+| Gradio dependency | `>=6.10.0,<7.0.0` | `requirements.txt`, `space/requirements.txt`, `requirements-ci.txt` |
+| Transformers | `>=4.51.0` | `requirements.txt` |
+| PyTorch | `>=2.3.0` | `requirements.txt` |
+| Base translation model | `Qwen/Qwen2.5-3B-Instruct` | `README.md`, workflow defaults |
+| ASR model | `microsoft/paza-whisper-large-v3-turbo` | `README.md`, `.env.example` |
+
+## Dataset Snapshot
+
+The current public corpus described in this repository is a governed English <-> Maasai parallel dataset with:
+
+- 9,910 total pairs.
+- 8,434 training rows, 738 validation rows, and 738 test rows.
+- Balanced translation directions across English and Maasai.
+- Mixed provenance from Bible-derived content, curated cultural examples, proverb material, lexicon sources, and vetted open-language resources.
+
+The dataset card lives in `docs/dataset_card.md`, and the project maintains an explicit source inventory in `docs/open_source_maasai_inventory.md` to avoid ungoverned ingestion.
 
 ## Quick Start
 
+### Environment
+
 ```bash
-# Setup
-python -m venv .venv && source .venv/bin/activate
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
+```
 
-# Generate training data
-python scripts/generate_cultural_pairs.py
-python scripts/prepare_data.py
+### Run The Space Locally
 
-# Train
-bash training/run_train.sh
-
-# Evaluate
-python scripts/evaluate_mt.py
-
-# Run Space locally
+```bash
 python space/app.py
-
-# Check hosted Space health
-.venv/bin/python scripts/check_space_health.py
 ```
 
-## Publish to Hugging Face
+### Train A Local Baseline
 
 ```bash
-# Optional: set token explicitly (recommended)
-export HF_TOKEN=hf_xxx
-
-# Preview publish plan (no uploads)
-python scripts/publish_to_hf.py
-
-# Export refreshed publish bundles locally
-python scripts/publish_to_hf.py --export-dir dist/hf_publish --create-model-repo
-
-# Execute publish for Space + dataset + model repo scaffold
-python scripts/publish_to_hf.py --execute --create-model-repo
+bash training/run_train.sh
 ```
 
-The publisher uploads:
-- Space bundle from `space/` + glossary data
-- Dataset bundle from `data/final_v3/` + dataset card
-- Model artifacts from `outputs/maasai-en-mt-qlora` when real weights exist
-- A model repo scaffold with `README.md`, `meta.yaml`, and status metadata when local outputs are still mock placeholders
-
-Legacy helpers such as `scripts/push_hf_model.py` and `scripts/push_trained_model.py` now route through the same publisher so model cards and Hub metadata stay consistent.
-
-## Daily Training Automation
-
-For daily resumable training from Hugging Face:
+### Evaluate A Checkpoint
 
 ```bash
-# Colab or any GPU runner
+python scripts/evaluate_mt.py \
+  --model_dir outputs/maasai-en-mt-qlora \
+  --test_file data/final_v3/test.jsonl \
+  --glossary_file data/glossary/maasai_glossary.json
+```
+
+## Training Workflows
+
+### Local Or Research Training
+
+The standard local training entrypoint is:
+
+```bash
+bash training/run_train.sh
+```
+
+For direct control over the fine-tuning job:
+
+```bash
+python scripts/train_qlora.py \
+  --model_name Qwen/Qwen2.5-3B-Instruct \
+  --train_file data/final_v3/train.jsonl \
+  --valid_file data/final_v3/valid.jsonl \
+  --output_dir outputs/maasai-en-mt-qlora
+```
+
+### Resumable Daily Training From Hugging Face
+
+This path restores the latest checkpoint from the model repo, trains for a bounded session, then pushes updated checkpoints back to Hugging Face.
+
+```bash
 python scripts/train_daily_from_hf.py \
   --dataset-repo NorthernTribe-Research/maasai-translation-corpus \
   --model-repo NorthernTribe-Research/maasai-en-mt \
@@ -84,7 +152,9 @@ python scripts/train_daily_from_hf.py \
   --save-steps 100
 ```
 
-For Kaggle, use the retrying wrapper so unsupported P100 assignments are rerun automatically until a supported GPU is allocated:
+### Kaggle Execution
+
+Use the retrying wrapper when you want GitHub or a local machine to submit the private Kaggle kernel and automatically retry unsupported GPU assignments.
 
 ```bash
 KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
@@ -93,62 +163,159 @@ KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
   --embed-local-hf-token
 ```
 
-- `scripts/train_daily_from_hf.py` downloads the dataset from HF, restores the latest checkpoint from the model repo, and pushes new checkpoints back with `hub_strategy="checkpoint"`.
-- The default open base model is `Qwen/Qwen2.5-3B-Instruct` so Kaggle and other GPU runners are not blocked on gated-model access.
-- `.github/workflows/daily-train.yml` schedules the same flow for a `self-hosted` GPU runner, reads `HF_DATASET_REPO` / `HF_MODEL_REPO` from GitHub repo variables when set, and uploads a per-run manifest artifact from the runner temp directory.
-- For the future `734ai` GitHub repo, GitHub becomes the control plane while Hugging Face stays the durable checkpoint backend.
+### GitHub Actions Control Plane
 
-## Project Structure
+The repository includes a scheduled and manually dispatchable GitHub Actions workflow:
 
-```
-├── data/
-│   ├── raw/              # Raw parallel corpora
-│   ├── processed/        # Train/valid/test JSONL
-│   ├── glossary/         # Maasai terminology glossary
-│   └── eval/             # Evaluation results
-├── scripts/
-│   ├── prepare_data.py   # Data cleaning & formatting
-│   ├── train_qlora.py    # QLoRA fine-tuning
-│   ├── evaluate_mt.py    # BLEU/chrF++ evaluation
-│   ├── infer_translate.py    # Translation inference
-│   ├── infer_asr.py      # Speech transcription
-│   ├── generate_cultural_pairs.py # Cultural data generator
-│   └── build_glossary.py # Glossary validation
-├── src/
-│   ├── config.py         # Project configuration
-│   ├── prompts.py        # Prompt templates
-│   ├── glossary.py       # Glossary loader
-│   ├── preprocessing.py  # Text cleaning
-│   ├── postprocessing.py # Output post-processing
-│   ├── metrics.py        # Evaluation metrics
-│   └── utils.py          # Utilities
-├── space/
-│   └── app.py            # Gradio demo application
-├── training/
-│   ├── lora_config.yaml  # LoRA configuration
-│   └── run_train.sh      # Training script
-└── docs/
-    ├── model_card.md
-    ├── dataset_card.md
-    ├── evaluation_plan.md
-    └── deployment.md
+- Workflow file: `.github/workflows/daily-train.yml`
+- Scheduled backend: Kaggle submission via a control-plane runner (`ubuntu-latest` by default, or `TRAINING_CONTROL_RUNNER_LABEL` when configured)
+- Manual backends: `kaggle` or `self-hosted`
+- Primary responsibilities: validate secrets, package the training job, dispatch execution, and upload run artifacts
+
+## Hugging Face Publishing
+
+The maintained publication path is `scripts/publish_to_hf.py`.
+
+Preview the full publish plan:
+
+```bash
+python scripts/publish_to_hf.py
 ```
 
-## Maasai Sections Covered
+Export publish-ready bundles locally:
 
-Ldikiri · Laikipiak · Samburu (Lmomonyot) · Ilkisongo · Ilpurko · Iloitai · Ildamat · Ilkeekonyokie · Iloodokilani · Ilkaputiei · Ilmatapato · Ilwuasinkishu · Isiria · Ilmoitanik · Ildalalekutuk · Ilaitayiok · Ilarusa · Ilparakuyo
+```bash
+python scripts/publish_to_hf.py \
+  --export-dir dist/hf_publish \
+  --create-model-repo
+```
+
+Execute publication:
+
+```bash
+python scripts/publish_to_hf.py \
+  --execute \
+  --create-model-repo
+```
+
+This workflow can publish:
+
+- The Gradio Space bundle from `space/`
+- The governed dataset bundle from `data/final_v3/`
+- The model repo contents from `outputs/maasai-en-mt-qlora/`
+- A metadata-first scaffold when real trained weights are not yet available
+
+## Monitoring And Operations
+
+### Space Health Checks
+
+Probe the live Hugging Face Space:
+
+```bash
+.venv/bin/python scripts/check_space_health.py
+```
+
+Emit machine-readable output:
+
+```bash
+.venv/bin/python scripts/check_space_health.py --json
+```
+
+### Run Artifacts
+
+Daily training writes structured run manifests and can optionally sync per-run bundles to Hugging Face buckets. This provides lightweight execution traceability even when the compute environment is ephemeral.
+
+## Security And Secrets
+
+This repository uses external platforms extensively. Secrets management is therefore part of the operating model, not an afterthought.
+
+Required or commonly used credentials include:
+
+- `HF_TOKEN`
+- `KAGGLE_USERNAME`
+- `KAGGLE_KEY`
+- `WANDB_API_KEY`
+- `TRANSLATION_MODEL_ID`
+- `ASR_MODEL_ID`
+
+Secret delivery depends on the execution path:
+
+- Local development: environment variables or local key files such as `huggingface-api-key.json` and `kaggle.json`
+- GitHub Actions: repository secrets and repository variables
+- Kaggle runtime: Kaggle notebook secrets
+- Colab-style execution: Colab secret store when applicable
+
+Important constraints:
+
+- Kaggle packaging can embed Hugging Face and W&B credentials into a private kernel package when explicitly requested.
+- The code blocks secret embedding for public Kaggle kernels.
+- Secrets should never be committed into the repository or bundled into public artifacts.
+
+## Data Governance
+
+The project is designed to avoid indiscriminate ingestion. Source traceability is explicit.
+
+Governance artifacts include:
+
+- `docs/open_source_maasai_inventory.md`
+- `data/registry/maasai_vetted_web_sources.json`
+- `scripts/discover_vetted_maasai_sources.py`
+
+Operationally, the intended pattern is:
+
+- ingest only sources with clear reuse rights
+- keep unclear, gated, or copyrighted material out of automated training
+- separate training-approved, permission-required, and reference-only sources
+
+## Evaluation And Quality
+
+The evaluation plan is documented in `docs/evaluation_plan.md`.
+
+The current approach combines:
+
+- BLEU
+- chrF++
+- glossary-sensitive terminology checks
+- human review by native Maa speakers where possible
+
+Quality expectations should remain realistic:
+
+- Maasai is a low-resource language.
+- Orthography and dialect usage are not fully standardized.
+- Cultural and domain coverage are uneven.
+- Human review remains necessary for formal, public-facing, legal, medical, or otherwise sensitive use.
+
+## Repository Layout
+
+```text
+.
+|-- .github/workflows/        GitHub Actions automation
+|-- data/                     Corpora, glossary assets, registry, and evaluation data
+|-- docs/                     Dataset, model, deployment, and operations documentation
+|-- kaggle/                   Kaggle runtime entrypoints and requirements
+|-- outputs/                  Local training artifacts and checkpoints
+|-- scripts/                  Training, publishing, monitoring, and utility commands
+|-- space/                    Gradio application bundle for Hugging Face Space deployment
+|-- src/                      Shared Python modules for prompts, metrics, preprocessing, and config
+`-- training/                 Shell-based local training entrypoints
+```
+
+## Key Documentation
+
+- `docs/deployment.md`
+- `docs/daily_training.md`
+- `docs/kaggle_training.md`
+- `docs/dataset_card.md`
+- `docs/model_card.md`
+- `docs/evaluation_plan.md`
 
 ## Limitations
 
-- Low-resource language quality may vary
-- Maasai orthography is not fully standardized
-- Outputs should be reviewed by native Maa speakers for formal use
-- Not all dialectal variations are equally represented
+- This repository is production-oriented in structure, but it is still an actively evolving research and delivery platform.
+- The translation and speech outputs should not be treated as authoritative without qualified human review.
+- Coverage across dialects, domains, and orthographic variants is incomplete.
+- The repository does not yet declare a formal license.
 
-## License
+## Acknowledgment
 
-TBD
-
-## Acknowledgments
-
-Built by NorthernTribe-Research for the preservation and accessibility of the Maasai (Maa) language.
+Built by NorthernTribe-Research to support Maasai language preservation, accessibility, and practical low-resource language AI operations.

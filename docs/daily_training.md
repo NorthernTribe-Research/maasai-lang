@@ -35,7 +35,7 @@ What happens:
 
 The repo now includes [`.github/workflows/daily-train.yml`](/home/ntr/Documents/dev/maasai-lang/.github/workflows/daily-train.yml).
 
-Scheduled GitHub runs now use `ubuntu-latest` only as the control plane. The workflow:
+Scheduled GitHub runs use a CPU runner only as the control plane. By default that is `ubuntu-latest`, but you can set the repository or organization variable `TRAINING_CONTROL_RUNNER_LABEL` to a Blacksmith runner label such as `blacksmith-4vcpu-ubuntu-2404` and keep the same workflow file. The workflow:
 
 - authenticates to Kaggle from GitHub secrets
 - builds the private Kaggle kernel package from this repo
@@ -58,8 +58,9 @@ Recommended GitHub repo variables:
 - `HF_MODEL_REPO`
 - `HF_BASE_MODEL`
 - `HF_BUCKET_URI`
+- `TRAINING_CONTROL_RUNNER_LABEL` if you want the Kaggle dispatch job to run on Blacksmith instead of GitHub-hosted runners
 
-The workflow falls back to the current NorthernTribe Hugging Face repos when those vars are not set, and defaults the base model to `Qwen/Qwen2.5-3B-Instruct`.
+The workflow falls back to the current NorthernTribe Hugging Face repos when those vars are not set, defaults the base model to `Qwen/Qwen2.5-3B-Instruct`, and currently uses `NorthernTribe-Research/maasai-en-mt-staging` as the safe default model repo unless `HF_MODEL_REPO` is explicitly configured.
 
 ### Manual Self-Hosted Fallback
 
@@ -77,6 +78,19 @@ Use the self-hosted backend only when you intentionally want training to happen 
 - The model repo therefore acts as the durable resume point between daily sessions
 - Each run also writes a `run_manifest.json` file so GitHub can retain a lightweight execution artifact even when the runner workspace is ephemeral
 
-## Recommended Repo Target
+## Lightweight CI
 
-When the project is moved to GitHub, use the `734ai` namespace as the main control-plane repository and keep Hugging Face as the storage and checkpoint backend.
+The repo now also includes [`.github/workflows/ci.yml`](/home/ntr/Documents/dev/maasai-lang/.github/workflows/ci.yml) for fast verification on `push`, `pull_request`, and manual dispatch.
+
+That workflow is intentionally CPU-only and avoids the heavyweight training stack. It currently:
+
+- lints workflow files with `actionlint`
+- compiles Python sources under `src/`, `scripts/`, `space/`, and `kaggle/`
+- generates a machine-readable dataset validation report
+- runs lightweight unit tests for prompt generation, dataset validation helpers, and the Gradio app build path
+
+If you want the same CI workflow to execute on Blacksmith, set `CI_RUNNER_LABEL` to a supported Blacksmith runner tag. Without that variable, the workflow stays on `ubuntu-latest`.
+
+## Repository Target
+
+The active control-plane repository is `NorthernTribe-Research/maasai-lang`, with Hugging Face remaining the system of record for datasets, model checkpoints, and Space deployment assets.

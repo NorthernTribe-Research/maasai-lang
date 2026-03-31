@@ -1,0 +1,69 @@
+name: Bug Report
+description: Report a defect in the application, data pipeline, workflow automation, or repository tooling.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for reproducible defects in the repository, Space, training pipeline, or GitHub automation.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the defect and its impact.
+      placeholder: The Space smoke path fails in CI after the latest Gradio change.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected Area
+      options:
+        - Space application
+        - Translation or ASR inference
+        - Dataset or glossary assets
+        - Training workflow
+        - GitHub Actions / Blacksmith
+        - Hugging Face publication
+        - Documentation / governance
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Provide exact steps, commands, and inputs.
+      placeholder: |
+        1. Run ...
+        2. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Artifacts
+      description: Paste relevant logs, tracebacks, workflow URLs, or artifact names. Redact secrets before submitting.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmations
+      options:
+        - label: I have removed secrets or private credentials from this report.
+          required: true
+        - label: I checked for existing issues before opening this one.
+          required: true

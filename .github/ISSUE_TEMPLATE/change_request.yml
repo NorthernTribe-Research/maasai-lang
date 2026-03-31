@@ -1,0 +1,55 @@
+name: Change Request
+description: Propose a product, data, workflow, or operations improvement for the repository.
+title: "[Request]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for product, platform, or data-governance improvements that should be tracked and reviewed.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Opportunity
+      description: What should improve, and why does it matter?
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Product capability
+        - Model quality or evaluation
+        - Dataset governance
+        - Space UX
+        - CI/CD or DevEx
+        - Security or compliance
+        - Operations and monitoring
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Change
+      description: Describe the desired solution or operating model.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Expected Impact
+      description: Describe user, organizational, or operational benefit.
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies or Risks
+      description: Note affected secrets, services, governance constraints, or rollout concerns.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmations
+      options:
+        - label: This request does not include confidential secrets or private credentials.
+          required: true

@@ -1,6 +1,9 @@
 {
   "total_pairs": 9910,
-  "unique_ids": 9231,
+  "unique_ids": 9230,
+  "present_ids": 9230,
+  "missing_id_count": 680,
+  "duplicate_id_row_count": 0,
   "domains": 21,
   "avg_confidence": 0.9726437941473259,
   "language_pairs": {
@@ -11,5 +14,8 @@
     "gold": 8444,
     "silver": 1466
   },
-  "quality_score_avg": 0.9758627648839555
+  "quality_score_avg": 0.9758627648839555,
+  "validation_warnings": [
+    "680 rows are missing IDs."
+  ]
 }
