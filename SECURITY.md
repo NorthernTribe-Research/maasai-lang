@@ -6,11 +6,11 @@ This repository handles application code, workflow automation, training orchestr
 
 ## Supported Branches
 
-Security fixes are prioritized for:
-
-- `main`
-- the currently deployed Space and workflow configuration
-- active automation under `.github/workflows/`
+| Branch | Security Support | Notes |
+| --- | --- | --- |
+| `main` | Primary | Security fixes are made and validated here first. |
+| release tags derived from `main` | Best effort | Tags are immutable snapshots; urgent mitigations are shipped through new tagged releases. |
+| non-main feature branches | No direct support | Rebase or merge into `main` for security remediation. |
 
 ## Reporting A Vulnerability
 
@@ -37,9 +37,22 @@ Examples include:
 
 ## Response Expectations
 
+- We aim to acknowledge private reports within 3 business days.
 - We will triage confirmed reports as quickly as possible.
 - We may request a private proof of concept or remediation guidance.
 - We will coordinate disclosure timing once a fix or mitigation exists.
+
+## Repository Security Baseline
+
+This repository is aligned to GitHub Security Overview controls within current project scope:
+
+- Code scanning: `CodeQL` workflow on `push`, `pull_request`, and schedule.
+- Dependency review: dependency diff checks on pull requests.
+- Dependabot security updates: enabled in repository security settings.
+- Secret scanning + push protection: enabled in repository security settings.
+- Private vulnerability reporting: enabled in repository security settings.
+- Branch protection on `main`: required status checks, required code-owner review, stale-review dismissal, admin enforcement, linear history, and conversation resolution.
+- Continuous control validation: `Security Posture` workflow executes `scripts/check_security_posture.py` daily and on demand.
 
 ## Operational Hygiene
 

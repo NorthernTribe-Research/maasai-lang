@@ -370,6 +370,7 @@ Quality expectations should remain realistic:
 - `SUPPORT.md`
 - `CODE_OF_CONDUCT.md`
 - `.github/CODEOWNERS`
+- `.github/workflows/security-posture.yml`
 
 ## Limitations
 
