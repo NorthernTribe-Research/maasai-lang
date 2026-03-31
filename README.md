@@ -161,7 +161,7 @@ python scripts/train_qlora.py \
   --output_dir outputs/maasai-en-mt-qlora
 ```
 
-### Resumable Daily Training From Hugging Face
+### Resumable Continuous Training From Hugging Face
 
 This path restores the latest checkpoint from the model repo, trains for a bounded session, then pushes updated checkpoints back to Hugging Face.
 
@@ -179,6 +179,7 @@ Use the retrying wrapper when you want GitHub or a local machine to submit the p
 
 ```bash
 KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
+  --skip-if-running \
   --max-attempts 5 \
   --report-to wandb \
   --embed-local-hf-token
@@ -189,9 +190,11 @@ KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
 The repository includes a scheduled and manually dispatchable GitHub Actions workflow:
 
 - Workflow file: `.github/workflows/daily-train.yml`
+- Scheduled cadence: every 30 minutes on `main` (`5,35 * * * *`)
 - Scheduled backend: Kaggle submission via a control-plane runner (`blacksmith-4vcpu-ubuntu-2404` by default, or `TRAINING_CONTROL_RUNNER_LABEL` when configured)
 - Manual backends: `kaggle` or `self-hosted`
-- Primary responsibilities: validate secrets, package the training job, dispatch execution, and upload run artifacts
+- Primary responsibilities: validate secrets, package the training job, keep a single active Kaggle training stream (`--skip-if-running`), and upload run artifacts
+- Freshness guard: `.github/workflows/training-freshness.yml` enforces a maximum staleness window for training activity
 
 ## Hugging Face Publishing
 
@@ -240,6 +243,18 @@ Emit machine-readable output:
 
 ```bash
 .venv/bin/python scripts/check_space_health.py --json
+```
+
+### Continuous Training Freshness
+
+Validate that training activity is still healthy:
+
+```bash
+GITHUB_REPOSITORY="NorthernTribe-Research/maasai-lang" \
+GITHUB_TOKEN="$(gh auth token)" \
+python scripts/check_training_freshness.py \
+  --workflow-file daily-train.yml \
+  --lookback-hours 3
 ```
 
 ### Run Artifacts
@@ -382,6 +397,7 @@ Quality expectations should remain realistic:
 - `.github/CODEOWNERS`
 - `.github/workflows/security-posture.yml`
 - `.github/workflows/source-intelligence.yml`
+- `.github/workflows/training-freshness.yml`
 
 ## Limitations
 

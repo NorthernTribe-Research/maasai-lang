@@ -1,4 +1,4 @@
-name: Daily Training
+name: Continuous Training
 
 on:
   workflow_dispatch:
@@ -12,18 +12,18 @@ on:
           - kaggle
           - self-hosted
       max_steps:
-        description: Override the daily max steps
+        description: Override max steps for this training cycle
         required: false
-        default: "800"
+        default: "1200"
       save_steps:
-        description: Override checkpoint save frequency
+        description: Override checkpoint save frequency for this cycle
         required: false
         default: "100"
   schedule:
-    - cron: "15 2 * * *"
+    - cron: "5,35 * * * *"
 
 concurrency:
-  group: daily-training
+  group: continuous-training
   cancel-in-progress: false
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
       HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO }}
       HF_BASE_MODEL: ${{ vars.HF_BASE_MODEL }}
       HF_BUCKET_URI: ${{ vars.HF_BUCKET_URI }}
-      DEFAULT_MAX_STEPS: "800"
+      DEFAULT_MAX_STEPS: "1200"
       DEFAULT_SAVE_STEPS: "100"
       KAGGLE_KERNEL_SLUG: "maasai-daily-hf-training"
 
@@ -127,9 +127,10 @@ jobs:
           python scripts/run_kaggle_training.py \
             --log-dir "$KAGGLE_MONITOR_DIR" \
             --kernel-slug "$KAGGLE_KERNEL_SLUG" \
-            --max-attempts 5 \
+            --skip-if-running \
+            --max-attempts 8 \
             --poll-seconds 25 \
-            --startup-timeout-seconds 600 \
+            --startup-timeout-seconds 900 \
             --project-git-url "$PROJECT_GIT_URL" \
             --project-branch "$PROJECT_BRANCH" \
             --dataset-repo "$HF_DATASET_REPO" \
@@ -170,7 +171,7 @@ jobs:
       HF_MODEL_REPO: ${{ vars.HF_MODEL_REPO }}
       HF_BASE_MODEL: ${{ vars.HF_BASE_MODEL }}
       HF_BUCKET_URI: ${{ vars.HF_BUCKET_URI }}
-      DEFAULT_MAX_STEPS: "800"
+      DEFAULT_MAX_STEPS: "1200"
       DEFAULT_SAVE_STEPS: "100"
 
     steps:

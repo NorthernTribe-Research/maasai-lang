@@ -1,0 +1,38 @@
+name: Training Freshness
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+concurrency:
+  group: training-freshness-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  freshness-check:
+    name: Verify Continuous Training Freshness
+    runs-on: ${{ vars.SECURITY_RUNNER_LABEL || vars.CI_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Ensure recent healthy training activity
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/check_training_freshness.py \
+            --workflow-file daily-train.yml \
+            --lookback-hours 3 \
+            --max-runs 30

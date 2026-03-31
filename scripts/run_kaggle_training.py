@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -27,6 +28,13 @@ TRAINING_PROGRESS_MARKERS = (
     "trainable params",
 )
 
+ACTIVE_KERNEL_STATUSES = (
+    "RUNNING",
+    "QUEUED",
+    "PENDING",
+    "PREPARING",
+)
+
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(description="Push and monitor the Maasai Kaggle training kernel")
@@ -36,6 +44,11 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument("--log-dir", default="/tmp/maasai_kaggle_monitor")
     parser.add_argument("--kernel-slug", default="maasai-daily-hf-training")
     parser.add_argument("--no-retry-unsupported-gpu", action="store_true")
+    parser.add_argument(
+        "--skip-if-running",
+        action="store_true",
+        help="Return success without pushing a new kernel when an active kernel already exists.",
+    )
     return parser.parse_known_args()
 
 
@@ -94,13 +107,43 @@ def run_capture(cmd: list[str], *, cwd: Path, env: dict[str, str], check: bool =
     return result
 
 
-def fetch_status(kaggle_cli: str, root: Path, env: dict[str, str], kernel_ref: str) -> str:
-    result = run_capture([kaggle_cli, "kernels", "status", kernel_ref], cwd=root, env=env)
+def parse_kernel_status(text: str) -> str:
+    match = re.search(r"KernelWorkerStatus\.([A-Za-z_]+)", text)
+    if match:
+        return match.group(1).upper()
+    for status in (
+        "RUNNING",
+        "QUEUED",
+        "PENDING",
+        "PREPARING",
+        "ERROR",
+        "COMPLETE",
+        "CANCELED",
+    ):
+        if re.search(rf"\b{status}\b", text, flags=re.IGNORECASE):
+            return status
+    return text.strip().upper()
+
+
+def fetch_status(
+    kaggle_cli: str,
+    root: Path,
+    env: dict[str, str],
+    kernel_ref: str,
+    *,
+    allow_failure: bool = False,
+) -> str:
+    result = run_capture(
+        [kaggle_cli, "kernels", "status", kernel_ref],
+        cwd=root,
+        env=env,
+        check=not allow_failure,
+    )
+    if allow_failure and result.returncode != 0:
+        return ""
     text = (result.stdout or result.stderr).strip()
     print(text)
-    if '"KernelWorkerStatus.' in text:
-        return text.rsplit("KernelWorkerStatus.", 1)[1].rstrip('"')
-    return text
+    return parse_kernel_status(text)
 
 
 def fetch_log_text(kaggle_cli: str, root: Path, env: dict[str, str], kernel_ref: str, log_dir: Path, kernel_slug: str) -> str:
@@ -188,6 +231,21 @@ def main() -> int:
     if "--kernel-slug" not in push_args:
         push_args.extend(["--kernel-slug", args.kernel_slug])
     monitor_log_dir = Path(args.log_dir)
+
+    if args.skip_if_running:
+        current_status = fetch_status(
+            kaggle_cli,
+            root,
+            env,
+            kernel_ref,
+            allow_failure=True,
+        )
+        if current_status in ACTIVE_KERNEL_STATUSES:
+            print(
+                f"Kaggle kernel {kernel_ref} is already active ({current_status}). "
+                "Skipping new push to keep a single continuous training stream."
+            )
+            return 0
 
     for attempt in range(1, args.max_attempts + 1):
         print(f"=== Kaggle attempt {attempt}/{args.max_attempts} ===")

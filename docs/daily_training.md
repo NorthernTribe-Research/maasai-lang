@@ -1,4 +1,4 @@
-# Daily Training Control Plane
+# Continuous Training Control Plane
 
 This project now supports a resumable Hugging Face training loop driven from either:
 
@@ -41,7 +41,14 @@ Scheduled GitHub runs use a CPU runner only as the control plane. By default tha
 - builds the private Kaggle kernel package from this repo
 - points the Kaggle runtime at the exact GitHub repo and branch that triggered the workflow
 - embeds the HF token into that private kernel package
-- pushes the kernel to Kaggle and waits until training starts (or a terminal startup failure is detected)
+- checks whether the kernel is already active and skips duplicate pushes
+- otherwise pushes the kernel to Kaggle and waits until training starts (or a terminal startup failure is detected)
+
+Schedule details:
+
+- `daily-train.yml` is now a continuous control loop on `main` every 30 minutes (`5,35 * * * *`)
+- the loop is non-overlapping at the kernel level because the dispatcher uses `--skip-if-running`
+- if a run is not active, the loop dispatches a fresh resumable training session
 
 Kaggle provides the GPU, while Hugging Face remains the system of record for datasets, checkpoints, and the model repo.
 
@@ -70,6 +77,18 @@ The workflow falls back to the current NorthernTribe Hugging Face repos when tho
 - `self-hosted` runs the original direct GPU flow on a runner labeled `self-hosted, linux, x64, gpu`
 
 Use the self-hosted backend only when you intentionally want training to happen on your own runner instead of Kaggle.
+
+## Freshness Guard
+
+The repo includes [`.github/workflows/training-freshness.yml`](../.github/workflows/training-freshness.yml) to verify that continuous training has not stalled.
+
+- it runs hourly
+- it inspects recent `daily-train.yml` workflow runs on `main`
+- it fails if there is no active run and no successful run in the last 3 hours
+
+The check script is:
+
+- `scripts/check_training_freshness.py`
 
 ## Checkpoint Policy
 
