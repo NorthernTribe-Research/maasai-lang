@@ -1,0 +1,228 @@
+{
+  "registry_id": "maasai_media_intelligence_candidates",
+  "registry_version": 1,
+  "generated_at": "2026-03-31T15:09:20.310746+00:00",
+  "generated_on": "2026-03-31",
+  "scope": "Candidate Maasai media/resource leads discovered via public APIs for rights-aware review only.",
+  "policy": {
+    "goal": "Discovery and triage, not indiscriminate scraping.",
+    "default_action": "review_before_download",
+    "open_lane": "approved_candidate",
+    "review_lane": "manual_review",
+    "permission_lane": "permission_lane"
+  },
+  "inputs": {
+    "vetted_registry": "data/registry/maasai_vetted_web_sources.json",
+    "max_per_provider": 10,
+    "include_existing": false,
+    "providers": [
+      "internet_archive",
+      "huggingface_datasets",
+      "openverse_audio",
+      "github_repositories"
+    ],
+    "query_terms": [
+      "maasai",
+      "masai"
+    ]
+  },
+  "summary": {
+    "candidate_count": 8,
+    "provider_counts": {
+      "github": 2,
+      "internet_archive": 4,
+      "openverse": 2
+    },
+    "trainability_lane_counts": {
+      "manual_review": 8
+    },
+    "rights_signal_counts": {
+      "review_required": 8
+    },
+    "access_model_counts": {
+      "public_download": 6,
+      "public_repository": 2
+    },
+    "skipped_existing_count": 2,
+    "deduped_count": 0,
+    "provider_failures": []
+  },
+  "sources": [
+    {
+      "id": "github_sjmuita-enhancing-access-to-education-psas-throu_7a7e7a3f48",
+      "title": "Enhancing-Access-to-Education-PSAs-through-Kiswahili-Luo-and-maasai-Translation-",
+      "source_system": "github",
+      "source_type": "repository",
+      "media_type": "code",
+      "landing_url": "https://github.com/Sjmuita/Enhancing-Access-to-Education-PSAs-through-Kiswahili-Luo-and-maasai-Translation-",
+      "download_url": "https://github.com/Sjmuita/Enhancing-Access-to-Education-PSAs-through-Kiswahili-Luo-and-maasai-Translation-.git",
+      "license": "unspecified",
+      "rights_signal": "review_required",
+      "access_model": "public_repository",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "Sjmuita/Enhancing-Access-to-Education-PSAs-through-Kiswahili-Luo-and-maasai-Translation-",
+        "query": "maasai dictionary in:name,description,readme",
+        "description": null,
+        "stars": 0,
+        "topics": []
+      },
+      "notes": "GitHub repository discovery lead. Repository contents may be mixed and require manual inspection before any corpus use."
+    },
+    {
+      "id": "github_titiplex-maasai-query_8dcbbc7653",
+      "title": "maasai-query",
+      "source_system": "github",
+      "source_type": "repository",
+      "media_type": "code",
+      "landing_url": "https://github.com/Titiplex/maasai-query",
+      "download_url": "https://github.com/Titiplex/maasai-query.git",
+      "license": "unspecified",
+      "rights_signal": "review_required",
+      "access_model": "public_repository",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "Titiplex/maasai-query",
+        "query": "maasai dictionary in:name,description,readme",
+        "description": "This project aims at creating queries into the Oregon University Maasai dictionary.",
+        "stars": 1,
+        "topics": []
+      },
+      "notes": "GitHub repository discovery lead. Repository contents may be mixed and require manual inspection before any corpus use."
+    },
+    {
+      "id": "internet_archive_eric-ed256170_34e2943d7a",
+      "title": "ERIC ED256170: African Language Resource Handbook: A Resource Handbook of the Eighty-two Highest Priority African Languages. Prepublication Edition.",
+      "source_system": "internet_archive",
+      "source_type": "archival_text",
+      "media_type": "text",
+      "landing_url": "https://archive.org/details/ERIC_ED256170",
+      "download_url": "https://archive.org/download/ERIC_ED256170/ERIC_ED256170_djvu.txt",
+      "license": "unspecified",
+      "rights_signal": "review_required",
+      "access_model": "public_download",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "ERIC_ED256170",
+        "query": "maasai",
+        "publication_year": "1985",
+        "license_url": null,
+        "raw_rights": null
+      },
+      "notes": "Internet Archive discovery lead. Review item metadata before any download planning."
+    },
+    {
+      "id": "internet_archive_rosettaproject-mas-gen-1_4b0607b92f",
+      "title": "Maasai Genesis Translation",
+      "source_system": "internet_archive",
+      "source_type": "archival_text",
+      "media_type": "text",
+      "landing_url": "https://archive.org/details/rosettaproject_mas_gen-1",
+      "download_url": "https://archive.org/download/rosettaproject_mas_gen-1/rosettaproject_mas_gen-1_djvu.txt",
+      "license": "unspecified",
+      "rights_signal": "review_required",
+      "access_model": "public_download",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "rosettaproject_mas_gen-1",
+        "query": "maasai",
+        "publication_year": "1954",
+        "license_url": null,
+        "raw_rights": null
+      },
+      "notes": "Internet Archive discovery lead. Review item metadata before any download planning."
+    },
+    {
+      "id": "internet_archive_vocabularyengud00erhagoog_a54f27784d",
+      "title": "Vocabulary of the enguduk iloigob",
+      "source_system": "internet_archive",
+      "source_type": "archival_text",
+      "media_type": "text",
+      "landing_url": "https://archive.org/details/vocabularyengud00erhagoog",
+      "download_url": "https://archive.org/download/vocabularyengud00erhagoog/vocabularyengud00erhagoog_djvu.txt",
+      "license": "unspecified",
+      "rights_signal": "review_required",
+      "access_model": "public_download",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "vocabularyengud00erhagoog",
+        "query": "maasai",
+        "publication_year": "1857",
+        "license_url": null,
+        "raw_rights": null
+      },
+      "notes": "Internet Archive discovery lead. Review item metadata before any download planning. Historical publication year suggests a public-domain candidate, but this script keeps it in review unless license status is explicit."
+    },
+    {
+      "id": "internet_archive_vocabularyofengu00erha_8d4714adb4",
+      "title": "Vocabulary of the enguduk iloigob, as spoken by the Masai-tribes in East-Africa",
+      "source_system": "internet_archive",
+      "source_type": "archival_text",
+      "media_type": "text",
+      "landing_url": "https://archive.org/details/vocabularyofengu00erha",
+      "download_url": "https://archive.org/download/vocabularyofengu00erha/vocabularyofengu00erha_djvu.txt",
+      "license": "unspecified",
+      "rights_signal": "review_required",
+      "access_model": "public_download",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "vocabularyofengu00erha",
+        "query": "masai",
+        "publication_year": "1857",
+        "license_url": null,
+        "raw_rights": null
+      },
+      "notes": "Internet Archive discovery lead. Review item metadata before any download planning. Historical publication year suggests a public-domain candidate, but this script keeps it in review unless license status is explicit."
+    },
+    {
+      "id": "openverse_1197a5bb-ee54-449f-bbb8-d5d5adb14120_b702776c21",
+      "title": "Maasai School Kids Singing",
+      "source_system": "openverse",
+      "source_type": "audio_recording",
+      "media_type": "audio",
+      "landing_url": "https://freesound.org/people/selcukartut/sounds/504695",
+      "download_url": "https://cdn.freesound.org/previews/504/504695_778707-hq.mp3",
+      "license": "CC0",
+      "rights_signal": "review_required",
+      "access_model": "public_download",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "1197a5bb-ee54-449f-bbb8-d5d5adb14120",
+        "query": "maasai",
+        "creator": "selcukartut",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "source": "freesound"
+      },
+      "notes": "Openverse audio discovery lead. Review the original source page for content fit and attribution requirements. Open license detected, but voice data still requires manual consent/privacy review before ingestion."
+    },
+    {
+      "id": "openverse_8fa68351-24b1-4fb0-afba-038d4c868034_5d0fedf823",
+      "title": "Maasai Village Classroom",
+      "source_system": "openverse",
+      "source_type": "audio_recording",
+      "media_type": "audio",
+      "landing_url": "https://freesound.org/people/selcukartut/sounds/504693",
+      "download_url": "https://cdn.freesound.org/previews/504/504693_778707-hq.mp3",
+      "license": "CC0",
+      "rights_signal": "review_required",
+      "access_model": "public_download",
+      "trainability_lane": "manual_review",
+      "discovered_on": "2026-03-31",
+      "evidence": {
+        "provider_record_id": "8fa68351-24b1-4fb0-afba-038d4c868034",
+        "query": "maasai",
+        "creator": "selcukartut",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "source": "freesound"
+      },
+      "notes": "Openverse audio discovery lead. Review the original source page for content fit and attribution requirements. Open license detected, but voice data still requires manual consent/privacy review before ingestion."
+    }
+  ]
+}

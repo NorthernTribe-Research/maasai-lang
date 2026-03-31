@@ -10,6 +10,8 @@ It should expand through a lawful, source-traceable acquisition pipeline:
 The machine-readable registry for this workflow lives at:
 
 - `data/registry/maasai_vetted_web_sources.json`
+- `data/registry/maasai_candidate_media_sources.json`
+- `data/registry/maasai_media_intelligence_candidates.json`
 
 The planning helper for this workflow lives at:
 
@@ -118,11 +120,82 @@ The planning helper for this workflow lives at:
 - Best next use:
   - manual review, prompt ideas, and evaluation examples only
 
+## Newly Identified Leads
+
+These are discovery leads, not blanket approval to harvest.
+For aggregators such as Openverse, discovery may be automated, but download and ingest still require upstream rights verification and sensitivity review.
+
+### 10. Internet Archive 1857 vocabulary resource: *Vocabulary of the enguduk iloigob, as spoken by the Masai-tribes in East-Africa*
+
+- Status: approved for conservative lexicon review
+- Action lane: parse next
+- URL: `https://archive.org/download/vocabularyofengu00erha/vocabularyofengu00erha.pdf`
+- Rights notes:
+  - public-domain 1857 vocabulary scan
+  - historical Wakuafi / Iloigob labeling and colonial orthography mean this must be stored as historical Maa/Iloikop material, not silently merged into modern prompts or evaluation sets
+- Best next use:
+  - page-level OCR review and extraction of only high-confidence vocabulary pairs with page citations preserved in the manifest
+
+### 11. Cal Poly Humboldt Maasai Dictionary page
+
+- Status: reference_only pending rights clarification
+- Action lane: rights review / permission outreach
+- URL: `https://www.humboldt.edu/press/maasai-dictionary`
+- Rights notes:
+  - full text is publicly downloadable through Cal Poly Humboldt Digital Commons
+  - the press policy says works are published online under a Creative Commons license chosen by the author, but the item page does not surface which license applies to this specific dictionary
+  - do not ingest until the exact reuse grant is documented
+- Best next use:
+  - inspect the PDF colophon and/or contact the press or rightsholder for the specific license or written permission
+
+### 12. Hugging Face: `Anv-ke/Maasai`
+
+- Status: gated_access
+- Action lane: request access and ethics review
+- URL: `https://huggingface.co/datasets/Anv-ke/Maasai`
+- Rights notes:
+  - access requires sharing contact information before files can be viewed
+  - the related African Next Voices organization card lists CC BY 4.0 and an explicit anti-surveillance / anti-exploitation warning
+  - this is human voice data and needs voice-consent, privacy, and downstream-use review before any ingest
+- Best next use:
+  - request access, snapshot the access terms, review speaker-consent and handling constraints, and limit first use to approved ASR evaluation or tightly scoped speech experiments
+
+### 13. Openverse / Freesound Maasai audio discovery lane
+
+- Status: reference_only unless the specific upstream item is re-verified
+- Action lane: discovery only, then upstream rights verification
+- Discovery note:
+  - Openverse is useful for finding openly licensed audio, but its own documentation says license accuracy must still be verified on the upstream source before use
+- Selected upstream leads:
+  - `Maasai Camp Nature Sounds Africa` - CC0 on Freesound - `https://freesound.org/people/selcukartut/sounds/504694/`
+  - `Maasai Village Classroom` - CC0 on Freesound - `https://freesound.org/people/selcukartut/sounds/504693/`
+  - `School Kids Counting Numbers` - CC0 on Freesound - `https://freesound.org/people/selcukartut/sounds/504675/`
+  - `crickets` (Maasai Mara ambience) - CC0 on Freesound - `https://freesound.org/people/selcukartut/sounds/504882/`
+- Rights / sensitivity notes:
+  - nature ambience may be reusable for exhibits or demos, but it is not language training data
+  - classroom or school recordings include student voices; even with CC0, they should stay out of automatic speech ingestion unless consent, context, and community appropriateness are documented
+  - do not treat geotagged wildlife or village soundscapes as permission to bulk-collect neighboring community audio
+- Best next use:
+  - use ambience clips only for non-linguistic demo layers and keep school / classroom clips in `reference_only` until voice-consent review is complete
+
+### 14. GitHub open-license language app lead: `ngesa254/Learn-Maasai`
+
+- Status: reference_only
+- Action lane: architecture and curriculum pattern review
+- URL: `https://github.com/ngesa254/Learn-Maasai`
+- Rights notes:
+  - app code is Apache-2.0 licensed
+  - repository visibility and code license do not automatically grant rights for every embedded media/data asset
+  - treat this as a reusable app-pattern lead, not a blanket training-data source
+- Best next use:
+  - review mobile language-learning UX patterns, then inspect repository assets file-by-file before reusing any content in Maasai datasets
+
 ## Recommended Run
 
 ```bash
 python scripts/discover_vetted_maasai_sources.py summary
 python scripts/discover_vetted_maasai_sources.py plan --output outputs/maasai_source_download_plan.json
+python scripts/discover_maasai_media_intelligence.py --output data/registry/maasai_media_intelligence_candidates.json
 ```
 
 ## Near-Term Priorities

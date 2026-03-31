@@ -1,0 +1,317 @@
+{
+  "registry_id": "maasai_candidate_media_sources",
+  "registry_version": 1,
+  "updated_on": "2026-03-31",
+  "scope": "Candidate Maasai text, speech, media, and application leads tracked for rights-aware discovery, review, and possible future ingest.",
+  "status_definitions": {
+    "approved": "Rights basis is documented and the item may enter a controlled ingest lane.",
+    "gated_access": "The item appears useful, but access terms, permission, or explicit approval must be completed first.",
+    "reference_only": "The item may inform research, evaluation, or architecture work, but not source ingest."
+  },
+  "automation_policy": {
+    "default_discovery_mode": "metadata_only",
+    "automated_download_allowed_statuses": [
+      "approved"
+    ],
+    "automated_ingest_requires_manual_approval": true,
+    "publish_requires_manual_approval": true,
+    "notes": "Openly reachable content is not automatically ingestible. Human voice, minors, and culturally sensitive material always require manual review."
+  },
+  "required_provenance_fields": [
+    "id",
+    "title",
+    "status",
+    "action_lane",
+    "source_urls",
+    "rights",
+    "next_action",
+    "reviewed_on"
+  ],
+  "candidates": [
+    {
+      "id": "ia_vocabularyofengu00erha_1857",
+      "title": "Vocabulary of the enguduk iloigob, as spoken by the Masai-tribes in East-Africa",
+      "source_family": "internet_archive",
+      "media_type": "historical_vocabulary_pdf",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "approved",
+      "action_lane": "parse_next",
+      "source_urls": {
+        "download_url": "https://archive.org/download/vocabularyofengu00erha/vocabularyofengu00erha.pdf",
+        "evidence_url": "https://commons.wikimedia.org/wiki/File:Vocabulary_of_the_enguduk_iloigob,_as_spoken_by_the_Masai-tribes_in_East-Africa_(IA_vocabularyofengu00erha).pdf"
+      },
+      "rights": {
+        "rights_status": "public_domain",
+        "license": "Public domain",
+        "rights_notes": "Published in 1857. Commons identifies the Internet Archive scan and marks the work as public domain in the United States.",
+        "restrictions": "Treat as historical Maa/Iloikop material with explicit dialect-era labeling and page-level provenance."
+      },
+      "sensitivity": {
+        "human_voice": false,
+        "minors": false,
+        "cultural_sensitivity_review_required": true,
+        "notes": "Historical orthography and colonial framing require review before mixing with modern datasets."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": true,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Download the PDF, run manual page triage, and extract only high-confidence vocabulary pairs with source-page citations.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "cal_poly_humboldt_maasai_dictionary",
+      "title": "Maasai Dictionary",
+      "source_family": "cal_poly_humboldt_digital_commons",
+      "media_type": "dictionary_pdf",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "reference_only",
+      "action_lane": "rights_review",
+      "source_urls": {
+        "landing_url": "https://www.humboldt.edu/press/maasai-dictionary",
+        "source_page_url": "https://digitalcommons.humboldt.edu/reprint/2/",
+        "policy_url": "https://digitalcommons.humboldt.edu/reprint/policies.html"
+      },
+      "rights": {
+        "rights_status": "open_access_license_unspecified",
+        "license": "Specific item license not surfaced",
+        "rights_notes": "The press policy says publications are hosted under a Creative Commons license chosen by the author, but the Maasai Dictionary item page does not identify which license applies to this work.",
+        "restrictions": "Do not ingest until the exact reuse grant is documented in the PDF colophon or by written confirmation from the rightsholder."
+      },
+      "sensitivity": {
+        "human_voice": false,
+        "minors": false,
+        "cultural_sensitivity_review_required": true,
+        "notes": "Dictionary content may still need dialect and terminology review before use."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Inspect the downloadable PDF for a work-specific license statement and contact the press or rightsholder if the reuse grant remains unclear.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "hf_anv_ke_maasai",
+      "title": "Anv-ke/Maasai",
+      "source_family": "hugging_face",
+      "media_type": "speech_dataset",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "gated_access",
+      "action_lane": "request_access",
+      "source_urls": {
+        "landing_url": "https://huggingface.co/datasets/Anv-ke/Maasai",
+        "organization_url": "https://huggingface.co/Anv-ke"
+      },
+      "rights": {
+        "rights_status": "cc_by_4_0_gated",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "rights_notes": "The organization card lists CC BY 4.0 and an ethical warning against surveillance, discrimination, exploitation, or unethical profiling. Dataset access requires sharing contact information.",
+        "restrictions": "Human voice data requires privacy, consent, and downstream-use review before ingest."
+      },
+      "sensitivity": {
+        "human_voice": true,
+        "minors": "unknown",
+        "cultural_sensitivity_review_required": true,
+        "notes": "Speech data includes scripted and unscripted recordings and should not be ingested without documented handling constraints."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Request access, record the access conditions, confirm consent and privacy posture, and scope initial use to approved ASR evaluation or tightly controlled experiments.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "openverse_maasai_audio_discovery_lane",
+      "title": "Openverse audio discovery lane for Maasai and Maasai Mara queries",
+      "source_family": "openverse",
+      "media_type": "audio_index",
+      "languages": [
+        "und"
+      ],
+      "status": "reference_only",
+      "action_lane": "discovery_only",
+      "source_urls": {
+        "landing_url": "https://openverse.org/",
+        "documentation_url": "https://docs.openverse.org/api/reference/made_with_ov.html"
+      },
+      "rights": {
+        "rights_status": "aggregated_open_license_index",
+        "license": "Aggregated CC / public-domain discovery index",
+        "rights_notes": "Openverse documentation states that catalog items are under Creative Commons licenses or in the public domain, but also warns users to verify the license of a particular work before using it.",
+        "restrictions": "Use Openverse as a discovery surface only. Re-verify every selected item on the upstream source page."
+      },
+      "sensitivity": {
+        "human_voice": "varies",
+        "minors": "varies",
+        "cultural_sensitivity_review_required": true,
+        "notes": "Aggregated search results may include community, classroom, or location-sensitive recordings."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Use query-level discovery for Maasai audio leads, then register each chosen upstream item separately with source-specific rights notes.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "freesound_maasai_camp_nature_sounds_africa",
+      "title": "Maasai Camp Nature Sounds Africa",
+      "source_family": "freesound",
+      "media_type": "ambient_audio",
+      "languages": [
+        "zxx"
+      ],
+      "status": "reference_only",
+      "action_lane": "demo_ambience_review",
+      "source_urls": {
+        "landing_url": "https://freesound.org/people/selcukartut/sounds/504694/"
+      },
+      "rights": {
+        "rights_status": "cc0",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "rights_notes": "Freesound marks the recording as Creative Commons 0.",
+        "restrictions": "Rights are clear for reuse, but the recording is ambient soundscape material rather than Maasai language data."
+      },
+      "sensitivity": {
+        "human_voice": false,
+        "minors": false,
+        "cultural_sensitivity_review_required": false,
+        "notes": "Suitable only for non-linguistic exhibit or demo ambience after attribution and provenance are recorded."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "If needed, review for demo ambience use only; do not classify as speech or translation training data.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "freesound_maasai_village_classroom",
+      "title": "Maasai Village Classroom",
+      "source_family": "freesound",
+      "media_type": "community_audio",
+      "languages": [
+        "und"
+      ],
+      "status": "reference_only",
+      "action_lane": "voice_consent_review",
+      "source_urls": {
+        "landing_url": "https://freesound.org/people/selcukartut/sounds/504693/"
+      },
+      "rights": {
+        "rights_status": "cc0",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "rights_notes": "Freesound marks the recording as Creative Commons 0.",
+        "restrictions": "Public-domain dedication does not remove the need for privacy, voice-consent, and contextual review for classroom recordings."
+      },
+      "sensitivity": {
+        "human_voice": true,
+        "minors": "possible",
+        "cultural_sensitivity_review_required": true,
+        "notes": "Contains a classroom environment and should remain out of automated ingest until consent and community-appropriateness are documented."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Keep as a reference lead only unless speaker-consent and classroom-use appropriateness can be documented.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "freesound_school_kids_counting_numbers",
+      "title": "School Kids Counting Numbers",
+      "source_family": "freesound",
+      "media_type": "child_voice_audio",
+      "languages": [
+        "en"
+      ],
+      "status": "reference_only",
+      "action_lane": "voice_consent_review",
+      "source_urls": {
+        "landing_url": "https://freesound.org/people/selcukartut/sounds/504675/"
+      },
+      "rights": {
+        "rights_status": "cc0",
+        "license": "CC0",
+        "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "rights_notes": "Freesound marks the recording as Creative Commons 0.",
+        "restrictions": "The clip contains student voices and is described as children counting in English, so it should not be treated as Maasai speech data."
+      },
+      "sensitivity": {
+        "human_voice": true,
+        "minors": true,
+        "cultural_sensitivity_review_required": true,
+        "notes": "Heightened privacy and consent review required because children are involved."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Keep out of ingest and training lanes; use only as a cautionary reference example for child-voice governance.",
+      "reviewed_on": "2026-03-31"
+    },
+    {
+      "id": "github_ngesa254_learn_maasai",
+      "title": "ngesa254/Learn-Maasai",
+      "source_family": "github",
+      "media_type": "application_codebase",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "reference_only",
+      "action_lane": "architecture_review",
+      "source_urls": {
+        "landing_url": "https://github.com/ngesa254/Learn-Maasai"
+      },
+      "rights": {
+        "rights_status": "apache_2_0_code_review_assets_separately",
+        "license": "Apache-2.0",
+        "rights_notes": "The repository has an Apache-2.0 license and advertises Maasai language learning functionality.",
+        "restrictions": "Review repository files and assets one-by-one before treating any embedded content as reusable training data."
+      },
+      "sensitivity": {
+        "human_voice": "unknown",
+        "minors": "unknown",
+        "cultural_sensitivity_review_required": true,
+        "notes": "Useful as a mobile learning architecture lead, with content reuse gated by additional review."
+      },
+      "automation": {
+        "metadata_capture": true,
+        "automated_download": false,
+        "automated_parsing": false,
+        "automated_publish": false
+      },
+      "next_action": "Review UI and app architecture patterns, then approve or reject individual assets for reuse based on file-level rights checks.",
+      "reviewed_on": "2026-03-31"
+    }
+  ]
+}

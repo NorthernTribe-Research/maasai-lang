@@ -20,3 +20,17 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+
+  source-intelligence:
+    build:
+      context: .
+      dockerfile: Dockerfile.discovery
+    image: maasai-lang/source-intel:local
+    container_name: maasai-source-intel
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /workspace
+    environment:
+      PYTHONUNBUFFERED: "1"
+      SOURCE_INTELLIGENCE_OUTPUT: /workspace/data/registry/maasai_media_intelligence_candidates.json
+    volumes:
+      - .:/workspace

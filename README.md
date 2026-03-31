@@ -252,17 +252,21 @@ Daily training writes structured run manifests and can optionally sync per-run b
 
 ### GitHub Packages (GHCR)
 
-The repository publishes a container image to GitHub Container Registry using [`.github/workflows/publish-container.yml`](.github/workflows/publish-container.yml).
+The repository publishes container images to GitHub Container Registry using [`.github/workflows/publish-container.yml`](.github/workflows/publish-container.yml).
 
-- Package namespace: `ghcr.io/northerntribe-research/maasai-lang-space`
+- Runtime image: `ghcr.io/northerntribe-research/maasai-lang-space`
+- Source-intelligence image: `ghcr.io/northerntribe-research/maasai-lang-source-intel`
 - Primary tags: `latest`, branch refs, and short commit SHA tags
-- Trigger paths: Docker/runtime files and app source changes
+- Trigger paths: Docker/runtime files, discovery scripts, and registry updates
 
 Pull and run:
 
 ```bash
 docker pull ghcr.io/northerntribe-research/maasai-lang-space:latest
 docker run --rm -p 7860:7860 ghcr.io/northerntribe-research/maasai-lang-space:latest
+
+docker pull ghcr.io/northerntribe-research/maasai-lang-source-intel:latest
+docker run --rm ghcr.io/northerntribe-research/maasai-lang-source-intel:latest
 ```
 
 ### Org Project Board Bootstrap
@@ -312,14 +316,20 @@ The project is designed to avoid indiscriminate ingestion. Source traceability i
 Governance artifacts include:
 
 - `docs/open_source_maasai_inventory.md`
+- `docs/maasai_preservation_operations.md`
 - `data/registry/maasai_vetted_web_sources.json`
+- `data/registry/maasai_candidate_media_sources.json`
+- `data/registry/maasai_media_intelligence_candidates.json`
 - `scripts/discover_vetted_maasai_sources.py`
+- `scripts/discover_maasai_media_intelligence.py`
+- `.github/workflows/source-intelligence.yml`
 
 Operationally, the intended pattern is:
 
 - ingest only sources with clear reuse rights
 - keep unclear, gated, or copyrighted material out of automated training
 - separate training-approved, permission-required, and reference-only sources
+- run API-based discovery continuously and promote leads only after rights/community review
 
 ## Evaluation And Quality
 
@@ -371,6 +381,7 @@ Quality expectations should remain realistic:
 - `CODE_OF_CONDUCT.md`
 - `.github/CODEOWNERS`
 - `.github/workflows/security-posture.yml`
+- `.github/workflows/source-intelligence.yml`
 
 ## Limitations
 

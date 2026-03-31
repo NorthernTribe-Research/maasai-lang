@@ -3,6 +3,7 @@
 
 # Include only files needed by Docker runtime image.
 !Dockerfile
+!Dockerfile.discovery
 !.dockerignore
 !space/
 !space/**
@@ -10,5 +11,9 @@
 !src/**
 !data/glossary/
 !data/glossary/**
+!data/registry/
+!data/registry/maasai_vetted_web_sources.json
+!scripts/
+!scripts/discover_maasai_media_intelligence.py
 !README.md
 !LICENSE
