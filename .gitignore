@@ -60,3 +60,21 @@ Thumbs.db
 huggingface-api-key.json
 kaggle.json
 wandb-keys.json
+
+# Local planning, session notes, and legacy root docs
+SKILLS.md
+mcp.json
+misc-readme.md
+readme00.md
+CLOUD_TRAINING_GUIDE.md
+COLAB_TRAINING_GUIDE.md
+DEPLOYMENT_COMPLETE.md
+DEPLOYMENT_GUIDE.md
+DEPLOYMENT_STATUS.md
+ENTERPRISE_ADVANCEMENT_PLAN_V3.md
+EXECUTION_CHECKLISTS.md
+EXECUTION_LOG.md
+PROJECT_STATUS_V2.md
+QUICKSTART.md
+SESSION_SUMMARY.md
+SESSION_SUMMARY_MARCH27.md

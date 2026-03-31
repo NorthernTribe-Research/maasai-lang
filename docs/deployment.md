@@ -4,8 +4,8 @@
 
 ```bash
 # Clone repo
-git clone <repo-url>
-cd maasai-language-showcase
+git clone https://github.com/NorthernTribe-Research/maasai-lang.git
+cd maasai-lang
 
 # Create virtual environment
 python -m venv .venv
@@ -18,6 +18,38 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your HF token
 ```
+
+## Containerized Space Runtime
+
+```bash
+# Build the runtime image
+docker build -t maasai-space:local .
+
+# Run the app on port 7860
+docker run --rm -p 7860:7860 \
+  -e GRADIO_SERVER_NAME=0.0.0.0 \
+  -e PORT=7860 \
+  -e GRADIO_ANALYTICS_ENABLED=False \
+  -e HF_HUB_DISABLE_TELEMETRY=1 \
+  maasai-space:local
+```
+
+Compose alternative:
+
+```bash
+docker compose up --build
+```
+
+## GitHub Packages Runtime
+
+If you want team-standard immutable images from GitHub Packages:
+
+```bash
+docker pull ghcr.io/northerntribe-research/maasai-lang-space:latest
+docker run --rm -p 7860:7860 ghcr.io/northerntribe-research/maasai-lang-space:latest
+```
+
+The publishing pipeline is defined in [`.github/workflows/publish-container.yml`](../.github/workflows/publish-container.yml) and runs on Blacksmith-backed GitHub Actions runners.
 
 ## Data Pipeline
 

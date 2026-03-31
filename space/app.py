@@ -37,6 +37,31 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("maasai-space")
 
 
+def gradio_major_version() -> int:
+    match = re.match(r"(\d+)", getattr(gr, "__version__", "0"))
+    if not match:
+        return 0
+    return int(match.group(1))
+
+
+def build_theme() -> gr.themes.Base:
+    return gr.themes.Base(
+        primary_hue=gr.themes.Color(
+            c50="#F7F1EF", c100="#E9D8D3", c200="#D9BEB5",
+            c300="#C89F92", c400="#B37B6A", c500="#8D4638",
+            c600="#76372C", c700="#602B22", c800="#4A211A", c900="#341712",
+            c950="#1B0C09",
+        ),
+        secondary_hue="gray",
+        neutral_hue="gray",
+        font=["IBM Plex Sans", "system-ui", "sans-serif"],
+    )
+
+
+APP_THEME = build_theme()
+GRADIO_THEME_ON_LAUNCH = gradio_major_version() >= 6
+
+
 def configure_gradio_runtime() -> None:
     try:
         from multiprocessing import Lock as MpLock
@@ -1702,23 +1727,14 @@ def load_css() -> str:
 
 
 def build_app() -> gr.Blocks:
-    custom_css = load_css()
+    blocks_kwargs: dict[str, Any] = {
+        "title": "Maasai Language Showcase — Enkutuk oo lMaa",
+    }
+    if not GRADIO_THEME_ON_LAUNCH:
+        blocks_kwargs["css"] = load_css()
+        blocks_kwargs["theme"] = APP_THEME
 
-    with gr.Blocks(
-        title="Maasai Language Showcase — Enkutuk oo lMaa",
-        css=custom_css,
-        theme=gr.themes.Base(
-            primary_hue=gr.themes.Color(
-                c50="#F7F1EF", c100="#E9D8D3", c200="#D9BEB5",
-                c300="#C89F92", c400="#B37B6A", c500="#8D4638",
-                c600="#76372C", c700="#602B22", c800="#4A211A", c900="#341712",
-                c950="#1B0C09",
-            ),
-            secondary_hue="gray",
-            neutral_hue="gray",
-            font=["IBM Plex Sans", "system-ui", "sans-serif"],
-        ),
-    ) as app:
+    with gr.Blocks(**blocks_kwargs) as app:
         gr.HTML("""
         <div class="hero-banner">
             <div class="hero-kicker">NorthernTribe-Research</div>
@@ -2227,8 +2243,14 @@ def build_app() -> gr.Blocks:
 if __name__ == "__main__":
     app = build_app()
     default_server_name = "0.0.0.0" if os.getenv("SPACE_ID") else "127.0.0.1"
+    launch_kwargs: dict[str, Any] = {}
+    if GRADIO_THEME_ON_LAUNCH:
+        launch_kwargs["css"] = load_css()
+        launch_kwargs["theme"] = APP_THEME
+
     app.launch(
         server_name=os.getenv("GRADIO_SERVER_NAME", default_server_name),
         server_port=int(os.getenv("PORT", "7860")),
         share=False,
+        **launch_kwargs,
     )

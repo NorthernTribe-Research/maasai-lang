@@ -1,0 +1,22 @@
+services:
+  maasai-space:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: maasai-lang/space:local
+    container_name: maasai-space
+    ports:
+      - "${PORT:-7860}:7860"
+    environment:
+      GRADIO_SERVER_NAME: 0.0.0.0
+      PORT: 7860
+      GRADIO_ANALYTICS_ENABLED: "False"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      TRANSLATION_MODEL_ID: "${TRANSLATION_MODEL_ID:-NorthernTribe-Research/maasai-en-mt}"
+      ASR_MODEL_ID: "${ASR_MODEL_ID:-microsoft/paza-whisper-large-v3-turbo}"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/', timeout=4).read(1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s

@@ -16,7 +16,7 @@ It clones this GitHub repo at runtime and executes:
 That means the Kaggle run:
 
 - downloads `NorthernTribe-Research/maasai-translation-corpus` from HF
-- restores the latest checkpoint from `NorthernTribe-Research/maasai-en-mt`
+- restores the latest checkpoint from the configured Hugging Face model repo (`HF_MODEL_REPO`; default workflow fallback is `NorthernTribe-Research/maasai-en-mt-staging`)
 - trains with the current generation-aware mixture
 - pushes checkpoints and final adapter artifacts back to HF
 
@@ -65,9 +65,7 @@ Optional:
 
 - `WANDB_API_KEY`
 
-`HF_TOKEN` must have access to the base model if it is gated and must have permission to push to:
-
-- `NorthernTribe-Research/maasai-en-mt`
+`HF_TOKEN` must have access to the base model if it is gated and must have permission to push to your configured model repo (`HF_MODEL_REPO`).
 
 ## Local Push Flow
 
@@ -100,7 +98,7 @@ KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
 
 ## GitHub Actions Flow
 
-The scheduled GitHub workflow now calls `scripts/run_kaggle_training.py` on `ubuntu-latest`.
+The scheduled GitHub workflow now calls `scripts/run_kaggle_training.py` on `blacksmith-4vcpu-ubuntu-2404` by default (or the label configured in `TRAINING_CONTROL_RUNNER_LABEL`).
 
 That workflow:
 
