@@ -33,7 +33,7 @@ jobs:
   kaggle-train:
     name: Submit Kaggle Training
     if: ${{ github.event_name == 'schedule' || inputs.backend == 'kaggle' }}
-    runs-on: ${{ vars.TRAINING_CONTROL_RUNNER_LABEL || 'ubuntu-latest' }}
+    runs-on: ${{ vars.TRAINING_CONTROL_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     env:
       KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
