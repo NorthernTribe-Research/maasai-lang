@@ -72,3 +72,55 @@ jobs:
           name: dataset-validation
           path: dataset-validation.json
           if-no-files-found: ignore
+
+  docker-smoke:
+    name: Docker Smoke
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build runtime image
+        run: docker build --tag maasai-space:ci .
+
+      - name: Start container
+        run: |
+          docker run -d --name maasai-space-ci \
+            -p 7860:7860 \
+            -e GRADIO_SERVER_NAME=0.0.0.0 \
+            -e PORT=7860 \
+            -e GRADIO_ANALYTICS_ENABLED=False \
+            -e HF_HUB_DISABLE_TELEMETRY=1 \
+            maasai-space:ci
+
+      - name: Probe service health
+        run: |
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:7860/ > /dev/null; then
+              echo "Docker service is healthy on attempt ${attempt}."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Docker service did not become healthy in time."
+          docker logs maasai-space-ci
+          exit 1
+
+      - name: Capture container logs
+        if: always()
+        continue-on-error: true
+        run: docker logs maasai-space-ci > docker-smoke.log 2>&1 || true
+
+      - name: Upload container logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-smoke-log
+          path: docker-smoke.log
+          if-no-files-found: ignore
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f maasai-space-ci > /dev/null 2>&1 || true

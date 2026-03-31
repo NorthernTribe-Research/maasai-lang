@@ -1,0 +1,14 @@
+# Exclude everything by default for a minimal build context.
+*
+
+# Include only files needed by Docker runtime image.
+!Dockerfile
+!.dockerignore
+!space/
+!space/**
+!src/
+!src/**
+!data/glossary/
+!data/glossary/**
+!README.md
+!LICENSE

@@ -19,6 +19,27 @@ cp .env.example .env
 # Edit .env with your HF token
 ```
 
+## Containerized Space Runtime
+
+```bash
+# Build the runtime image
+docker build -t maasai-space:local .
+
+# Run the app on port 7860
+docker run --rm -p 7860:7860 \
+  -e GRADIO_SERVER_NAME=0.0.0.0 \
+  -e PORT=7860 \
+  -e GRADIO_ANALYTICS_ENABLED=False \
+  -e HF_HUB_DISABLE_TELEMETRY=1 \
+  maasai-space:local
+```
+
+Compose alternative:
+
+```bash
+docker compose up --build
+```
+
 ## Data Pipeline
 
 ```bash

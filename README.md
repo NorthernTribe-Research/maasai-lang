@@ -106,6 +106,26 @@ cp .env.example .env
 python space/app.py
 ```
 
+### Run The Space With Docker
+
+Build and run the production container image:
+
+```bash
+docker build -t maasai-space:local .
+docker run --rm -p 7860:7860 \
+  -e GRADIO_SERVER_NAME=0.0.0.0 \
+  -e PORT=7860 \
+  -e GRADIO_ANALYTICS_ENABLED=False \
+  -e HF_HUB_DISABLE_TELEMETRY=1 \
+  maasai-space:local
+```
+
+Or use Docker Compose:
+
+```bash
+docker compose up --build
+```
+
 ### Train A Local Baseline
 
 ```bash
@@ -225,6 +245,10 @@ Emit machine-readable output:
 ### Run Artifacts
 
 Daily training writes structured run manifests and can optionally sync per-run bundles to Hugging Face buckets. This provides lightweight execution traceability even when the compute environment is ephemeral.
+
+### CI Container Validation
+
+`CI` includes a `Docker Smoke` job that builds the Space runtime container and probes the served HTTP endpoint on Blacksmith runners. This keeps local Docker behavior and GitHub Actions behavior aligned.
 
 ## Security And Secrets
 

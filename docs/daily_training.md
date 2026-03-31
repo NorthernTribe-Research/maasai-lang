@@ -88,6 +88,7 @@ That workflow is intentionally CPU-only and avoids the heavyweight training stac
 - compiles Python sources under `src/`, `scripts/`, `space/`, and `kaggle/`
 - generates a machine-readable dataset validation report
 - runs lightweight unit tests for prompt generation, dataset validation helpers, and the Gradio app build path
+- builds the Space Docker image and performs an HTTP smoke probe against the running container
 
 The same CI workflow executes on Blacksmith by default using `blacksmith-4vcpu-ubuntu-2404`. Set `CI_RUNNER_LABEL` when you need a different supported Blacksmith runner tag.
 
