@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Lint workflow files
-        uses: rhysd/actionlint@v1
+        uses: rhysd/actionlint@v1.7.12
 
   validate:
     name: Repo Validation
@@ -64,8 +64,9 @@ jobs:
 
       - name: Upload validation report
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: dataset-validation
           path: dataset-validation.json
-          if-no-files-found: error
+          if-no-files-found: ignore
