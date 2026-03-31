@@ -18,7 +18,8 @@ permissions:
 jobs:
   analyze:
     name: Analyze Python
-    runs-on: ${{ vars.SECURITY_RUNNER_LABEL || vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    runs-on: ${{ vars.SECURITY_RUNNER_LABEL || vars.CI_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -27,14 +28,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"

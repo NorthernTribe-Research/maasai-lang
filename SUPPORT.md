@@ -4,7 +4,7 @@
 
 - Bugs and reproducible defects: open a GitHub issue using the bug report template.
 - Product, workflow, or platform improvements: open a GitHub issue using the change request template.
-- Security concerns: follow [SECURITY.md](/home/ntr/Documents/dev/maasai-lang/SECURITY.md) and report privately.
+- Security concerns: follow [SECURITY.md](SECURITY.md) and report privately.
 - Sensitive operational issues involving secrets, access, or private infrastructure: use an approved internal NorthernTribe-Research channel rather than a public issue.
 
 ## What To Include

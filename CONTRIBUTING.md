@@ -5,7 +5,7 @@ This repository is operated by NorthernTribe-Research as a production-oriented l
 ## Before You Start
 
 - Use Python 3.11 for contributor-facing automation and CI parity.
-- Treat the repository as all rights reserved until a formal license is published.
+- Treat the repository as proprietary and all rights reserved under `LICENSE`.
 - Do not contribute content, datasets, or terminology you are not authorized to share.
 - Never commit secrets, Kaggle credentials, Hugging Face tokens, or private run artifacts.
 
@@ -66,4 +66,4 @@ Use heavier flows only when your change requires them:
 
 ## Security Reporting
 
-For vulnerabilities, follow [SECURITY.md](/home/ntr/Documents/dev/maasai-lang/SECURITY.md) instead of opening a public bug report.
+For vulnerabilities, follow [SECURITY.md](SECURITY.md) instead of opening a public bug report.

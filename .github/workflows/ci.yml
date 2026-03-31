@@ -17,17 +17,19 @@ permissions:
 jobs:
   workflow-lint:
     name: Workflow Lint
-    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Lint workflow files
         uses: rhysd/actionlint@v1.7.12
 
   validate:
     name: Repo Validation
-    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 20
     env:
       GRADIO_ANALYTICS_ENABLED: "False"
       HF_HUB_DISABLE_TELEMETRY: "1"
@@ -35,10 +37,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: "pip"
@@ -65,7 +67,7 @@ jobs:
       - name: Upload validation report
         if: always()
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dataset-validation
           path: dataset-validation.json

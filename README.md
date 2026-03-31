@@ -7,7 +7,7 @@
 Production-oriented repository for English <-> Maasai translation, Maasai speech transcription, culturally grounded language tooling, and the MLOps workflows required to train, publish, monitor, and operate those assets across GitHub, Hugging Face, Kaggle, and self-hosted GPU infrastructure.
 
 > Status
-> Active development. This repository does not currently declare an open-source license. Until a license is added, treat the code and bundled assets as all rights reserved.
+> Active development. This repository is proprietary and all rights reserved. See `LICENSE` for the governing terms.
 
 ## Executive Summary
 
@@ -59,6 +59,7 @@ This repository follows a clear control-plane and data-plane split:
 | Hugging Face Space | `NorthernTribe-Research/maasai-language-showcase` |
 | Hugging Face dataset | `NorthernTribe-Research/maasai-translation-corpus` |
 | Hugging Face model repo | `NorthernTribe-Research/maasai-en-mt` |
+| Daily training fallback model repo | `NorthernTribe-Research/maasai-en-mt-staging` |
 | Base translation model | `Qwen/Qwen2.5-3B-Instruct` |
 | ASR model | `microsoft/paza-whisper-large-v3-turbo` |
 
@@ -168,7 +169,7 @@ KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
 The repository includes a scheduled and manually dispatchable GitHub Actions workflow:
 
 - Workflow file: `.github/workflows/daily-train.yml`
-- Scheduled backend: Kaggle submission via a control-plane runner (`ubuntu-latest` by default, or `TRAINING_CONTROL_RUNNER_LABEL` when configured)
+- Scheduled backend: Kaggle submission via a control-plane runner (`blacksmith-4vcpu-ubuntu-2404` by default, or `TRAINING_CONTROL_RUNNER_LABEL` when configured)
 - Manual backends: `kaggle` or `self-hosted`
 - Primary responsibilities: validate secrets, package the training job, dispatch execution, and upload run artifacts
 
@@ -309,12 +310,20 @@ Quality expectations should remain realistic:
 - `docs/model_card.md`
 - `docs/evaluation_plan.md`
 
+## Governance
+
+- `CONTRIBUTING.md`
+- `SECURITY.md`
+- `SUPPORT.md`
+- `CODE_OF_CONDUCT.md`
+- `.github/CODEOWNERS`
+
 ## Limitations
 
 - This repository is production-oriented in structure, but it is still an actively evolving research and delivery platform.
 - The translation and speech outputs should not be treated as authoritative without qualified human review.
 - Coverage across dialects, domains, and orthographic variants is incomplete.
-- The repository does not yet declare a formal license.
+- Code and bundled assets are proprietary and all rights reserved under `LICENSE`.
 
 ## Acknowledgment
 

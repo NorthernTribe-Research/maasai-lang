@@ -32,7 +32,7 @@ permissions:
 jobs:
   kaggle-train:
     name: Submit Kaggle Training
-    if: ${{ github.event_name == 'schedule' || inputs.backend == 'kaggle' }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || inputs.backend == 'kaggle') }}
     runs-on: ${{ vars.TRAINING_CONTROL_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
     timeout-minutes: 45
     env:
@@ -52,10 +52,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: "pip"
@@ -149,17 +149,18 @@ jobs:
 
       - name: Upload Kaggle dispatch artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
         with:
           name: kaggle-training-dispatch
           path: |
             ${{ runner.temp }}/kaggle-monitor
-            dist/kaggle_kernel
+          retention-days: 7
           if-no-files-found: ignore
 
   self-hosted-train:
     name: Direct Runner Training
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.backend == 'self-hosted' }}
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.backend == 'self-hosted' }}
     runs-on: [self-hosted, linux, x64, gpu]
     timeout-minutes: 690
     env:
@@ -174,10 +175,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: "pip"
@@ -267,7 +268,8 @@ jobs:
 
       - name: Upload self-hosted training artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
         with:
           name: self-hosted-training-artifacts
           path: |
@@ -275,4 +277,5 @@ jobs:
             ${{ runner.temp }}/maasai-daily-hf/train.log
             ${{ runner.temp }}/maasai-daily-hf/model_output/trainer_state.json
             ${{ runner.temp }}/maasai-daily-hf/model_output/runs
+          retention-days: 7
           if-no-files-found: ignore

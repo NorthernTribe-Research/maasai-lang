@@ -4,8 +4,8 @@
 
 ```bash
 # Clone repo
-git clone <repo-url>
-cd maasai-language-showcase
+git clone https://github.com/NorthernTribe-Research/maasai-lang.git
+cd maasai-lang
 
 # Create virtual environment
 python -m venv .venv

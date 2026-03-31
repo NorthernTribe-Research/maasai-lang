@@ -28,4 +28,4 @@ Maintainers may edit, hide, reject, or remove content and may restrict participa
 
 ## Reporting
 
-Report conduct concerns to repository maintainers through GitHub or another approved NorthernTribe-Research private channel. If the report includes security-sensitive information, follow [SECURITY.md](/home/ntr/Documents/dev/maasai-lang/SECURITY.md) instead of posting publicly.
+Report conduct concerns to repository maintainers through GitHub or another approved NorthernTribe-Research private channel. If the report includes security-sensitive information, follow [SECURITY.md](SECURITY.md) instead of posting publicly.
