@@ -40,6 +40,17 @@ Compose alternative:
 docker compose up --build
 ```
 
+## GitHub Packages Runtime
+
+If you want team-standard immutable images from GitHub Packages:
+
+```bash
+docker pull ghcr.io/northerntribe-research/maasai-lang-space:latest
+docker run --rm -p 7860:7860 ghcr.io/northerntribe-research/maasai-lang-space:latest
+```
+
+The publishing pipeline is defined in [`.github/workflows/publish-container.yml`](../.github/workflows/publish-container.yml) and runs on Blacksmith-backed GitHub Actions runners.
+
 ## Data Pipeline
 
 ```bash

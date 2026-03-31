@@ -250,6 +250,21 @@ Daily training writes structured run manifests and can optionally sync per-run b
 
 `CI` includes a `Docker Smoke` job that builds the Space runtime container and probes the served HTTP endpoint on Blacksmith runners. This keeps local Docker behavior and GitHub Actions behavior aligned.
 
+### GitHub Packages (GHCR)
+
+The repository publishes a container image to GitHub Container Registry using [`.github/workflows/publish-container.yml`](.github/workflows/publish-container.yml).
+
+- Package namespace: `ghcr.io/northerntribe-research/maasai-lang-space`
+- Primary tags: `latest`, branch refs, and short commit SHA tags
+- Trigger paths: Docker/runtime files and app source changes
+
+Pull and run:
+
+```bash
+docker pull ghcr.io/northerntribe-research/maasai-lang-space:latest
+docker run --rm -p 7860:7860 ghcr.io/northerntribe-research/maasai-lang-space:latest
+```
+
 ## Security And Secrets
 
 This repository uses external platforms extensively. Secrets management is therefore part of the operating model, not an afterthought.
