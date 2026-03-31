@@ -265,6 +265,20 @@ docker pull ghcr.io/northerntribe-research/maasai-lang-space:latest
 docker run --rm -p 7860:7860 ghcr.io/northerntribe-research/maasai-lang-space:latest
 ```
 
+### Org Project Board Bootstrap
+
+To create a team-ready organization Project and auto-seed milestone issues:
+
+```bash
+gh auth refresh -s project,read:project,read:packages
+./scripts/bootstrap_org_project_board.sh
+```
+
+Default target:
+- Org: `NorthernTribe-Research`
+- Repo: `NorthernTribe-Research/maasai-lang`
+- Milestone seed: `SOTA Expansion Q2 2026`
+
 ## Security And Secrets
 
 This repository uses external platforms extensively. Secrets management is therefore part of the operating model, not an afterthought.
