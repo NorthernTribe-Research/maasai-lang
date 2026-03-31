@@ -1,0 +1,59 @@
+name: Platform Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "11,41 * * * *"
+
+concurrency:
+  group: platform-health-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  health:
+    name: Verify Platform Health
+    runs-on: ${{ vars.SECURITY_RUNNER_LABEL || vars.CI_RUNNER_LABEL || 'blacksmith-4vcpu-ubuntu-2404' }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Check GitHub Pages health
+        run: |
+          python scripts/check_pages_health.py --json > pages-health.json
+
+      - name: Check Hugging Face Space health
+        run: |
+          python scripts/check_space_health.py --json > space-health.json
+
+      - name: Check training freshness
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/check_training_freshness.py \
+            --workflow-file daily-train.yml \
+            --lookback-hours 3 \
+            --max-runs 30 \
+            > training-freshness.json
+
+      - name: Upload health artifacts
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: platform-health
+          path: |
+            pages-health.json
+            space-health.json
+            training-freshness.json
+          if-no-files-found: ignore

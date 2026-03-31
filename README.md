@@ -257,6 +257,28 @@ python scripts/check_training_freshness.py \
   --lookback-hours 3
 ```
 
+### GitHub Pages Documentation
+
+The project now uses GitHub Pages for the public docs gateway.
+
+- Workflow: `.github/workflows/pages-bridge.yml`
+- Continuous health monitor: `.github/workflows/platform-health.yml`
+- Site root: `https://northerntribe-research.github.io/maasai-lang/`
+- Docs hub: `https://northerntribe-research.github.io/maasai-lang/docs/`
+
+To manually trigger deployment:
+
+```bash
+gh workflow run pages-bridge.yml --repo NorthernTribe-Research/maasai-lang --ref main
+```
+
+Run health checks from local or a runner:
+
+```bash
+python scripts/check_pages_health.py --json
+python scripts/check_space_health.py --json
+```
+
 ### Run Artifacts
 
 Daily training writes structured run manifests and can optionally sync per-run bundles to Hugging Face buckets. This provides lightweight execution traceability even when the compute environment is ephemeral.
