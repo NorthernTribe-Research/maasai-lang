@@ -187,6 +187,7 @@ def wait_for_kernel(
 ) -> tuple[str, str]:
     deadline = time.time() + startup_timeout_seconds
     last_log = ""
+    running_streak = 0
 
     while time.time() < deadline:
         status = fetch_status(kaggle_cli, root, env, kernel_ref)
@@ -194,8 +195,19 @@ def wait_for_kernel(
         if log_text:
             last_log = log_text
 
+        if status == "RUNNING":
+            running_streak += 1
+        else:
+            running_streak = 0
+
         if has_any_marker(last_log, TRAINING_PROGRESS_MARKERS):
             return "training_started", last_log
+
+        # Some Kaggle runs stream logs slowly. If the kernel is RUNNING for several
+        # consecutive polls, treat this as a healthy startup and let freshness checks
+        # enforce continued liveness.
+        if running_streak >= 3:
+            return "running", last_log
 
         if status == "ERROR":
             if has_any_marker(last_log, UNSUPPORTED_GPU_MARKERS):
@@ -266,7 +278,7 @@ def main() -> int:
             startup_timeout_seconds=args.startup_timeout_seconds,
         )
 
-        if outcome in {"training_started", "complete"}:
+        if outcome in {"training_started", "running", "complete"}:
             print(f"Kaggle kernel reached state: {outcome}")
             return 0
 
