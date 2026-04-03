@@ -10,11 +10,13 @@
 - [x] Add Bible cross-reference generation tasks so related verses act as semantic context for a primary Maa target.
 - [x] Reduce GitHub Actions artifact retention pressure so high-frequency workflows stop filling storage unnecessarily.
 - [x] Restore GitHub Pages availability by switching the public site to a branch-based `gh-pages` source and queueing a fresh Pages build.
+- [x] Add a model-readiness gate so promotion requires a real Gemma checkpoint plus evaluation evidence.
 
 ## Next
 
 - [ ] Reconcile and republish the live Hugging Face model repo so the Space serves real Gemma-based inference instead of any fallback/demo behavior.
 - [ ] Verify the published model lineage is Gemma 4 end-to-end, not mixed with older placeholder adapter metadata.
+- [ ] Make the publish path require a passing readiness report in the live release run, not only in local/operator flows.
 - [ ] Turn the cloud CPU backend on for real once SSH authentication from this workstation is accepted by the remote host.
 - [ ] Push the validated repo state to GitHub and then sync the updated Space/model path to Hugging Face and Kaggle.
 

@@ -15,6 +15,7 @@ Status date: April 3, 2026
 - Maa generation tasks already exist beyond plain translation.
 - Bible passage generation is implemented.
 - Bible cross-reference generation is now implemented so related scripture can support the primary Maa target during training.
+- The repo now has a model-readiness gate that checks for real Gemma lineage, evaluation output, terminology quality, and English leakage before promotion.
 
 ## Advanced In This Repo
 
@@ -42,6 +43,7 @@ It has a functioning training control plane and a functioning demo surface.
 The next work is about:
 
 - making publication and deployment fully consistent
+- promoting only evaluated Gemma checkpoints instead of scaffold or placeholder outputs
 - broadening lawful Maa data coverage
 - improving Maa fluency through controlled continual learning
 - restoring every public surface so monitoring stays green

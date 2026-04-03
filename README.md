@@ -141,6 +141,16 @@ python scripts/evaluate_mt.py \
   --glossary_file data/glossary/maasai_glossary.json
 ```
 
+### Check Model Readiness
+
+Use the readiness gate before promoting a checkpoint to Hugging Face or pointing the Space at it:
+
+```bash
+python scripts/check_model_readiness.py \
+  --model-dir outputs/maasai-en-mt-qlora \
+  --eval-file outputs/maasai-en-mt-qlora/eval_results.json
+```
+
 ## Training Workflows
 
 ### Local Or Research Training
@@ -172,6 +182,11 @@ python scripts/train_daily_from_hf.py \
   --max-steps 800 \
   --save-steps 100
 ```
+
+By default, the daily training path now also writes:
+
+- `eval_results.json` with bounded post-training evaluation
+- `model_readiness.json` with a promotion verdict for the checkpoint
 
 ### Kaggle Execution
 
@@ -250,6 +265,7 @@ Execute publication:
 
 ```bash
 python scripts/publish_to_hf.py \
+  --require-ready-model \
   --execute \
   --create-model-repo
 ```

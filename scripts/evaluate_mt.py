@@ -272,6 +272,10 @@ def main() -> None:
         details.append({
             "id": sample.get("id", f"sample-{i}"),
             "prompt": prompt,
+            "source_text": sample.get("source_text"),
+            "source_lang": sample.get("source_lang"),
+            "target_lang": sample.get("target_lang"),
+            "target_text": sample.get("target_text"),
             "reference": reference,
             "hypothesis": hypothesis,
         })
