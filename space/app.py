@@ -162,6 +162,73 @@ COMPOSITION_SYSTEM_PROMPT = (
     "You are a careful Maasai-language writing assistant. Respond only in Maa, keep the tone "
     "natural, and do not add explanations or headings."
 )
+ENGLISH_FUNCTION_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "do",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "who",
+    "why",
+    "with",
+    "you",
+    "your",
+}
+MAASAI_SIGNAL_WORDS = {
+    "ajo",
+    "aji",
+    "enkai",
+    "enkang",
+    "enkop",
+    "inkera",
+    "inkishu",
+    "iyie",
+    "iyiook",
+    "kake",
+    "metaa",
+    "nabo",
+    "oleng",
+    "oltau",
+    "pee",
+    "sidai",
+    "supa",
+    "taata",
+}
+MAASAI_SIGNAL_PREFIXES = (
+    "enk",
+    "ink",
+    "olt",
+    "olo",
+    "olp",
+    "ilm",
+    "eme",
+    "nai",
+)
 
 COMPOSITION_LENGTH_GUIDANCE = {
     "Compact": {
@@ -942,6 +1009,70 @@ def build_composition_prompt(
     return prompt, int(length_profile["max_new_tokens"])
 
 
+def lexical_tokens(text: str) -> list[str]:
+    """Split text into normalized alphabetic tokens."""
+    return re.findall(r"[A-Za-z']+", text.lower())
+
+
+def maasai_signal_score(text: str) -> int:
+    """Count lightweight Maa lexical cues in the text."""
+    score = 0
+    for token in lexical_tokens(text):
+        if token in MAASAI_SIGNAL_WORDS:
+            score += 2
+        elif token.startswith(MAASAI_SIGNAL_PREFIXES):
+            score += 1
+    return score
+
+
+def english_function_word_score(text: str) -> int:
+    """Count lightweight English function-word cues in the text."""
+    return sum(1 for token in lexical_tokens(text) if token in ENGLISH_FUNCTION_WORDS)
+
+
+def source_overlap_ratio(source_text: str, output_text: str) -> float:
+    """Measure how much the output repeats the source lexical content."""
+    source_tokens = {token for token in lexical_tokens(source_text) if len(token) > 2}
+    output_tokens = {token for token in lexical_tokens(output_text) if len(token) > 2}
+    if not output_tokens:
+        return 0.0
+    return len(source_tokens & output_tokens) / len(output_tokens)
+
+
+def has_english_leakage(output_text: str, *, source_text: str = "", direction: str = "English → Maasai") -> bool:
+    """Heuristic check for English-heavy output where Maa is expected."""
+    if direction != "English → Maasai":
+        return False
+
+    output_text = output_text.strip()
+    if not output_text:
+        return True
+
+    english_score = english_function_word_score(output_text)
+    maasai_score = maasai_signal_score(output_text)
+    overlap_ratio = source_overlap_ratio(source_text, output_text) if source_text else 0.0
+
+    if overlap_ratio >= 0.55:
+        return True
+    if english_score >= 3 and maasai_score == 0:
+        return True
+    if english_score >= max(3, maasai_score + 2):
+        return True
+    return False
+
+
+def build_maasai_repair_prompt(source_text: str, draft_text: str) -> str:
+    """Ask the model to rewrite a draft as natural Maa only."""
+    return (
+        "Rewrite the translation as fluent natural Maa.\n"
+        "Do not explain your reasoning.\n"
+        "Do not repeat the English source text.\n"
+        "Return only the final Maa translation.\n\n"
+        f'English source:\n"{source_text.strip()}"\n\n'
+        f'Weak draft:\n"{draft_text.strip()}"'
+    )
+
+
 def clean_generated_output(text: str) -> str:
     """Normalize raw model continuations for both translation and composition."""
     cleaned = text.strip().strip('"').strip("'")
@@ -971,6 +1102,44 @@ def clean_composition_output(text: str) -> str:
         flags=re.IGNORECASE,
     )
     return cleaned
+
+
+def generate_model_text(
+    model: Any,
+    formatter: Any,
+    tokenizer: Any,
+    *,
+    user_prompt: str,
+    system_prompt: str,
+    max_new_tokens: int,
+    repetition_penalty: float,
+    do_sample: bool,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    clean_output=clean_generated_output,
+    enable_thinking: bool = TRANSLATION_ENABLE_THINKING,
+) -> str:
+    """Run one generation pass through the configured model."""
+    prompt = render_generation_prompt(
+        user_prompt,
+        formatter,
+        system_prompt=system_prompt,
+        enable_thinking=enable_thinking,
+    )
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    generation_kwargs: dict[str, Any] = {
+        "max_new_tokens": max_new_tokens,
+        "do_sample": do_sample,
+        "repetition_penalty": repetition_penalty,
+        "pad_token_id": tokenizer.eos_token_id or tokenizer.pad_token_id,
+    }
+    if do_sample:
+        generation_kwargs["temperature"] = 0.72 if temperature is None else temperature
+        generation_kwargs["top_p"] = 0.92 if top_p is None else top_p
+    outputs = model.generate(**inputs, **generation_kwargs)
+    raw_text = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+    cleaned = clean_output(raw_text)
+    return cleaned or raw_text.strip()
 
 
 def _demo_compose_text(
@@ -1090,7 +1259,7 @@ def compose_with_context(
         composition = _demo_compose_text(theme, composition_type, register, required_terms)
     else:
         model, formatter, tokenizer = pipeline
-        prompt, max_new_tokens = build_composition_prompt(
+        composition_prompt, max_new_tokens = build_composition_prompt(
             theme=theme,
             composition_type=composition_type,
             register=register,
@@ -1098,23 +1267,30 @@ def compose_with_context(
             glossary_matches=glossary_matches,
             required_terms=required_terms,
         )
-        prompt = render_generation_prompt(
-            prompt,
+        composition = generate_model_text(
+            model,
             formatter,
+            tokenizer,
+            user_prompt=composition_prompt,
             system_prompt=COMPOSITION_SYSTEM_PROMPT,
-        )
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        outputs = model.generate(
-            **inputs,
             max_new_tokens=max_new_tokens,
-            temperature=0.72,
-            top_p=0.92,
-            do_sample=True,
             repetition_penalty=1.08,
-            pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+            do_sample=True,
+            clean_output=clean_composition_output,
         )
-        raw_text = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-        composition = clean_composition_output(raw_text)
+        source_context = "\n".join(part for part in [theme.strip(), raw_terms.strip()] if part.strip())
+        if has_english_leakage(composition, source_text=source_context, direction="English → Maasai"):
+            composition = generate_model_text(
+                model,
+                formatter,
+                tokenizer,
+                user_prompt=build_maasai_repair_prompt(source_context, composition),
+                system_prompt=COMPOSITION_SYSTEM_PROMPT,
+                max_new_tokens=max_new_tokens,
+                repetition_penalty=1.05,
+                do_sample=False,
+                clean_output=clean_composition_output,
+            ) or composition
         if not composition:
             used_demo = True
             composition = _demo_compose_text(theme, composition_type, register, required_terms)
@@ -1227,23 +1403,32 @@ def translate_text(
         return _demo_translate(text, direction)
 
     model, formatter, tokenizer = pipeline
-    prompt = build_inference_prompt(text, direction, glossary_matches)
-    prompt = render_generation_prompt(
-        prompt,
+    translation_prompt = build_inference_prompt(text, direction, glossary_matches)
+    result = generate_model_text(
+        model,
         formatter,
+        tokenizer,
+        user_prompt=translation_prompt,
         system_prompt=TRANSLATION_SYSTEM_PROMPT,
-    )
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    outputs = model.generate(
-        **inputs,
         max_new_tokens=256,
-        do_sample=False,
         repetition_penalty=1.02,
-        pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+        do_sample=False,
     )
-    result = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-    return clean_generated_output(result) or result.strip()
+    if has_english_leakage(result, source_text=text, direction=direction):
+        repaired = generate_model_text(
+            model,
+            formatter,
+            tokenizer,
+            user_prompt=build_maasai_repair_prompt(text, result),
+            system_prompt=TRANSLATION_SYSTEM_PROMPT,
+            max_new_tokens=256,
+            repetition_penalty=1.05,
+            do_sample=False,
+        )
+        if repaired and not has_english_leakage(repaired, source_text=text, direction=direction):
+            return repaired
+        return repaired or result
+    return result
 
 
 def translate_with_context(text: str, direction: str) -> tuple[str, str, str, str]:

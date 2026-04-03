@@ -71,6 +71,32 @@ class SpaceAppTests(unittest.TestCase):
         )
         self.assertEqual(cleaned, "Supa oleng")
 
+    def test_space_flags_english_leakage_for_maasai_target_output(self) -> None:
+        self.assertTrue(
+            space_app.has_english_leakage(
+                "The children are going to school",
+                source_text="The children are going to school",
+                direction="English → Maasai",
+            )
+        )
+
+    def test_space_allows_maasai_like_output(self) -> None:
+        self.assertFalse(
+            space_app.has_english_leakage(
+                "Inkera ia enkisoma",
+                source_text="The children are going to school",
+                direction="English → Maasai",
+            )
+        )
+
+    def test_space_builds_maa_repair_prompt(self) -> None:
+        prompt = space_app.build_maasai_repair_prompt(
+            "The children are going to school",
+            "The children are going to school",
+        )
+        self.assertIn("Rewrite the translation as fluent natural Maa.", prompt)
+        self.assertIn("Return only the final Maa translation.", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,8 +18,8 @@ import torch
 from transformers import AutoModelForCausalLM
 
 from src.modeling import load_text_formatter
-from src.prompts import build_inference_prompt
-from src.postprocessing import postprocess
+from src.prompts import build_generation_prompt_from_user_prompt, build_inference_prompt
+from src.postprocessing import build_language_repair_prompt, has_english_leakage, postprocess
 
 LOGGER = logging.getLogger("infer_translate")
 
@@ -42,6 +42,10 @@ def parse_args() -> argparse.Namespace:
     thinking_group.add_argument("--thinking", dest="enable_thinking", action="store_true")
     thinking_group.add_argument("--no-thinking", dest="enable_thinking", action="store_false")
     parser.set_defaults(enable_thinking=None)
+    repair_group = parser.add_mutually_exclusive_group()
+    repair_group.add_argument("--repair-target-language", dest="repair_target_language", action="store_true")
+    repair_group.add_argument("--no-repair-target-language", dest="repair_target_language", action="store_false")
+    parser.set_defaults(repair_target_language=True)
     return parser.parse_args()
 
 
@@ -66,6 +70,38 @@ def translate(model, tokenizer, prompt: str, max_new_tokens: int, device: str, d
     if not decoded.strip():
         decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return postprocess(decoded, glossary=None, direction=direction)
+
+
+def translate_with_repair(
+    model,
+    formatter,
+    tokenizer,
+    *,
+    source_text: str,
+    prompt: str,
+    max_new_tokens: int,
+    device: str,
+    direction: str,
+    model_name_or_path: str,
+    enable_thinking: bool | None,
+    repair_target_language: bool,
+) -> str:
+    result = translate(model, tokenizer, prompt, max_new_tokens, device, direction)
+    if not repair_target_language:
+        return result
+    if not has_english_leakage(result, source_text=source_text, direction=direction):
+        return result
+
+    repair_prompt = build_generation_prompt_from_user_prompt(
+        build_language_repair_prompt(source_text, result, direction=direction),
+        model_name_or_path=model_name_or_path,
+        formatter=formatter,
+        enable_thinking=enable_thinking,
+    )
+    repaired = translate(model, tokenizer, repair_prompt, max_new_tokens, device, direction)
+    if repaired and not has_english_leakage(repaired, source_text=source_text, direction=direction):
+        return repaired
+    return repaired or result
 
 
 def main() -> None:
@@ -101,7 +137,19 @@ def main() -> None:
             formatter=formatter,
             enable_thinking=args.enable_thinking,
         )
-        result = translate(model, tokenizer, prompt, args.max_new_tokens, device, args.direction)
+        result = translate_with_repair(
+            model,
+            formatter,
+            tokenizer,
+            source_text=args.text,
+            prompt=prompt,
+            max_new_tokens=args.max_new_tokens,
+            device=device,
+            direction=args.direction,
+            model_name_or_path=args.model_dir,
+            enable_thinking=args.enable_thinking,
+            repair_target_language=args.repair_target_language,
+        )
         print(f"\n{'='*60}")
         print(f"Direction: {args.direction}")
         print(f"Input:     {args.text}")
@@ -129,7 +177,19 @@ def main() -> None:
                 formatter=formatter,
                 enable_thinking=args.enable_thinking,
             )
-            result = translate(model, tokenizer, prompt, args.max_new_tokens, device, direction)
+            result = translate_with_repair(
+                model,
+                formatter,
+                tokenizer,
+                source_text=text,
+                prompt=prompt,
+                max_new_tokens=args.max_new_tokens,
+                device=device,
+                direction=direction,
+                model_name_or_path=args.model_dir,
+                enable_thinking=args.enable_thinking,
+                repair_target_language=args.repair_target_language,
+            )
 
             print(f"  → {result}\n")
 

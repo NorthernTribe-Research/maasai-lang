@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from src.modeling import is_gemma4_model
-from src.postprocessing import postprocess
+from src.postprocessing import build_language_repair_prompt, has_english_leakage, postprocess
 from src.prompts import (
     build_generation_prompt_from_user_prompt,
     build_inference_prompt,
@@ -76,6 +76,34 @@ class PromptTests(unittest.TestCase):
     def test_postprocess_strips_reasoning_artifacts(self) -> None:
         text = "<thinking>reason through the sentence</thinking>\nFinal Answer: Supa sidai"
         self.assertEqual(postprocess(text), "Supa sidai")
+
+    def test_has_english_leakage_flags_english_heavy_maasai_target_output(self) -> None:
+        self.assertTrue(
+            has_english_leakage(
+                "The children are going to school",
+                source_text="The children are going to school",
+                direction="en_to_mas",
+            )
+        )
+
+    def test_has_english_leakage_allows_maasai_looking_output(self) -> None:
+        self.assertFalse(
+            has_english_leakage(
+                "Inkera ia enkisoma",
+                source_text="The children are going to school",
+                direction="en_to_mas",
+            )
+        )
+
+    def test_build_language_repair_prompt_requests_final_maa_only(self) -> None:
+        prompt = build_language_repair_prompt(
+            "The children are going to school",
+            "The children are going to school",
+            direction="en_to_mas",
+        )
+        self.assertIn("Rewrite the translation as fluent natural Maa.", prompt)
+        self.assertIn("Return only the final Maa translation.", prompt)
+        self.assertIn("Weak draft:", prompt)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,153 @@ from typing import Optional
 
 from src.glossary import MaasaiGlossary
 
+ENGLISH_FUNCTION_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "do",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "who",
+    "why",
+    "with",
+    "you",
+    "your",
+}
+
+MAASAI_SIGNAL_WORDS = {
+    "ajo",
+    "aji",
+    "enkai",
+    "enkang",
+    "enkop",
+    "inkera",
+    "inkishu",
+    "iyie",
+    "iyiook",
+    "kake",
+    "metaa",
+    "nabo",
+    "oleng",
+    "oltau",
+    "pee",
+    "sidai",
+    "supa",
+    "taata",
+}
+
+MAASAI_SIGNAL_PREFIXES = (
+    "enk",
+    "ink",
+    "olt",
+    "olo",
+    "olp",
+    "ilm",
+    "eme",
+    "nai",
+)
+
+
+def lexical_tokens(text: str) -> list[str]:
+    """Split text into normalized alphabetic tokens."""
+    return re.findall(r"[A-Za-z']+", text.lower())
+
+
+def maasai_signal_score(text: str) -> int:
+    """Count lightweight Maa lexical cues in the text."""
+    score = 0
+    for token in lexical_tokens(text):
+        if token in MAASAI_SIGNAL_WORDS:
+            score += 2
+        elif token.startswith(MAASAI_SIGNAL_PREFIXES):
+            score += 1
+    return score
+
+
+def english_function_word_score(text: str) -> int:
+    """Count lightweight English function-word cues in the text."""
+    return sum(1 for token in lexical_tokens(text) if token in ENGLISH_FUNCTION_WORDS)
+
+
+def source_overlap_ratio(source_text: str, output_text: str) -> float:
+    """Measure how much the output repeats the source lexical content."""
+    source_tokens = {token for token in lexical_tokens(source_text) if len(token) > 2}
+    output_tokens = {token for token in lexical_tokens(output_text) if len(token) > 2}
+    if not output_tokens:
+        return 0.0
+    return len(source_tokens & output_tokens) / len(output_tokens)
+
+
+def has_english_leakage(
+    output_text: str,
+    *,
+    source_text: str = "",
+    direction: str = "en_to_mas",
+) -> bool:
+    """Heuristic check for English-heavy output where Maa is expected."""
+    if direction not in {"en_to_mas", "English → Maasai"}:
+        return False
+
+    output_text = output_text.strip()
+    if not output_text:
+        return True
+
+    english_score = english_function_word_score(output_text)
+    maasai_score = maasai_signal_score(output_text)
+    overlap_ratio = source_overlap_ratio(source_text, output_text) if source_text else 0.0
+
+    if overlap_ratio >= 0.55:
+        return True
+    if english_score >= 3 and maasai_score == 0:
+        return True
+    if english_score >= max(3, maasai_score + 2):
+        return True
+    return False
+
+
+def build_language_repair_prompt(source_text: str, draft_text: str, *, direction: str = "en_to_mas") -> str:
+    """Build a repair prompt when translation output is too English-heavy."""
+    if direction in {"en_to_mas", "English → Maasai"}:
+        return (
+            "Rewrite the translation as fluent natural Maa.\n"
+            "Do not explain your reasoning.\n"
+            "Do not repeat the English source text.\n"
+            "Return only the final Maa translation.\n\n"
+            f'English source:\n"{source_text.strip()}"\n\n'
+            f'Weak draft:\n"{draft_text.strip()}"'
+        )
+
+    return (
+        "Rewrite the translation so it is natural and faithful.\n"
+        "Return only the final translation.\n\n"
+        f'Source:\n"{source_text.strip()}"\n\n'
+        f'Draft:\n"{draft_text.strip()}"'
+    )
+
 
 def strip_response_marker(text: str) -> str:
     """Remove the ### Response: marker from generated text."""

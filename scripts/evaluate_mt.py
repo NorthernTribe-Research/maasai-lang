@@ -23,6 +23,7 @@ from transformers import AutoModelForCausalLM
 
 from src.modeling import load_text_formatter
 from src.prompts import build_generation_prompt_from_user_prompt
+from src.postprocessing import build_language_repair_prompt, has_english_leakage, postprocess
 LOGGER = logging.getLogger("evaluate_mt")
 
 
@@ -49,6 +50,10 @@ def parse_args() -> argparse.Namespace:
     thinking_group.add_argument("--thinking", dest="enable_thinking", action="store_true")
     thinking_group.add_argument("--no-thinking", dest="enable_thinking", action="store_false")
     parser.set_defaults(enable_thinking=None)
+    repair_group = parser.add_mutually_exclusive_group()
+    repair_group.add_argument("--repair-target-language", dest="repair_target_language", action="store_true")
+    repair_group.add_argument("--no-repair-target-language", dest="repair_target_language", action="store_false")
+    parser.set_defaults(repair_target_language=True)
     return parser.parse_args()
 
 
@@ -140,8 +145,15 @@ def load_model_and_tokenizer(args: argparse.Namespace, device: str):
 
 def generate_translation(
     model,
+    formatter,
     tokenizer,
     prompt: str,
+    *,
+    source_text: str,
+    direction: str,
+    model_name_or_path: str,
+    enable_thinking: bool | None,
+    repair_target_language: bool,
     max_new_tokens: int = 128,
     device: str = "cpu",
 ) -> str:
@@ -159,15 +171,55 @@ def generate_translation(
         )
 
     generated_tokens = outputs[0][inputs["input_ids"].shape[1]:]
-    decoded = tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()
+    decoded = postprocess(
+        tokenizer.decode(generated_tokens, skip_special_tokens=True).strip(),
+        glossary=None,
+        direction=direction,
+    )
     if decoded:
-        return decoded
+        result = decoded
+    else:
+        full_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        marker = "### Response:"
+        if marker in full_text:
+            result = full_text.split(marker, 1)[1].strip()
+        else:
+            result = full_text.strip()
+        result = postprocess(result, glossary=None, direction=direction)
 
-    full_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    marker = "### Response:"
-    if marker in full_text:
-        return full_text.split(marker, 1)[1].strip()
-    return full_text.strip()
+    if not repair_target_language or not has_english_leakage(
+        result,
+        source_text=source_text,
+        direction=direction,
+    ):
+        return result
+
+    repair_prompt = build_generation_prompt_from_user_prompt(
+        build_language_repair_prompt(source_text, result, direction=direction),
+        model_name_or_path=model_name_or_path,
+        formatter=formatter,
+        enable_thinking=enable_thinking,
+    )
+    repair_inputs = tokenizer(repair_prompt, return_tensors="pt")
+    repair_inputs = {k: v.to(device) for k, v in repair_inputs.items()}
+
+    with torch.inference_mode():
+        repair_outputs = model.generate(
+            **repair_inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            repetition_penalty=1.05,
+            eos_token_id=tokenizer.eos_token_id,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+
+    repair_tokens = repair_outputs[0][repair_inputs["input_ids"].shape[1]:]
+    repaired = postprocess(
+        tokenizer.decode(repair_tokens, skip_special_tokens=True).strip(),
+        glossary=None,
+        direction=direction,
+    )
+    return repaired or result
 
 
 def main() -> None:
@@ -197,7 +249,23 @@ def main() -> None:
             enable_thinking=args.enable_thinking,
         )
 
-        hypothesis = generate_translation(model, tokenizer, prompt_text, args.max_new_tokens, device)
+        target_lang = str(sample.get("target_lang", "")).strip().lower()
+        direction = "en_to_mas" if target_lang == "mas" else "mas_to_en"
+        source_text = str(sample.get("source_text", prompt)).strip()
+
+        hypothesis = generate_translation(
+            model,
+            formatter,
+            tokenizer,
+            prompt_text,
+            source_text=source_text,
+            direction=direction,
+            model_name_or_path=formatter_source,
+            enable_thinking=args.enable_thinking,
+            repair_target_language=args.repair_target_language,
+            max_new_tokens=args.max_new_tokens,
+            device=device,
+        )
         hypotheses.append(hypothesis)
         references.append(reference)
 
