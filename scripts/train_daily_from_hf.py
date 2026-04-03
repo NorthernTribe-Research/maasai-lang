@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=os.getenv("HF_MODEL_REPO", "NorthernTribe-Research/maasai-en-mt-staging"),
     )
-    parser.add_argument("--model-name", type=str, default=os.getenv("HF_BASE_MODEL", "Qwen/Qwen2.5-3B-Instruct"))
+    parser.add_argument("--model-name", type=str, default=os.getenv("HF_BASE_MODEL", "google/gemma-4-E4B-it"))
     parser.add_argument("--work-dir", type=str, default=os.getenv("HF_DAILY_WORKDIR", "/tmp/maasai-daily-hf"))
     parser.add_argument("--token", type=str, default=None)
     parser.add_argument("--private-model-repo", action="store_true")
@@ -78,7 +78,7 @@ def parse_args() -> argparse.Namespace:
     generation_group = parser.add_mutually_exclusive_group()
     generation_group.add_argument("--augment-with-generation-tasks", dest="augment_with_generation_tasks", action="store_true")
     generation_group.add_argument("--no-augment-with-generation-tasks", dest="augment_with_generation_tasks", action="store_false")
-    parser.set_defaults(augment_with_generation_tasks=False)
+    parser.set_defaults(augment_with_generation_tasks=True)
     parser.add_argument("--disconnect-colab", action="store_true")
     return parser.parse_args()
 

@@ -71,7 +71,7 @@ python scripts/prepare_data.py --input_dir data/raw --output_dir data/final_v3
 bash training/run_train.sh
 
 # Or with custom params
-python scripts/train_qlora.py --model_name Qwen/Qwen2.5-3B-Instruct --num_train_epochs 5
+python scripts/train_qlora.py --model_name google/gemma-4-E4B-it --num_train_epochs 5
 
 # Resumable daily training from Hugging Face
 python scripts/train_daily_from_hf.py \

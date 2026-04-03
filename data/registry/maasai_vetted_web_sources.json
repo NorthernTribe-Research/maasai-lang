@@ -384,6 +384,163 @@
         "method": "manual_review_only",
         "expected_format": "application/pdf"
       }
+    },
+    {
+      "id": "uiowa_maasai_speech_samples",
+      "title": "Maasai Speech Samples",
+      "publication_year": 2026,
+      "publisher": "University of Iowa",
+      "source_type": "speech_dataset",
+      "languages": [
+        "mas"
+      ],
+      "status": "approved",
+      "rights_status": "cc_by_4_0",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "access": {
+        "model": "public_download",
+        "landing_url": "https://iro.uiowa.edu/esploro/outputs/dataset/Maasai-Speech-Samples/9983557355602771"
+      },
+      "provenance": {
+        "discovered_via": "web_review",
+        "reviewed_on": "2026-04-03",
+        "reviewed_by": "codex_cli",
+        "evidence_urls": [
+          "https://iro.uiowa.edu/esploro/outputs/dataset/Maasai-Speech-Samples/9983557355602771",
+          "https://creativecommons.org/licenses/by/4.0/"
+        ],
+        "rights_basis": "The University of Iowa dataset page exposes Maasai speech samples as open access under CC BY 4.0."
+      },
+      "usage_policy": {
+        "trainable": true,
+        "ingest_ready": true,
+        "download_plannable": false,
+        "manual_clearance_required": false,
+        "notes": "High-value Maa speech and pronunciation asset. Use with provenance tracking and keep first use focused on speech evaluation, lexicon support, and carefully reviewed ASR experiments."
+      },
+      "harvest": {
+        "method": "manual_download_review",
+        "expected_format": "speech_dataset"
+      }
+    },
+    {
+      "id": "biblenlp_corpus_maa",
+      "title": "BibleNLP Corpus",
+      "publication_year": 2025,
+      "publisher": "BibleNLP / Hugging Face",
+      "source_type": "parallel_text_corpus",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "reference_only",
+      "rights_status": "mixed_rights_file_level_review_required",
+      "license": "Mixed per-file metadata",
+      "access": {
+        "model": "public_dataset_review_required",
+        "landing_url": "https://huggingface.co/datasets/bible-nlp/biblenlp-corpus"
+      },
+      "provenance": {
+        "discovered_via": "web_review",
+        "reviewed_on": "2026-04-03",
+        "reviewed_by": "codex_cli",
+        "evidence_urls": [
+          "https://huggingface.co/datasets/bible-nlp/biblenlp-corpus",
+          "https://github.com/BibleNLP/ebible"
+        ],
+        "rights_basis": "The dataset is public, but its card exposes mixed rights metadata. Maa files should be reviewed and whitelisted file by file before training use."
+      },
+      "usage_policy": {
+        "trainable": false,
+        "ingest_ready": false,
+        "download_plannable": false,
+        "manual_clearance_required": true,
+        "notes": "Use as a selective-ingest lead only after file-level rights review and provenance capture."
+      },
+      "harvest": {
+        "method": "manual_review_only",
+        "expected_format": "dataset_repository"
+      }
+    },
+    {
+      "id": "global_storybooks_maa",
+      "title": "Global Storybooks Maa language lane",
+      "publication_year": 2026,
+      "publisher": "Global Storybooks / Storybooks Canada",
+      "source_type": "storybook_collection",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "reference_only",
+      "rights_status": "story_level_open_license_review_required",
+      "license": "Varies by story; verify attribution and reuse terms",
+      "access": {
+        "model": "public_site_review_required",
+        "landing_url": "https://globalstorybooks.net/"
+      },
+      "provenance": {
+        "discovered_via": "web_review",
+        "reviewed_on": "2026-04-03",
+        "reviewed_by": "codex_cli",
+        "evidence_urls": [
+          "https://globalstorybooks.net/",
+          "https://global-asp.github.io/storybooks-english/about/languages/",
+          "https://www.storybookscanada.globalstorybooks.net/about/source/"
+        ],
+        "rights_basis": "Global Storybooks is openly reusable overall, but Maa story selection and attribution still need item-level review."
+      },
+      "usage_policy": {
+        "trainable": false,
+        "ingest_ready": false,
+        "download_plannable": false,
+        "manual_clearance_required": true,
+        "notes": "Strong non-Bible fluency lead. Review story by story before ingestion."
+      },
+      "harvest": {
+        "method": "manual_review_only",
+        "expected_format": "html_story_collection"
+      }
+    },
+    {
+      "id": "african_storybook_maa",
+      "title": "African Storybook Maa lead",
+      "publication_year": 2026,
+      "publisher": "African Storybook",
+      "source_type": "storybook_collection",
+      "languages": [
+        "mas",
+        "en"
+      ],
+      "status": "reference_only",
+      "rights_status": "mixed_open_license_story_review_required",
+      "license": "Openly licensed platform with story-level restrictions",
+      "access": {
+        "model": "public_site_review_required",
+        "landing_url": "https://africanstorybook.org/about.php"
+      },
+      "provenance": {
+        "discovered_via": "web_review",
+        "reviewed_on": "2026-04-03",
+        "reviewed_by": "codex_cli",
+        "evidence_urls": [
+          "https://africanstorybook.org/about.php",
+          "https://www.africanstorybook.org/terms.html"
+        ],
+        "rights_basis": "African Storybook is openly licensed overall, but some stories carry additional restrictions, so Maa ingest must stay story-level."
+      },
+      "usage_policy": {
+        "trainable": false,
+        "ingest_ready": false,
+        "download_plannable": false,
+        "manual_clearance_required": true,
+        "notes": "Good literacy and narrative expansion lane once clearly reusable Maa titles are isolated."
+      },
+      "harvest": {
+        "method": "manual_review_only",
+        "expected_format": "html_story_collection"
+      }
     }
   ]
 }

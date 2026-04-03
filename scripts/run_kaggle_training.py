@@ -35,6 +35,21 @@ ACTIVE_KERNEL_STATUSES = (
     "PREPARING",
 )
 
+TERMINAL_KERNEL_STATUSES = (
+    "ERROR",
+    "FAILED",
+    "COMPLETE",
+    "CANCELED",
+    "CANCELLED",
+    "CANCEL_ACKNOWLEDGED",
+    "TERMINATED",
+)
+
+PUSH_FAILURE_MARKERS = (
+    "maximum weekly gpu quota",
+    "kernel push error:",
+)
+
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(description="Push and monitor the Maasai Kaggle training kernel")
@@ -105,6 +120,22 @@ def run_capture(cmd: list[str], *, cwd: Path, env: dict[str, str], check: bool =
             print(result.stderr, file=sys.stderr)
         raise subprocess.CalledProcessError(result.returncode, cmd, result.stdout, result.stderr)
     return result
+
+
+def detect_push_failure(push_output: str) -> str | None:
+    lowered = push_output.lower()
+    if not any(marker in lowered for marker in PUSH_FAILURE_MARKERS):
+        return None
+
+    quota_match = re.search(r"Maximum weekly GPU quota[^\n]*", push_output, flags=re.IGNORECASE)
+    if quota_match:
+        return quota_match.group(0).strip()
+
+    generic_match = re.search(r"Kernel push error:[^\n]*", push_output, flags=re.IGNORECASE)
+    if generic_match:
+        return generic_match.group(0).strip()
+
+    return "Kaggle kernel push failed."
 
 
 def parse_kernel_status(text: str) -> str:
@@ -200,7 +231,7 @@ def wait_for_kernel(
         else:
             running_streak = 0
 
-        if has_any_marker(last_log, TRAINING_PROGRESS_MARKERS):
+        if status in ACTIVE_KERNEL_STATUSES and has_any_marker(last_log, TRAINING_PROGRESS_MARKERS):
             return "training_started", last_log
 
         # Some Kaggle runs stream logs slowly. If the kernel is RUNNING for several
@@ -209,13 +240,12 @@ def wait_for_kernel(
         if running_streak >= 3:
             return "running", last_log
 
-        if status == "ERROR":
+        if status in TERMINAL_KERNEL_STATUSES:
+            if status == "COMPLETE":
+                return "complete", last_log
             if has_any_marker(last_log, UNSUPPORTED_GPU_MARKERS):
                 return "unsupported_gpu", last_log
-            return "error", last_log
-
-        if status == "COMPLETE":
-            return "complete", last_log
+            return "terminal_failure", last_log
 
         time.sleep(poll_seconds)
 
@@ -261,11 +291,27 @@ def main() -> int:
 
     for attempt in range(1, args.max_attempts + 1):
         print(f"=== Kaggle attempt {attempt}/{args.max_attempts} ===")
-        run_capture(
+        push_result = run_capture(
             [python_bin, str(root / "scripts" / "push_kaggle_kernel.py"), *push_args],
             cwd=root,
             env=env,
+            check=False,
         )
+        if push_result.stdout:
+            print(push_result.stdout.strip())
+        if push_result.stderr:
+            print(push_result.stderr.strip(), file=sys.stderr)
+        if push_result.returncode != 0:
+            print(
+                f"Kaggle kernel push command failed with exit code {push_result.returncode}.",
+                file=sys.stderr,
+            )
+            return 1
+
+        push_failure = detect_push_failure(f"{push_result.stdout}\n{push_result.stderr}")
+        if push_failure:
+            print(push_failure, file=sys.stderr)
+            return 1
 
         outcome, log_text = wait_for_kernel(
             kaggle_cli=kaggle_cli,
@@ -295,6 +341,8 @@ def main() -> int:
             print("Kaggle kept assigning unsupported GPUs across the allowed attempts.", file=sys.stderr)
         elif outcome == "timeout":
             print("Kaggle kernel did not reach training or terminal failure within the startup timeout.", file=sys.stderr)
+        elif outcome == "terminal_failure":
+            print("Kaggle kernel reached a terminal failure state before training startup.", file=sys.stderr)
         else:
             print(f"Kaggle kernel ended with outcome: {outcome}", file=sys.stderr)
         return 1

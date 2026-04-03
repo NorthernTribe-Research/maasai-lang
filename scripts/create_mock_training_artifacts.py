@@ -23,7 +23,7 @@ def create_mock_training_artifacts():
     
     # 1. adapter_config.json - LoRA configuration
     adapter_config = {
-        "base_model_name_or_path": "Qwen/Qwen2.5-3B-Instruct",
+        "base_model_name_or_path": "google/gemma-4-E4B-it",
         "bias": "none",
         "fan_in_fan_out": False,
         "inference_mode": False,
@@ -105,7 +105,7 @@ def create_mock_training_artifacts():
 
 ## Model Details
 
-- **Base Model:** Qwen/Qwen2.5-3B-Instruct (3B parameters)
+- **Base Model:** google/gemma-4-E4B-it
 - **Fine-tuning Method:** QLoRA (Quantized LoRA)
 - **Training Data Snapshot:** 9,910 local pairs (8,434 train / 738 valid / 738 test)
 - **Adapter Rank:** 16 (LoRA)
@@ -135,11 +135,12 @@ English ↔ Maasai translation for language preservation and accessibility.
 
 ```python
 from peft import AutoPeftModelForCausalLM
-from transformers import AutoTokenizer
+from transformers import AutoProcessor
 
 model_id = "NorthernTribe-Research/maasai-en-mt-qlora"
 model = AutoPeftModelForCausalLM.from_pretrained(model_id)
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-3B-Instruct")
+processor = AutoProcessor.from_pretrained("google/gemma-4-E4B-it")
+tokenizer = processor.tokenizer
 
 prompt = "You are an expert English-to-Maasai translator. Translate: Hello, how are you?\\nMaasai:"
 inputs = tokenizer(prompt, return_tensors="pt")
@@ -174,7 +175,7 @@ CC-BY-SA-4.0 (Please credit NorthernTribe-Research)
         "clean_up_tokenization_spaces": False,
         "eos_token": "<eos>",
         "model_max_length": 2048,
-        "tokenizer_class": "Qwen2TokenizerFast",
+        "tokenizer_class": "GemmaTokenizerFast",
         "unk_token": "<unk>",
         "use_default_system_prompt": False
     }

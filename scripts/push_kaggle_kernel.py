@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--model-repo", default="NorthernTribe-Research/maasai-en-mt-staging")
     parser.add_argument("--bucket-uri", default="hf://buckets/NorthernTribe-Research/maasai-project-storage")
     parser.add_argument("--bucket-prefix", default="training_runs")
-    parser.add_argument("--base-model", default="Qwen/Qwen2.5-3B-Instruct")
+    parser.add_argument("--base-model", default="google/gemma-4-E4B-it")
     parser.add_argument("--work-dir", default="/kaggle/working/maasai-daily-hf")
     parser.add_argument("--max-length", type=int, default=512)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
         action="store_false",
         help="Keep the first Kaggle run translation-only",
     )
-    parser.set_defaults(augment_with_generation_tasks=False)
+    parser.set_defaults(augment_with_generation_tasks=True)
     parser.add_argument("--private-model-repo", action="store_true")
     parser.add_argument("--torch-version", default="2.5.1")
     parser.add_argument("--torchvision-version", default="0.20.1")

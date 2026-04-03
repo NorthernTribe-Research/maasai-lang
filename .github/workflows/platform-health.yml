@@ -47,7 +47,7 @@ jobs:
             > training-freshness.json
 
       - name: Upload health artifacts
-        if: always()
+        if: failure() || cancelled()
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
@@ -56,4 +56,5 @@ jobs:
             pages-health.json
             space-health.json
             training-freshness.json
+          retention-days: 1
           if-no-files-found: ignore

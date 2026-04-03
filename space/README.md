@@ -15,6 +15,7 @@ Gradio Space for English↔Maasai translation, Maasai speech transcription, glos
 ## Connected Assets
 
 - Translation model: `NorthernTribe-Research/maasai-en-mt`
+- Translation base model target: `google/gemma-4-E4B-it`
 - Dataset: `NorthernTribe-Research/maasai-translation-corpus`
 - ASR model: `microsoft/paza-whisper-large-v3-turbo`
 - Glossary: bundled `data/glossary/maasai_glossary.json`

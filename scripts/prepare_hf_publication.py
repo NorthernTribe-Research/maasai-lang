@@ -184,7 +184,7 @@ Current `data/final_v3` corpus for Maasai language preservation.
 
 ## Related Work
 
-- **Base Model**: Qwen/Qwen2.5-3B-Instruct
+- **Base Model**: google/gemma-4-E4B-it
 - **Training Method**: QLoRA (4-bit quantized LoRA)
 - **Inference**: llama.cpp with Q4_K_M quantization
 - **Space Demo**: https://huggingface.co/spaces/NorthernTribe-Research/maasai-language-showcase

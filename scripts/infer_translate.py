@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM
 
+from src.modeling import load_text_formatter
 from src.prompts import build_inference_prompt
 from src.postprocessing import postprocess
 
@@ -54,7 +56,10 @@ def translate(model, tokenizer, prompt: str, max_new_tokens: int, device: str, d
             pad_token_id=tokenizer.pad_token_id,
         )
 
-    decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    generated_tokens = outputs[0][inputs["input_ids"].shape[1]:]
+    decoded = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+    if not decoded.strip():
+        decoded = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return postprocess(decoded, glossary=None, direction=direction)
 
 
@@ -64,21 +69,32 @@ def main() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     LOGGER.info("Loading model from %s", args.model_dir)
-    tokenizer = AutoTokenizer.from_pretrained(args.model_dir, use_fast=True)
+    model_dir = Path(args.model_dir)
+    formatter, tokenizer = load_text_formatter(args.model_dir, use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_dir,
-        torch_dtype=torch.bfloat16 if device == "cuda" else torch.float32,
-        device_map="auto" if device == "cuda" else None,
-        trust_remote_code=True,
-    )
+    model_kwargs = {
+        "torch_dtype": torch.bfloat16 if device == "cuda" else torch.float32,
+        "device_map": "auto" if device == "cuda" else None,
+        "trust_remote_code": True,
+    }
+    if (model_dir / "adapter_config.json").exists():
+        from peft import AutoPeftModelForCausalLM
+
+        model = AutoPeftModelForCausalLM.from_pretrained(args.model_dir, **model_kwargs)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(args.model_dir, **model_kwargs)
     if device != "cuda":
         model.to(device)
 
     if args.text:
-        prompt = build_inference_prompt(args.direction, args.text)
+        prompt = build_inference_prompt(
+            args.direction,
+            args.text,
+            model_name_or_path=args.model_dir,
+            formatter=formatter,
+        )
         result = translate(model, tokenizer, prompt, args.max_new_tokens, device, args.direction)
         print(f"\n{'='*60}")
         print(f"Direction: {args.direction}")
@@ -100,7 +116,12 @@ def main() -> None:
                 continue
             if not text:
                 continue
-            prompt = build_inference_prompt(direction, text)
+            prompt = build_inference_prompt(
+                direction,
+                text,
+                model_name_or_path=args.model_dir,
+                formatter=formatter,
+            )
             result = translate(model, tokenizer, prompt, args.max_new_tokens, device, direction)
 
             print(f"  → {result}\n")

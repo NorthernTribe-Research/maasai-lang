@@ -21,7 +21,6 @@ from datasets import Dataset, DatasetDict, load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from transformers import (
     AutoModelForCausalLM,
-    AutoTokenizer,
     DataCollatorForLanguageModeling,
     Trainer,
     TrainingArguments,
@@ -32,6 +31,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.generation_data import build_instruction_mixture
+from src.modeling import load_text_formatter
+from src.prompts import build_training_text
 
 try:
     from transformers import BitsAndBytesConfig
@@ -51,7 +52,7 @@ def setup_logging() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-3B-Instruct")
+    parser.add_argument("--model_name", type=str, default="google/gemma-4-E4B-it")
     parser.add_argument("--train_file", type=str, default="data/final_v3/train.jsonl")
     parser.add_argument("--valid_file", type=str, default="data/final_v3/valid.jsonl")
     parser.add_argument("--output_dir", type=str, default="outputs/maasai-en-mt-qlora")
@@ -146,10 +147,6 @@ def maybe_augment_instruction_mixture(
     )
 
 
-def build_prompt(prompt: str, completion: str) -> str:
-    return f"{prompt}\n\n### Response:\n{completion}"
-
-
 def build_translation_prompt(source_text: str, source_lang: Any, target_lang: Any) -> str:
     source_lang = str(source_lang or "").strip().lower()
     target_lang = str(target_lang or "").strip().lower()
@@ -204,9 +201,17 @@ def normalize_examples(examples: dict[str, list[Any]]) -> tuple[list[str], list[
     return prompts, completions
 
 
-def tokenize_examples(examples, tokenizer, max_length: int):
+def tokenize_examples(examples, formatter, tokenizer, max_length: int, model_name: str):
     prompts, completions = normalize_examples(examples)
-    texts = [build_prompt(prompt, completion) for prompt, completion in zip(prompts, completions)]
+    texts = [
+        build_training_text(
+            prompt,
+            completion,
+            model_name_or_path=model_name,
+            formatter=formatter,
+        )
+        for prompt, completion in zip(prompts, completions)
+    ]
     tokenized = tokenizer(
         texts,
         truncation=True,
@@ -328,8 +333,8 @@ def main() -> None:
     dataset = maybe_limit_split(dataset, "train", args.max_train_samples)
     dataset = maybe_limit_split(dataset, "validation", args.max_eval_samples)
 
-    LOGGER.info("Loading tokenizer: %s", args.model_name)
-    tokenizer = AutoTokenizer.from_pretrained(
+    LOGGER.info("Loading text formatter: %s", args.model_name)
+    formatter, tokenizer = load_text_formatter(
         args.model_name,
         use_fast=True,
         trust_remote_code=True,
@@ -363,7 +368,7 @@ def main() -> None:
 
     LOGGER.info("Tokenizing dataset")
     tokenized = dataset.map(
-        lambda x: tokenize_examples(x, tokenizer, args.max_length),
+        lambda x: tokenize_examples(x, formatter, tokenizer, args.max_length, args.model_name),
         batched=True,
         remove_columns=dataset["train"].column_names,
         desc="Tokenizing",
@@ -411,9 +416,11 @@ def main() -> None:
     LOGGER.info("Starting training")
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint or None)
 
-    LOGGER.info("Saving adapter and tokenizer to %s", args.output_dir)
+    LOGGER.info("Saving adapter and text formatter to %s", args.output_dir)
     trainer.model.save_pretrained(args.output_dir)
-    tokenizer.save_pretrained(args.output_dir)
+    from src.modeling import save_text_formatter
+
+    save_text_formatter(formatter, tokenizer, args.output_dir)
 
     if args.push_to_hub:
         LOGGER.info("Pushing final trainer state to the Hugging Face Hub")

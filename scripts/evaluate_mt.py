@@ -19,8 +19,10 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM
 
+from src.modeling import load_text_formatter
+from src.prompts import build_generation_prompt_from_user_prompt
 LOGGER = logging.getLogger("evaluate_mt")
 
 
@@ -96,12 +98,14 @@ def get_prompt_and_reference(sample: dict[str, Any]) -> tuple[str, str]:
 
 def load_model_and_tokenizer(args: argparse.Namespace, device: str):
     model_dir = Path(args.model_dir)
-    tokenizer_source = args.model_dir
-    if not (model_dir / "tokenizer_config.json").exists() and args.base_model:
-        tokenizer_source = args.base_model
+    formatter_source = args.model_dir
+    if not model_dir.exists() and args.base_model:
+        formatter_source = args.base_model
+    if not (model_dir / "tokenizer_config.json").exists() and not (model_dir / "processor_config.json").exists() and args.base_model:
+        formatter_source = args.base_model
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        tokenizer_source,
+    formatter, tokenizer = load_text_formatter(
+        formatter_source,
         use_fast=True,
         trust_remote_code=True,
         local_files_only=args.local_files_only,
@@ -127,7 +131,7 @@ def load_model_and_tokenizer(args: argparse.Namespace, device: str):
     if device != "cuda":
         model.to(device)
 
-    return model, tokenizer
+    return model, formatter, tokenizer, formatter_source
 
 
 def generate_translation(
@@ -168,7 +172,7 @@ def main() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     LOGGER.info("Loading model from %s", args.model_dir)
-    model, tokenizer = load_model_and_tokenizer(args, device)
+    model, formatter, tokenizer, formatter_source = load_model_and_tokenizer(args, device)
 
     LOGGER.info("Loading test data from %s", args.test_file)
     test_data = load_test_data(args.test_file)
@@ -182,7 +186,11 @@ def main() -> None:
 
     for i, sample in enumerate(test_data):
         prompt, reference = get_prompt_and_reference(sample)
-        prompt_text = prompt + "\n\n### Response:\n"
+        prompt_text = build_generation_prompt_from_user_prompt(
+            prompt,
+            model_name_or_path=formatter_source,
+            formatter=formatter,
+        )
 
         hypothesis = generate_translation(model, tokenizer, prompt_text, args.max_new_tokens, device)
         hypotheses.append(hypothesis)

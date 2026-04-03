@@ -25,6 +25,7 @@ import gradio as gr
 # Configuration
 # ---------------------------------------------------------------------------
 TRANSLATION_MODEL_ID = os.getenv("TRANSLATION_MODEL_ID", "NorthernTribe-Research/maasai-en-mt")
+TRANSLATION_BASE_MODEL = os.getenv("TRANSLATION_BASE_MODEL", "google/gemma-4-E4B-it")
 ASR_MODEL_ID = os.getenv("ASR_MODEL_ID", "microsoft/paza-whisper-large-v3-turbo")
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = APP_DIR if (APP_DIR / "data").exists() else APP_DIR.parent
@@ -62,6 +63,54 @@ APP_THEME = build_theme()
 GRADIO_THEME_ON_LAUNCH = gradio_major_version() >= 6
 
 
+def detect_torch_accelerator(torch_module: Any) -> str:
+    """Return the best available accelerator without importing torch at module load."""
+    cuda = getattr(torch_module, "cuda", None)
+    if callable(getattr(cuda, "is_available", None)) and cuda.is_available():
+        return "cuda"
+
+    backends = getattr(torch_module, "backends", None)
+    mps = getattr(backends, "mps", None) if backends is not None else None
+    if callable(getattr(mps, "is_available", None)) and mps.is_available():
+        return "mps"
+
+    return "cpu"
+
+
+def build_translation_model_load_kwargs(torch_module: Any) -> dict[str, Any]:
+    """Choose translation model loading defaults that work on Space CPU runtimes."""
+    accelerator = detect_torch_accelerator(torch_module)
+    kwargs: dict[str, Any] = {"trust_remote_code": True}
+
+    if accelerator == "cuda":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+        kwargs["device_map"] = "auto"
+    elif accelerator == "mps":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+    else:
+        kwargs["torch_dtype"] = getattr(torch_module, "float32", None)
+        kwargs["low_cpu_mem_usage"] = True
+
+    return {key: value for key, value in kwargs.items() if value is not None}
+
+
+def build_asr_pipeline_load_kwargs(torch_module: Any) -> dict[str, Any]:
+    """Choose ASR pipeline loading defaults for CPU and GPU runtimes."""
+    accelerator = detect_torch_accelerator(torch_module)
+    kwargs: dict[str, Any] = {}
+
+    if accelerator == "cuda":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+        kwargs["device_map"] = "auto"
+    elif accelerator == "mps":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+        kwargs["device"] = "mps"
+    else:
+        kwargs["torch_dtype"] = getattr(torch_module, "float32", None)
+
+    return {key: value for key, value in kwargs.items() if value is not None}
+
+
 def configure_gradio_runtime() -> None:
     try:
         from multiprocessing import Lock as MpLock
@@ -97,6 +146,15 @@ OPERATIONAL_MESSAGE_PREFIXES = (
     ASR_UNAVAILABLE_PREFIX,
 )
 RESPONSE_MARKER = "### Response:"
+TRANSLATION_SYSTEM_PROMPT = (
+    "You are an expert translator working between English and the Maasai language (Maa). "
+    "Return only the translation. Preserve culturally significant Maa terms when a direct "
+    "English substitute would flatten meaning."
+)
+COMPOSITION_SYSTEM_PROMPT = (
+    "You are a careful Maasai-language writing assistant. Respond only in Maa, keep the tone "
+    "natural, and do not add explanations or headings."
+)
 
 COMPOSITION_LENGTH_GUIDANCE = {
     "Compact": {
@@ -152,24 +210,111 @@ COMPOSITION_EXAMPLES = [
 ]
 
 
+def translation_uses_chat_template() -> bool:
+    """Return whether the configured translation base model expects native chat formatting."""
+    model_hints = f"{TRANSLATION_MODEL_ID} {TRANSLATION_BASE_MODEL}".lower()
+    return "gemma-4" in model_hints
+
+
+def apply_chat_template(
+    formatter: Any,
+    messages: list[dict[str, str]],
+    *,
+    add_generation_prompt: bool,
+) -> str:
+    """Render a prompt via a formatter that exposes apply_chat_template."""
+    kwargs = {
+        "tokenize": False,
+        "add_generation_prompt": add_generation_prompt,
+    }
+    try:
+        kwargs["enable_thinking"] = False
+        return formatter.apply_chat_template(messages, **kwargs)
+    except TypeError:
+        kwargs.pop("enable_thinking", None)
+        return formatter.apply_chat_template(messages, **kwargs)
+
+
+def render_generation_prompt(user_prompt: str, formatter: Any, *, system_prompt: str) -> str:
+    """Render a model-ready generation prompt for the configured translation family."""
+    tokenizer = getattr(formatter, "tokenizer", formatter)
+    has_chat_template = bool(getattr(tokenizer, "chat_template", None))
+    if translation_uses_chat_template() and has_chat_template and hasattr(formatter, "apply_chat_template"):
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        return apply_chat_template(formatter, messages, add_generation_prompt=True)
+    return f"{user_prompt}\n\n{RESPONSE_MARKER}\n"
+
+
 def get_translation_pipeline():
     """Lazy-load translation model."""
     global _translation_pipeline, _translation_error
     if _translation_pipeline is None:
         try:
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
             import torch
 
-            tokenizer = AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
-            model = AutoModelForCausalLM.from_pretrained(
-                TRANSLATION_MODEL_ID,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                trust_remote_code=True,
-            )
-            _translation_pipeline = (model, tokenizer)
+            accelerator = detect_torch_accelerator(torch)
+            formatter: Any
+            tokenizer: Any
+            if translation_uses_chat_template():
+                try:
+                    formatter = AutoProcessor.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
+                    tokenizer = getattr(formatter, "tokenizer", None)
+                    if tokenizer is None:
+                        raise ValueError("Gemma 4 processor did not expose a tokenizer.")
+                except Exception as formatter_error:
+                    logger.warning("Gemma-style processor load failed; falling back to tokenizer: %s", formatter_error)
+                    tokenizer = AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
+                    formatter = tokenizer
+            else:
+                tokenizer = AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
+                formatter = tokenizer
+
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token
+
+            model_kwargs = build_translation_model_load_kwargs(torch)
+            model = None
+            last_error: Exception | None = None
+
+            try:
+                from peft import AutoPeftModelForCausalLM
+
+                try:
+                    model = AutoPeftModelForCausalLM.from_pretrained(
+                        TRANSLATION_MODEL_ID,
+                        **model_kwargs,
+                    )
+                    logger.info("Loaded translation repo as PEFT adapter: %s", TRANSLATION_MODEL_ID)
+                except Exception as peft_error:
+                    last_error = peft_error
+                    logger.info("PEFT adapter load unavailable for %s: %s", TRANSLATION_MODEL_ID, peft_error)
+            except Exception:
+                AutoPeftModelForCausalLM = None  # type: ignore[assignment]
+
+            if model is None:
+                try:
+                    model = AutoModelForCausalLM.from_pretrained(
+                        TRANSLATION_MODEL_ID,
+                        **model_kwargs,
+                    )
+                except Exception as model_error:
+                    last_error = model_error
+                    raise model_error
+
+            if accelerator == "mps":
+                model = model.to("mps")
+            _translation_pipeline = (model, formatter, tokenizer)
             _translation_error = None
-            logger.info("Translation model loaded: %s", TRANSLATION_MODEL_ID)
+            logger.info(
+                "Translation model loaded: %s (runtime=%s, base=%s)",
+                TRANSLATION_MODEL_ID,
+                accelerator,
+                TRANSLATION_BASE_MODEL,
+            )
         except Exception as e:
             logger.warning("Translation model not available: %s", e)
             _translation_error = str(e)
@@ -185,13 +330,13 @@ def get_asr_pipeline():
             import torch
             from transformers import pipeline as hf_pipeline
 
+            accelerator = detect_torch_accelerator(torch)
             _asr_pipeline = hf_pipeline(
                 "automatic-speech-recognition",
                 model=ASR_MODEL_ID,
-                torch_dtype=torch.float16,
-                device_map="auto",
+                **build_asr_pipeline_load_kwargs(torch),
             )
-            logger.info("ASR model loaded: %s", ASR_MODEL_ID)
+            logger.info("ASR model loaded: %s (runtime=%s)", ASR_MODEL_ID, accelerator)
             _asr_error = None
         except Exception as e:
             logger.warning("ASR model not available: %s", e)
@@ -566,12 +711,11 @@ def is_operational_message(text: str) -> bool:
 def glossary_candidates(entry: dict[str, Any], direction: str) -> list[str]:
     """Return candidate search terms for the given translation direction."""
     primary_key = "term_english" if direction == "English → Maasai" else "term_maasai"
-    secondary_key = "term_maasai" if direction == "English → Maasai" else "term_english"
-    return [
+    candidates = [
         str(entry.get(primary_key, "")).strip(),
         *[str(item).strip() for item in entry.get("alternate_spellings", [])],
-        str(entry.get(secondary_key, "")).strip(),
     ]
+    return [candidate for index, candidate in enumerate(candidates) if candidate and candidate not in candidates[:index]]
 
 
 def term_mentioned(text: str, term: str) -> bool:
@@ -641,7 +785,7 @@ def build_inference_prompt(text: str, direction: str, glossary_matches: list[dic
             + "\nUse these mappings faithfully. Preserve protected Maa terms exactly when appropriate.\n\n"
         )
 
-    return f"{glossary_section}{base_prompt}\n\n{RESPONSE_MARKER}\n"
+    return f"{glossary_section}{base_prompt}"
 
 
 def render_glossary_matches(glossary_matches: list[dict[str, Any]], direction: str) -> str:
@@ -774,8 +918,7 @@ def build_composition_prompt(
         "Do not use bullets or headings.\n\n"
         f"{glossary_section}"
         f"{required_term_section}"
-        f"Theme or context:\n{theme.strip()}\n\n"
-        f"{RESPONSE_MARKER}\n"
+        f"Theme or context:\n{theme.strip()}\n"
     )
     return prompt, int(length_profile["max_new_tokens"])
 
@@ -922,7 +1065,7 @@ def compose_with_context(
     if used_demo:
         composition = _demo_compose_text(theme, composition_type, register, required_terms)
     else:
-        model, tokenizer = pipeline
+        model, formatter, tokenizer = pipeline
         prompt, max_new_tokens = build_composition_prompt(
             theme=theme,
             composition_type=composition_type,
@@ -930,6 +1073,11 @@ def compose_with_context(
             length=length,
             glossary_matches=glossary_matches,
             required_terms=required_terms,
+        )
+        prompt = render_generation_prompt(
+            prompt,
+            formatter,
+            system_prompt=COMPOSITION_SYSTEM_PROMPT,
         )
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         outputs = model.generate(
@@ -1054,9 +1202,13 @@ def translate_text(
         # Fallback demo response
         return _demo_translate(text, direction)
 
-    model, tokenizer = pipeline
-
+    model, formatter, tokenizer = pipeline
     prompt = build_inference_prompt(text, direction, glossary_matches)
+    prompt = render_generation_prompt(
+        prompt,
+        formatter,
+        system_prompt=TRANSLATION_SYSTEM_PROMPT,
+    )
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     outputs = model.generate(
@@ -2156,7 +2308,7 @@ def build_app() -> gr.Blocks:
                         <table class="data-table">
                             <tr>
                                 <th>Translation</th>
-                                <td>NorthernTribe-Research/maasai-en-mt (QLoRA on Qwen2.5-3B-Instruct)</td>
+                                <td>NorthernTribe-Research/maasai-en-mt (QLoRA on Gemma 4 E4B)</td>
                             </tr>
                             <tr>
                                 <th>Speech</th>
