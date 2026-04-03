@@ -376,8 +376,7 @@ def upload_remote_text_file(
     rendered = " ".join(shlex.quote(part) for part in cmd)
     print(f"$ {rendered}")
     if dry_run:
-        summary = "[redacted]" if redact_contents else content.strip()
-        print(f"# upload -> {remote_path}: {summary}")
+        print(f"# upload -> {remote_path} (content omitted)")
         return
     subprocess.run(
         cmd,
