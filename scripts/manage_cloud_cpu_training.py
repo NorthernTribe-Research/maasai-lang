@@ -287,15 +287,21 @@ def upload_control_files(
         interval_minutes=timer_minutes,
     )
 
+    upload_remote_text_file(
+        ssh_config,
+        host,
+        f"{runtime_root}/cloud-training.env",
+        env_text,
+        mode=0o600,
+        askpass_script=askpass_script,
+        dry_run=dry_run,
+        redact_contents=True,
+    )
+
     with tempfile.TemporaryDirectory(prefix="cloud-train-") as tmpdir:
         tmp = Path(tmpdir)
-        runtime_dir = tmp / "runtime"
         ops_dir = tmp / "ops"
-        runtime_dir.mkdir(parents=True, exist_ok=True)
         ops_dir.mkdir(parents=True, exist_ok=True)
-
-        env_path = runtime_dir / "cloud-training.env"
-        env_path.write_text(env_text, encoding="utf-8")
         launcher_path = ops_dir / "maasai-cloud-train-launch.sh"
         launcher_path.write_text(launcher_text, encoding="utf-8")
         service_path = ops_dir / "maasai-cloud-train.service"
@@ -308,7 +314,6 @@ def upload_control_files(
         run_cmd(
             rsync_base(ssh_config, askpass_script)
             + [
-                "./runtime/cloud-training.env",
                 "./ops/maasai-cloud-train-launch.sh",
                 "./ops/maasai-cloud-train.service",
                 "./ops/maasai-cloud-train.timer",
@@ -347,6 +352,39 @@ else
 fi
 """
     remote_shell(ssh_config, host, remote_script, askpass_script=askpass_script, dry_run=dry_run)
+
+
+def upload_remote_text_file(
+    ssh_config: Path,
+    host: str,
+    remote_path: str,
+    content: str,
+    *,
+    mode: int,
+    askpass_script: Path | None,
+    dry_run: bool,
+    redact_contents: bool = False,
+) -> None:
+    parent_dir = str(Path(remote_path).parent)
+    remote_cmd = (
+        "set -euo pipefail; "
+        f"mkdir -p {shlex.quote(parent_dir)}; "
+        f"cat > {shlex.quote(remote_path)}; "
+        f"chmod {mode:o} {shlex.quote(remote_path)}"
+    )
+    cmd = ssh_base(ssh_config, host, askpass_script) + ["bash", "-lc", remote_cmd]
+    rendered = " ".join(shlex.quote(part) for part in cmd)
+    print(f"$ {rendered}")
+    if dry_run:
+        summary = "[redacted]" if redact_contents else content.strip()
+        print(f"# upload -> {remote_path}: {summary}")
+        return
+    subprocess.run(
+        cmd,
+        input=content,
+        text=True,
+        check=True,
+    )
 
 
 def remote_shell(
