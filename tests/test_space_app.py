@@ -65,6 +65,12 @@ class SpaceAppTests(unittest.TestCase):
         self.assertEqual(kwargs["torch_dtype"], "float16")
         self.assertEqual(kwargs["device_map"], "auto")
 
+    def test_space_strips_reasoning_artifacts_from_output(self) -> None:
+        cleaned = space_app.clean_generated_output(
+            "<thinking>plan the translation</thinking>\nFinal Answer: Supa oleng"
+        )
+        self.assertEqual(cleaned, "Supa oleng")
+
 
 if __name__ == "__main__":
     unittest.main()

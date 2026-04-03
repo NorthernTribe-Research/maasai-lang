@@ -101,6 +101,9 @@ python scripts/evaluate_mt.py \
 # Single translation
 python scripts/infer_translate.py --text "Hello, how are you?" --direction en_to_mas
 
+# Gemma 4 inference with thinking enabled
+python scripts/infer_translate.py --text "Describe a peaceful evening in Maa" --thinking
+
 # Interactive mode
 python scripts/infer_translate.py --model_dir outputs/maasai-en-mt-qlora
 

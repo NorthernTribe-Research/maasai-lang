@@ -45,6 +45,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--max_samples", type=int, default=None)
     parser.add_argument("--local_files_only", action="store_true")
+    thinking_group = parser.add_mutually_exclusive_group()
+    thinking_group.add_argument("--thinking", dest="enable_thinking", action="store_true")
+    thinking_group.add_argument("--no-thinking", dest="enable_thinking", action="store_false")
+    parser.set_defaults(enable_thinking=None)
     return parser.parse_args()
 
 
@@ -190,6 +194,7 @@ def main() -> None:
             prompt,
             model_name_or_path=formatter_source,
             formatter=formatter,
+            enable_thinking=args.enable_thinking,
         )
 
         hypothesis = generate_translation(model, tokenizer, prompt_text, args.max_new_tokens, device)

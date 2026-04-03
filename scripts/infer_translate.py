@@ -5,6 +5,7 @@ Interactive translation inference script.
 Usage:
     python scripts/infer_translate.py --model_dir outputs/maasai-en-mt-qlora
     python scripts/infer_translate.py --model_dir outputs/maasai-en-mt-qlora --text "Hello, how are you?" --direction en_to_mas
+    python scripts/infer_translate.py --text "Describe a peaceful evening in Maa" --thinking
 """
 
 from __future__ import annotations
@@ -37,6 +38,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--direction", type=str, default="en_to_mas",
                         choices=["en_to_mas", "mas_to_en"])
     parser.add_argument("--max_new_tokens", type=int, default=128)
+    thinking_group = parser.add_mutually_exclusive_group()
+    thinking_group.add_argument("--thinking", dest="enable_thinking", action="store_true")
+    thinking_group.add_argument("--no-thinking", dest="enable_thinking", action="store_false")
+    parser.set_defaults(enable_thinking=None)
     return parser.parse_args()
 
 
@@ -94,6 +99,7 @@ def main() -> None:
             args.text,
             model_name_or_path=args.model_dir,
             formatter=formatter,
+            enable_thinking=args.enable_thinking,
         )
         result = translate(model, tokenizer, prompt, args.max_new_tokens, device, args.direction)
         print(f"\n{'='*60}")
@@ -121,6 +127,7 @@ def main() -> None:
                 text,
                 model_name_or_path=args.model_dir,
                 formatter=formatter,
+                enable_thinking=args.enable_thinking,
             )
             result = translate(model, tokenizer, prompt, args.max_new_tokens, device, direction)
 

@@ -31,6 +31,12 @@ TRANSLATION_SYSTEM_PROMPT = (
     "English substitute would flatten meaning."
 )
 
+TRANSLATION_INFERENCE_SYSTEM_PROMPT = (
+    "You are an expert translator working between English and the Maasai language (Maa). "
+    "Think carefully about meaning, register, grammar, and cultural nuance before answering. "
+    "Return only the final translation."
+)
+
 # ---------------------------------------------------------------------------
 # Cultural context prompts (for enriched instruction tuning)
 # ---------------------------------------------------------------------------
@@ -86,6 +92,7 @@ def apply_chat_template(
     messages: list[dict[str, str]],
     *,
     add_generation_prompt: bool,
+    enable_thinking: bool = False,
 ) -> str:
     """Render chat messages using a formatter that exposes apply_chat_template."""
     kwargs = {
@@ -93,7 +100,7 @@ def apply_chat_template(
         "add_generation_prompt": add_generation_prompt,
     }
     try:
-        kwargs["enable_thinking"] = False
+        kwargs["enable_thinking"] = enable_thinking
         return formatter.apply_chat_template(messages, **kwargs)
     except TypeError:
         kwargs.pop("enable_thinking", None)
@@ -104,6 +111,16 @@ def formatter_supports_chat_template(formatter: Any) -> bool:
     """Return whether a formatter exposes a usable chat template."""
     tokenizer = getattr(formatter, "tokenizer", formatter)
     return bool(getattr(tokenizer, "chat_template", None)) and hasattr(formatter, "apply_chat_template")
+
+
+def should_enable_inference_thinking(
+    model_name_or_path: str | None,
+    requested: bool | None = None,
+) -> bool:
+    """Default Gemma 4 inference to thinking-enabled unless explicitly disabled."""
+    if requested is not None:
+        return requested
+    return model_uses_chat_template(model_name_or_path)
 
 
 def build_chat_messages(
@@ -139,6 +156,7 @@ def build_training_text(
             formatter,
             build_chat_messages(prompt, assistant_response=completion),
             add_generation_prompt=False,
+            enable_thinking=False,
         )
     return f"{prompt}\n\n{RESPONSE_MARKER}\n{completion}"
 
@@ -149,6 +167,7 @@ def build_inference_prompt(
     *,
     model_name_or_path: str | None = None,
     formatter: Any | None = None,
+    enable_thinking: bool | None = None,
 ) -> str:
     """Build the inference prompt with response marker for generation."""
     if direction == "English → Maasai" or direction == "en_to_mas":
@@ -166,8 +185,15 @@ def build_inference_prompt(
     ):
         return apply_chat_template(
             formatter,
-            build_chat_messages(prompt),
+            build_chat_messages(
+                prompt,
+                system_prompt=TRANSLATION_INFERENCE_SYSTEM_PROMPT,
+            ),
             add_generation_prompt=True,
+            enable_thinking=should_enable_inference_thinking(
+                model_name_or_path,
+                requested=enable_thinking,
+            ),
         )
     return f"{prompt}\n\n{RESPONSE_MARKER}\n"
 
@@ -177,7 +203,8 @@ def build_generation_prompt_from_user_prompt(
     *,
     model_name_or_path: str | None = None,
     formatter: Any | None = None,
-    system_prompt: str = TRANSLATION_SYSTEM_PROMPT,
+    system_prompt: str = TRANSLATION_INFERENCE_SYSTEM_PROMPT,
+    enable_thinking: bool | None = None,
 ) -> str:
     """Wrap an already-built user prompt for generation."""
     if (
@@ -189,6 +216,10 @@ def build_generation_prompt_from_user_prompt(
             formatter,
             build_chat_messages(user_prompt, system_prompt=system_prompt),
             add_generation_prompt=True,
+            enable_thinking=should_enable_inference_thinking(
+                model_name_or_path,
+                requested=enable_thinking,
+            ),
         )
     return f"{user_prompt}\n\n{RESPONSE_MARKER}\n"
 

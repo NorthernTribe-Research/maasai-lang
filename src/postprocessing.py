@@ -18,6 +18,25 @@ def strip_response_marker(text: str) -> str:
     return text.strip()
 
 
+def strip_reasoning_artifacts(text: str) -> str:
+    """Remove common reasoning wrappers when inference exposes them."""
+    cleaned = text.strip()
+    tag_patterns = [
+        r"<thinking>.*?</thinking>",
+        r"<thought>.*?</thought>",
+        r"<reasoning>.*?</reasoning>",
+    ]
+    for pattern in tag_patterns:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    prefix_patterns = [
+        r"^\s*(final answer|answer|translation)\s*:\s*",
+    ]
+    for pattern in prefix_patterns:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
 def normalize_output_whitespace(text: str) -> str:
     """Clean up whitespace in generated output."""
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -80,6 +99,7 @@ def postprocess(
 ) -> str:
     """Full post-processing pipeline."""
     text = strip_response_marker(text)
+    text = strip_reasoning_artifacts(text)
     text = truncate_at_eos(text)
     text = normalize_output_whitespace(text)
     text = apply_glossary_corrections(text, glossary, direction)

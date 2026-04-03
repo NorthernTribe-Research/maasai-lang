@@ -26,6 +26,12 @@ import gradio as gr
 # ---------------------------------------------------------------------------
 TRANSLATION_MODEL_ID = os.getenv("TRANSLATION_MODEL_ID", "NorthernTribe-Research/maasai-en-mt")
 TRANSLATION_BASE_MODEL = os.getenv("TRANSLATION_BASE_MODEL", "google/gemma-4-E4B-it")
+TRANSLATION_ENABLE_THINKING = os.getenv("TRANSLATION_ENABLE_THINKING", "true").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
 ASR_MODEL_ID = os.getenv("ASR_MODEL_ID", "microsoft/paza-whisper-large-v3-turbo")
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = APP_DIR if (APP_DIR / "data").exists() else APP_DIR.parent
@@ -148,7 +154,8 @@ OPERATIONAL_MESSAGE_PREFIXES = (
 RESPONSE_MARKER = "### Response:"
 TRANSLATION_SYSTEM_PROMPT = (
     "You are an expert translator working between English and the Maasai language (Maa). "
-    "Return only the translation. Preserve culturally significant Maa terms when a direct "
+    "Think carefully about meaning, register, grammar, and cultural nuance before answering. "
+    "Return only the final translation. Preserve culturally significant Maa terms when a direct "
     "English substitute would flatten meaning."
 )
 COMPOSITION_SYSTEM_PROMPT = (
@@ -221,6 +228,7 @@ def apply_chat_template(
     messages: list[dict[str, str]],
     *,
     add_generation_prompt: bool,
+    enable_thinking: bool = False,
 ) -> str:
     """Render a prompt via a formatter that exposes apply_chat_template."""
     kwargs = {
@@ -228,14 +236,20 @@ def apply_chat_template(
         "add_generation_prompt": add_generation_prompt,
     }
     try:
-        kwargs["enable_thinking"] = False
+        kwargs["enable_thinking"] = enable_thinking
         return formatter.apply_chat_template(messages, **kwargs)
     except TypeError:
         kwargs.pop("enable_thinking", None)
         return formatter.apply_chat_template(messages, **kwargs)
 
 
-def render_generation_prompt(user_prompt: str, formatter: Any, *, system_prompt: str) -> str:
+def render_generation_prompt(
+    user_prompt: str,
+    formatter: Any,
+    *,
+    system_prompt: str,
+    enable_thinking: bool = TRANSLATION_ENABLE_THINKING,
+) -> str:
     """Render a model-ready generation prompt for the configured translation family."""
     tokenizer = getattr(formatter, "tokenizer", formatter)
     has_chat_template = bool(getattr(tokenizer, "chat_template", None))
@@ -244,7 +258,12 @@ def render_generation_prompt(user_prompt: str, formatter: Any, *, system_prompt:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        return apply_chat_template(formatter, messages, add_generation_prompt=True)
+        return apply_chat_template(
+            formatter,
+            messages,
+            add_generation_prompt=True,
+            enable_thinking=enable_thinking,
+        )
     return f"{user_prompt}\n\n{RESPONSE_MARKER}\n"
 
 
@@ -928,6 +947,11 @@ def clean_generated_output(text: str) -> str:
     cleaned = text.strip().strip('"').strip("'")
     if RESPONSE_MARKER in cleaned:
         cleaned = cleaned.split(RESPONSE_MARKER, 1)[1].strip()
+
+    cleaned = re.sub(r"<thinking>.*?</thinking>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"<thought>.*?</thought>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"<reasoning>.*?</reasoning>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"^\s*(Final Answer|Answer|Translation)\s*:\s*", "", cleaned, flags=re.IGNORECASE)
 
     for marker in ("\nEnglish:", "\nMaasai:", "\nTranslation:", "\nExplanation:", "\nNotes:"):
         if marker in cleaned:
