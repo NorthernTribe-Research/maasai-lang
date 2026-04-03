@@ -17,7 +17,7 @@ That means the Kaggle run:
 
 - downloads `NorthernTribe-Research/maasai-translation-corpus` from HF
 - restores the latest checkpoint from the configured Hugging Face model repo (`HF_MODEL_REPO`; default workflow fallback is `NorthernTribe-Research/maasai-en-mt-staging`)
-- trains with the current generation-aware mixture
+- trains with the generation-aware mixture by default
 - pushes checkpoints and final adapter artifacts back to HF
 
 ## Files Added
@@ -134,8 +134,8 @@ Example:
 ## Runtime Notes
 
 - Kaggle GPU sessions are time-limited, so the HF checkpoint resume path matters.
-- The default kernel profile is translation-only and passes `--no-augment-with-generation-tasks` unless you override it.
-- The default base model is `Qwen/Qwen2.5-3B-Instruct` so the Kaggle runtime is not blocked on gated-model approval.
+- The default kernel profile is generation-aware and passes `--augment-with-generation-tasks` unless you explicitly opt out with `--no-augment-with-generation-tasks`.
+- The default base model is `google/gemma-4-E4B-it`, which keeps the project on the latest Gemma 4 family while staying closer to the repo's Kaggle T4/L4 training footprint than the larger Gemma 4 variants.
 - The default kernel profile now uses `batch_size=1` and `gradient_accumulation_steps=32`, and it does not require 4-bit unless you explicitly push with `--require-4bit`.
 - If Kaggle assigns a Tesla P100 / Pascal GPU, the current PyTorch build may not support that architecture. The trainer now fails early with an explicit rerun-on-T4/L4 message instead of crashing deep in model load.
 - `scripts/run_kaggle_training.py` watches the Kaggle run, downloads the current log, and automatically retries when that unsupported-GPU marker appears.

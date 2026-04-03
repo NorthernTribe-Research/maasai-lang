@@ -5,6 +5,7 @@ This project now supports a resumable Hugging Face training loop driven from eit
 - Google Colab with secrets stored in the Colab key vault
 - GitHub Actions dispatching Kaggle GPU training
 - A manual GitHub Actions fallback that runs directly on a self-hosted GPU runner
+- A persistent remote cloud CPU machine managed from `cloud-machine-connection.md`
 
 ## Colab Flow
 
@@ -67,7 +68,7 @@ Recommended GitHub repo variables:
 - `HF_BUCKET_URI`
 - `TRAINING_CONTROL_RUNNER_LABEL` if you want the Kaggle dispatch job to use a different Blacksmith runner label
 
-The workflow falls back to the current NorthernTribe Hugging Face repos when those vars are not set, defaults the base model to `Qwen/Qwen2.5-3B-Instruct`, and uses `NorthernTribe-Research/maasai-en-mt-staging` as the safe default model repo unless `HF_MODEL_REPO` is explicitly configured.
+The workflow falls back to the current NorthernTribe Hugging Face repos when those vars are not set, defaults the base model to `google/gemma-4-E4B-it`, and uses `NorthernTribe-Research/maasai-en-mt-staging` as the safe default model repo unless `HF_MODEL_REPO` is explicitly configured.
 
 ### Manual Self-Hosted Fallback
 
@@ -89,6 +90,37 @@ The repo includes [`.github/workflows/training-freshness.yml`](../.github/workfl
 The check script is:
 
 - `scripts/check_training_freshness.py`
+
+## Persistent Cloud CPU Backend
+
+The repo also supports a persistent cloud CPU training backend for situations where you want training to keep advancing outside GitHub and Kaggle.
+
+Install it from your local machine:
+
+```bash
+HF_TOKEN=... .venv/bin/python scripts/manage_cloud_cpu_training.py install \
+  --timer-minutes 45 \
+  --model-name google/gemma-4-E4B-it \
+  --max-steps 120 \
+  --save-steps 60
+```
+
+What happens:
+
+- the local machine reads the SSH host definition from `cloud-machine-connection.md`
+- syncs the training subset and CPU requirements to the remote machine
+- bootstraps a remote virtualenv
+- writes a protected remote env file containing the HF token and training settings
+- installs either a systemd timer or a cron fallback on the remote machine
+- schedules `scripts/run_cloud_train_cycle.py`, which keeps invoking `scripts/train_daily_from_hf.py`
+- stores a remote heartbeat JSON file under `runtime/state/cloud-train-heartbeat.json`
+
+This backend stays interconnected with the rest of the project by reusing:
+
+- `HF_DATASET_REPO` for dataset download
+- `HF_MODEL_REPO` for checkpoint restore and pushback
+- `HF_BUCKET_URI` for per-run bundle sync
+- the same `train_daily_from_hf.py` resumable control loop used by other training backends
 
 ## Checkpoint Policy
 

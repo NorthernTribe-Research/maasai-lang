@@ -40,4 +40,5 @@ jobs:
         with:
           name: source-intelligence-candidate-registry
           path: ${{ env.SOURCE_INTELLIGENCE_OUTPUT }}
+          retention-days: 14
           if-no-files-found: error

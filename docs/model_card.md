@@ -4,7 +4,7 @@ language:
   - mas
 library_name: transformers
 pipeline_tag: translation
-base_model: Qwen/Qwen2.5-3B-Instruct
+base_model: google/gemma-4-E4B-it
 license: apache-2.0
 tags:
   - translation

@@ -17,10 +17,17 @@ import collections
 import json
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 
 from huggingface_hub import HfApi
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.readiness import build_model_readiness_report, inspect_model_artifacts
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,6 +52,17 @@ def parse_args() -> argparse.Namespace:
         "--create-model-repo",
         action="store_true",
         help="Create the model repo scaffold even when trained weights are not available yet",
+    )
+    parser.add_argument(
+        "--require-ready-model",
+        action="store_true",
+        help="Fail model publication unless the local model passes readiness checks.",
+    )
+    parser.add_argument(
+        "--eval-file",
+        type=str,
+        default=None,
+        help="Optional evaluation report to use for model readiness checks.",
     )
 
     parser.add_argument(
@@ -195,59 +213,6 @@ def build_dataset_bundle(project_root: Path, temp_root: Path, dataset_dir: Path)
     return bundle
 
 
-def looks_like_placeholder_artifact(path: Path) -> bool:
-    """Detect mock or obviously invalid weight placeholders."""
-    try:
-        if path.stat().st_size < 1024:
-            text = path.read_text(encoding="utf-8", errors="ignore").upper()
-            return any(marker in text for marker in ("MOCK_", "PLACEHOLDER", "DUMMY"))
-    except OSError:
-        return False
-    return False
-
-
-def inspect_model_artifacts(model_dir: Path) -> dict:
-    """Inspect model files and distinguish real artifacts from placeholders."""
-    weight_markers = {
-        "adapter_model.safetensors",
-        "adapter_model.bin",
-        "pytorch_model.bin",
-        "model.safetensors",
-    }
-    info = {
-        "state": "missing",
-        "real_files": [],
-        "placeholder_files": [],
-        "model_dir": str(model_dir),
-    }
-
-    if not model_dir.exists() or not model_dir.is_dir():
-        return info
-
-    for path in model_dir.rglob("*"):
-        if not path.is_file():
-            continue
-        is_weight_file = (
-            path.name in weight_markers
-            or path.suffix == ".gguf"
-            or (path.name.startswith("model-") and path.suffix == ".safetensors")
-        )
-        if not is_weight_file:
-            continue
-
-        if looks_like_placeholder_artifact(path):
-            info["placeholder_files"].append(path.name)
-        else:
-            info["real_files"].append(path.name)
-
-    if info["real_files"]:
-        info["state"] = "real"
-    elif info["placeholder_files"]:
-        info["state"] = "placeholder"
-
-    return info
-
-
 def build_model_download_meta(model_artifacts: dict) -> str:
     """Build lightweight Hub metadata for scaffold and trained model repos."""
     publication_status = "weights_available" if model_artifacts["state"] == "real" else "scaffold"
@@ -257,7 +222,7 @@ def build_model_download_meta(model_artifacts: dict) -> str:
     lines = [
         "project: maasai-en-mt",
         "task: translation",
-        "base_model: Qwen/Qwen2.5-3B-Instruct",
+        "base_model: google/gemma-4-E4B-it",
         "training_recipe: qlora",
         f"publication_status: {publication_status}",
         "download_count_anchor: true",
@@ -330,6 +295,7 @@ def print_plan(
     dataset_dir: Path,
     model_dir: Path,
     model_artifacts: dict,
+    readiness_report: dict,
 ) -> None:
     print("\n=== Hugging Face Publish Plan ===")
     print(f"Account: {username}")
@@ -348,6 +314,10 @@ def print_plan(
             print(f"  source:  {model_dir} + ./docs/model_card.md")
         else:
             print("  source:  README scaffold only (local model folder has placeholder or missing weights)")
+        print(f"  readiness: {'ready' if readiness_report['ready'] else 'not ready'}")
+        if readiness_report["reasons"]:
+            for reason in readiness_report["reasons"]:
+                print(f"    - {reason}")
     elif not args.skip_model:
         if model_artifacts["state"] == "placeholder":
             print(f"- Model:   skipped (placeholder/mock artifacts found in: {model_dir})")
@@ -397,6 +367,11 @@ def main() -> None:
     project_root = Path(__file__).resolve().parent.parent
     dataset_dir = (project_root / args.dataset_dir).resolve()
     model_dir = (project_root / args.model_dir).resolve()
+    eval_file = None
+    if args.eval_file:
+        eval_file = Path(args.eval_file)
+        if not eval_file.is_absolute():
+            eval_file = (project_root / eval_file).resolve()
     export_root = None
     if args.export_dir:
         export_root = Path(args.export_dir)
@@ -420,6 +395,7 @@ def main() -> None:
             username = "<set-username>"
 
     model_artifacts = inspect_model_artifacts(model_dir)
+    readiness_report = build_model_readiness_report(model_dir, eval_file=eval_file)
 
     do_space = not args.skip_space
     do_dataset = not args.skip_dataset
@@ -431,7 +407,22 @@ def main() -> None:
         )
     )
 
-    print_plan(username, args, do_space, do_dataset, do_model, dataset_dir, model_dir, model_artifacts)
+    print_plan(
+        username,
+        args,
+        do_space,
+        do_dataset,
+        do_model,
+        dataset_dir,
+        model_dir,
+        model_artifacts,
+        readiness_report,
+    )
+
+    if args.require_ready_model and do_model and not readiness_report["ready"]:
+        raise SystemExit(
+            "Model readiness gate failed. Re-run after generating a real Gemma checkpoint and evaluation report."
+        )
 
     if not args.execute and export_root is None:
         print("\nPreview mode only. Re-run with --execute to publish.")
@@ -480,6 +471,14 @@ def main() -> None:
 
         if do_model:
             model_bundle = build_model_bundle(project_root, temp_root, model_dir)
+            readiness_path = model_bundle / "MODEL_READINESS.json"
+            readiness_path.write_text(
+                json.dumps(readiness_report, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            local_eval_path = eval_file or (model_dir / "eval_results.json")
+            if local_eval_path.exists():
+                copy_file(local_eval_path, model_bundle / "eval_results.json")
             if export_root is not None:
                 export_path = export_bundle(model_bundle, export_root, "model_bundle")
                 print(f"Exported Model bundle: {export_path}")

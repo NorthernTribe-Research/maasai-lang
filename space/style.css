@@ -120,11 +120,22 @@ footer {
 }
 
 .tab-nav {
+    display: flex;
+    gap: 0.35rem;
+    position: relative;
     border-bottom: 1px solid var(--border) !important;
     margin-bottom: 0.8rem !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
 }
 
 .tab-nav button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    white-space: nowrap;
     color: var(--text-muted) !important;
     background: transparent !important;
     border: 1px solid transparent !important;
@@ -434,11 +445,16 @@ select:focus {
 .status-meta code,
 .glossary-panel code,
 .section-meta code {
+    display: inline-block;
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
     padding: 0.1rem 0.35rem;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .research-grid {
@@ -569,6 +585,15 @@ select:focus {
     margin: 0.75rem 0 0;
 }
 
+.culture-section table,
+.laikipiak-doc table,
+.data-table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 .culture-section th,
 .culture-section td,
 .laikipiak-doc th,
@@ -577,6 +602,8 @@ select:focus {
     padding: 0.75rem 0.6rem;
     text-align: left;
     color: var(--text-secondary);
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .culture-section th,
@@ -726,12 +753,23 @@ label {
 }
 
 @media (max-width: 768px) {
+    .gradio-container {
+        padding-left: 0.85rem !important;
+        padding-right: 0.85rem !important;
+    }
+
     .hero-banner {
         padding: 1.7rem 1.4rem;
     }
 
     .hero-banner h1 {
         font-size: 1.9rem !important;
+    }
+
+    .hero-banner p,
+    .hero-subtitle {
+        font-size: 0.96rem !important;
+        line-height: 1.6 !important;
     }
 
     .research-grid,
@@ -745,6 +783,22 @@ label {
     }
 
     .tab-nav button {
+        font-size: 0.9rem !important;
         padding: 0.75rem 0.95rem !important;
+    }
+
+    .voice-actions {
+        flex-direction: column;
+    }
+
+    .voice-button {
+        width: 100%;
+    }
+
+    .culture-section table,
+    .laikipiak-doc table,
+    .data-table {
+        min-width: 0;
+        font-size: 0.92rem;
     }
 }

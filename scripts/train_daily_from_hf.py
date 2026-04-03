@@ -24,6 +24,12 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, hf_hub_download, login, snapshot_download
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.readiness import build_model_readiness_report, write_model_readiness_report
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run daily resumable Hugging Face training")
@@ -37,7 +43,7 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=os.getenv("HF_MODEL_REPO", "NorthernTribe-Research/maasai-en-mt-staging"),
     )
-    parser.add_argument("--model-name", type=str, default=os.getenv("HF_BASE_MODEL", "Qwen/Qwen2.5-3B-Instruct"))
+    parser.add_argument("--model-name", type=str, default=os.getenv("HF_BASE_MODEL", "google/gemma-4-E4B-it"))
     parser.add_argument("--work-dir", type=str, default=os.getenv("HF_DAILY_WORKDIR", "/tmp/maasai-daily-hf"))
     parser.add_argument("--token", type=str, default=None)
     parser.add_argument("--private-model-repo", action="store_true")
@@ -75,10 +81,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--story-seed-file", type=str, default="data/raw/maasai_story_generation_seed.jsonl")
     parser.add_argument("--max-bible-passages", type=int, default=48)
     parser.add_argument("--bible-passage-window", type=int, default=3)
+    evaluation_group = parser.add_mutually_exclusive_group()
+    evaluation_group.add_argument("--evaluate-after-train", dest="evaluate_after_train", action="store_true")
+    evaluation_group.add_argument("--no-evaluate-after-train", dest="evaluate_after_train", action="store_false")
+    parser.set_defaults(evaluate_after_train=True)
+    parser.add_argument("--evaluation-max-samples", type=int, default=100)
+    parser.add_argument("--evaluation-max-new-tokens", type=int, default=128)
+    parser.add_argument("--require-ready-model", action="store_true")
     generation_group = parser.add_mutually_exclusive_group()
     generation_group.add_argument("--augment-with-generation-tasks", dest="augment_with_generation_tasks", action="store_true")
     generation_group.add_argument("--no-augment-with-generation-tasks", dest="augment_with_generation_tasks", action="store_false")
-    parser.set_defaults(augment_with_generation_tasks=False)
+    parser.set_defaults(augment_with_generation_tasks=True)
     parser.add_argument("--disconnect-colab", action="store_true")
     return parser.parse_args()
 
@@ -158,6 +171,7 @@ def write_run_manifest(
     args: argparse.Namespace,
     train_file: Path,
     valid_file: Path,
+    test_file: Path,
     output_dir: Path,
     resume_checkpoint: str | None,
 ) -> None:
@@ -169,6 +183,7 @@ def write_run_manifest(
         "model_name": args.model_name,
         "train_file": str(train_file),
         "valid_file": str(valid_file),
+        "test_file": str(test_file),
         "output_dir": str(output_dir),
         "resume_checkpoint": resume_checkpoint,
         "max_steps": args.max_steps,
@@ -183,6 +198,10 @@ def write_run_manifest(
         "story_seed_file": args.story_seed_file,
         "max_bible_passages": args.max_bible_passages,
         "bible_passage_window": args.bible_passage_window,
+        "evaluate_after_train": args.evaluate_after_train,
+        "evaluation_max_samples": args.evaluation_max_samples,
+        "evaluation_max_new_tokens": args.evaluation_max_new_tokens,
+        "require_ready_model": args.require_ready_model,
     }
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -198,7 +217,7 @@ def ensure_model_repo(api: HfApi, token: str, repo_id: str, private: bool) -> No
     )
 
 
-def download_dataset_splits(repo_id: str, token: str, dataset_root: Path) -> tuple[Path, Path]:
+def download_dataset_splits(repo_id: str, token: str, dataset_root: Path) -> tuple[Path, Path, Path]:
     dataset_root.mkdir(parents=True, exist_ok=True)
 
     def download_split(split: str) -> Path:
@@ -219,7 +238,8 @@ def download_dataset_splits(repo_id: str, token: str, dataset_root: Path) -> tup
 
     train_file = download_split("train")
     valid_file = download_split("valid")
-    return train_file, valid_file
+    test_file = download_split("test")
+    return train_file, valid_file, test_file
 
 
 def checkpoint_step(path: Path) -> int:
@@ -338,6 +358,34 @@ def build_train_command(
     return [part for part in cmd if part]
 
 
+def build_evaluation_command(
+    args: argparse.Namespace,
+    project_root: Path,
+    *,
+    output_dir: Path,
+    test_file: Path,
+    eval_output_path: Path,
+) -> list[str]:
+    return [
+        sys.executable,
+        str(project_root / "scripts" / "evaluate_mt.py"),
+        "--model_dir",
+        str(output_dir),
+        "--base_model",
+        args.model_name,
+        "--test_file",
+        str(test_file),
+        "--glossary_file",
+        str(project_root / "data" / "glossary" / "maasai_glossary.json"),
+        "--output_file",
+        str(eval_output_path),
+        "--max_new_tokens",
+        str(args.evaluation_max_new_tokens),
+        "--max_samples",
+        str(args.evaluation_max_samples),
+    ]
+
+
 def maybe_disconnect_colab() -> None:
     try:
         from google.colab import runtime  # type: ignore
@@ -354,6 +402,10 @@ def build_bucket_bundle(
     manifest_path: Path,
     output_dir: Path,
     training_exit_code: int,
+    evaluation_output_path: Path | None,
+    readiness_output_path: Path | None,
+    evaluation_exit_code: int | None,
+    ready_for_promotion: bool | None,
 ) -> Path:
     bundle_dir = work_dir / "bucket_bundle"
     if bundle_dir.exists():
@@ -366,6 +418,8 @@ def build_bucket_bundle(
     summary = {
         "run_id": run_id,
         "training_exit_code": training_exit_code,
+        "evaluation_exit_code": evaluation_exit_code,
+        "ready_for_promotion": ready_for_promotion,
         "saved_at": datetime.now(timezone.utc).isoformat(),
         "output_dir_exists": output_dir.exists(),
         "checkpoints": sorted(path.name for path in output_dir.glob("checkpoint-*") if path.is_dir()),
@@ -374,6 +428,10 @@ def build_bucket_bundle(
 
     if output_dir.exists():
         shutil.copytree(output_dir, bundle_dir / "model_output", dirs_exist_ok=True)
+    if evaluation_output_path and evaluation_output_path.exists():
+        shutil.copy2(evaluation_output_path, bundle_dir / "eval_results.json")
+    if readiness_output_path and readiness_output_path.exists():
+        shutil.copy2(readiness_output_path, bundle_dir / "model_readiness.json")
 
     return bundle_dir
 
@@ -402,6 +460,8 @@ def main() -> int:
     dataset_root = work_dir / "dataset"
     output_dir = work_dir / "model_output"
     manifest_path = work_dir / "run_manifest.json"
+    eval_output_path = work_dir / "eval_results.json"
+    readiness_output_path = work_dir / "model_readiness.json"
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
     token = resolve_token(args)
@@ -413,7 +473,7 @@ def main() -> int:
     ensure_model_repo(api, token, args.model_repo, args.private_model_repo)
 
     print(f"Downloading dataset from {args.dataset_repo}")
-    train_file, valid_file = download_dataset_splits(args.dataset_repo, token, dataset_root)
+    train_file, valid_file, test_file = download_dataset_splits(args.dataset_repo, token, dataset_root)
 
     print(f"Restoring latest checkpoint from {args.model_repo}")
     resume_checkpoint = restore_latest_checkpoint(args.model_repo, token, output_dir)
@@ -428,6 +488,7 @@ def main() -> int:
         args=args,
         train_file=train_file,
         valid_file=valid_file,
+        test_file=test_file,
         output_dir=output_dir,
         resume_checkpoint=resume_checkpoint,
     )
@@ -446,6 +507,28 @@ def main() -> int:
     print(f"Run manifest: {manifest_path}")
 
     result = subprocess.run(cmd, cwd=project_root, check=False)
+    evaluation_result: subprocess.CompletedProcess[str] | None = None
+
+    if result.returncode == 0 and args.evaluate_after_train:
+        eval_cmd = build_evaluation_command(
+            args,
+            project_root,
+            output_dir=output_dir,
+            test_file=test_file,
+            eval_output_path=eval_output_path,
+        )
+        print("Launching evaluation command:")
+        print(" ".join(eval_cmd))
+        evaluation_result = subprocess.run(eval_cmd, cwd=project_root, check=False)
+        if eval_output_path.exists():
+            shutil.copy2(eval_output_path, output_dir / "eval_results.json")
+
+    readiness_report = build_model_readiness_report(
+        output_dir,
+        eval_file=eval_output_path if eval_output_path.exists() else None,
+    )
+    write_model_readiness_report(readiness_output_path, readiness_report)
+    shutil.copy2(readiness_output_path, output_dir / "model_readiness.json")
 
     try:
         bundle_dir = build_bucket_bundle(
@@ -454,6 +537,10 @@ def main() -> int:
             manifest_path=manifest_path,
             output_dir=output_dir,
             training_exit_code=result.returncode,
+            evaluation_output_path=eval_output_path if eval_output_path.exists() else None,
+            readiness_output_path=readiness_output_path,
+            evaluation_exit_code=None if evaluation_result is None else evaluation_result.returncode,
+            ready_for_promotion=readiness_report["ready"],
         )
         sync_bundle_to_bucket(args, bundle_dir, run_id, token)
     except Exception as exc:
@@ -462,7 +549,16 @@ def main() -> int:
     if args.disconnect_colab and result.returncode == 0:
         maybe_disconnect_colab()
 
-    return result.returncode
+    if result.returncode != 0:
+        return result.returncode
+    if evaluation_result is not None and evaluation_result.returncode != 0:
+        return evaluation_result.returncode
+    if args.require_ready_model and not readiness_report["ready"]:
+        print("Model readiness gate failed:", file=sys.stderr)
+        for reason in readiness_report["reasons"]:
+            print(f"- {reason}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

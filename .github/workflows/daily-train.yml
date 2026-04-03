@@ -88,7 +88,7 @@ jobs:
           fi
 
           if [ -z "${HF_BASE_MODEL:-}" ]; then
-            HF_BASE_MODEL="Qwen/Qwen2.5-3B-Instruct"
+            HF_BASE_MODEL="google/gemma-4-E4B-it"
           fi
           if [ -z "${HF_BUCKET_URI:-}" ]; then
             HF_BUCKET_URI="hf://buckets/NorthernTribe-Research/maasai-project-storage"
@@ -149,14 +149,14 @@ jobs:
             "${EXTRA_ARGS[@]}"
 
       - name: Upload Kaggle dispatch artifacts
-        if: always()
+        if: failure() || cancelled()
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: kaggle-training-dispatch
           path: |
             ${{ runner.temp }}/kaggle-monitor
-          retention-days: 7
+          retention-days: 3
           if-no-files-found: ignore
 
   self-hosted-train:
@@ -202,7 +202,7 @@ jobs:
           fi
 
           if [ -z "${HF_BASE_MODEL:-}" ]; then
-            HF_BASE_MODEL="Qwen/Qwen2.5-3B-Instruct"
+            HF_BASE_MODEL="google/gemma-4-E4B-it"
           fi
           if [ -z "${HF_BUCKET_URI:-}" ]; then
             HF_BUCKET_URI="hf://buckets/NorthernTribe-Research/maasai-project-storage"

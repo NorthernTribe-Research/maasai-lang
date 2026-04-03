@@ -25,6 +25,13 @@ import gradio as gr
 # Configuration
 # ---------------------------------------------------------------------------
 TRANSLATION_MODEL_ID = os.getenv("TRANSLATION_MODEL_ID", "NorthernTribe-Research/maasai-en-mt")
+TRANSLATION_BASE_MODEL = os.getenv("TRANSLATION_BASE_MODEL", "google/gemma-4-E4B-it")
+TRANSLATION_ENABLE_THINKING = os.getenv("TRANSLATION_ENABLE_THINKING", "true").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
 ASR_MODEL_ID = os.getenv("ASR_MODEL_ID", "microsoft/paza-whisper-large-v3-turbo")
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = APP_DIR if (APP_DIR / "data").exists() else APP_DIR.parent
@@ -62,6 +69,54 @@ APP_THEME = build_theme()
 GRADIO_THEME_ON_LAUNCH = gradio_major_version() >= 6
 
 
+def detect_torch_accelerator(torch_module: Any) -> str:
+    """Return the best available accelerator without importing torch at module load."""
+    cuda = getattr(torch_module, "cuda", None)
+    if callable(getattr(cuda, "is_available", None)) and cuda.is_available():
+        return "cuda"
+
+    backends = getattr(torch_module, "backends", None)
+    mps = getattr(backends, "mps", None) if backends is not None else None
+    if callable(getattr(mps, "is_available", None)) and mps.is_available():
+        return "mps"
+
+    return "cpu"
+
+
+def build_translation_model_load_kwargs(torch_module: Any) -> dict[str, Any]:
+    """Choose translation model loading defaults that work on Space CPU runtimes."""
+    accelerator = detect_torch_accelerator(torch_module)
+    kwargs: dict[str, Any] = {"trust_remote_code": True}
+
+    if accelerator == "cuda":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+        kwargs["device_map"] = "auto"
+    elif accelerator == "mps":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+    else:
+        kwargs["torch_dtype"] = getattr(torch_module, "float32", None)
+        kwargs["low_cpu_mem_usage"] = True
+
+    return {key: value for key, value in kwargs.items() if value is not None}
+
+
+def build_asr_pipeline_load_kwargs(torch_module: Any) -> dict[str, Any]:
+    """Choose ASR pipeline loading defaults for CPU and GPU runtimes."""
+    accelerator = detect_torch_accelerator(torch_module)
+    kwargs: dict[str, Any] = {}
+
+    if accelerator == "cuda":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+        kwargs["device_map"] = "auto"
+    elif accelerator == "mps":
+        kwargs["torch_dtype"] = getattr(torch_module, "float16", None)
+        kwargs["device"] = "mps"
+    else:
+        kwargs["torch_dtype"] = getattr(torch_module, "float32", None)
+
+    return {key: value for key, value in kwargs.items() if value is not None}
+
+
 def configure_gradio_runtime() -> None:
     try:
         from multiprocessing import Lock as MpLock
@@ -97,6 +152,83 @@ OPERATIONAL_MESSAGE_PREFIXES = (
     ASR_UNAVAILABLE_PREFIX,
 )
 RESPONSE_MARKER = "### Response:"
+TRANSLATION_SYSTEM_PROMPT = (
+    "You are an expert translator working between English and the Maasai language (Maa). "
+    "Think carefully about meaning, register, grammar, and cultural nuance before answering. "
+    "Return only the final translation. Preserve culturally significant Maa terms when a direct "
+    "English substitute would flatten meaning."
+)
+COMPOSITION_SYSTEM_PROMPT = (
+    "You are a careful Maasai-language writing assistant. Respond only in Maa, keep the tone "
+    "natural, and do not add explanations or headings."
+)
+ENGLISH_FUNCTION_WORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "do",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "their",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "who",
+    "why",
+    "with",
+    "you",
+    "your",
+}
+MAASAI_SIGNAL_WORDS = {
+    "ajo",
+    "aji",
+    "enkai",
+    "enkang",
+    "enkop",
+    "inkera",
+    "inkishu",
+    "iyie",
+    "iyiook",
+    "kake",
+    "metaa",
+    "nabo",
+    "oleng",
+    "oltau",
+    "pee",
+    "sidai",
+    "supa",
+    "taata",
+}
+MAASAI_SIGNAL_PREFIXES = (
+    "enk",
+    "ink",
+    "olt",
+    "olo",
+    "olp",
+    "ilm",
+    "eme",
+    "nai",
+)
 
 COMPOSITION_LENGTH_GUIDANCE = {
     "Compact": {
@@ -152,24 +284,123 @@ COMPOSITION_EXAMPLES = [
 ]
 
 
+def translation_uses_chat_template() -> bool:
+    """Return whether the configured translation base model expects native chat formatting."""
+    model_hints = f"{TRANSLATION_MODEL_ID} {TRANSLATION_BASE_MODEL}".lower()
+    return "gemma-4" in model_hints
+
+
+def apply_chat_template(
+    formatter: Any,
+    messages: list[dict[str, str]],
+    *,
+    add_generation_prompt: bool,
+    enable_thinking: bool = False,
+) -> str:
+    """Render a prompt via a formatter that exposes apply_chat_template."""
+    kwargs = {
+        "tokenize": False,
+        "add_generation_prompt": add_generation_prompt,
+    }
+    try:
+        kwargs["enable_thinking"] = enable_thinking
+        return formatter.apply_chat_template(messages, **kwargs)
+    except TypeError:
+        kwargs.pop("enable_thinking", None)
+        return formatter.apply_chat_template(messages, **kwargs)
+
+
+def render_generation_prompt(
+    user_prompt: str,
+    formatter: Any,
+    *,
+    system_prompt: str,
+    enable_thinking: bool = TRANSLATION_ENABLE_THINKING,
+) -> str:
+    """Render a model-ready generation prompt for the configured translation family."""
+    tokenizer = getattr(formatter, "tokenizer", formatter)
+    has_chat_template = bool(getattr(tokenizer, "chat_template", None))
+    if translation_uses_chat_template() and has_chat_template and hasattr(formatter, "apply_chat_template"):
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        return apply_chat_template(
+            formatter,
+            messages,
+            add_generation_prompt=True,
+            enable_thinking=enable_thinking,
+        )
+    return f"{user_prompt}\n\n{RESPONSE_MARKER}\n"
+
+
 def get_translation_pipeline():
     """Lazy-load translation model."""
     global _translation_pipeline, _translation_error
     if _translation_pipeline is None:
         try:
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            from transformers import AutoModelForCausalLM, AutoProcessor, AutoTokenizer
             import torch
 
-            tokenizer = AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
-            model = AutoModelForCausalLM.from_pretrained(
-                TRANSLATION_MODEL_ID,
-                torch_dtype=torch.float16,
-                device_map="auto",
-                trust_remote_code=True,
-            )
-            _translation_pipeline = (model, tokenizer)
+            accelerator = detect_torch_accelerator(torch)
+            formatter: Any
+            tokenizer: Any
+            if translation_uses_chat_template():
+                try:
+                    formatter = AutoProcessor.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
+                    tokenizer = getattr(formatter, "tokenizer", None)
+                    if tokenizer is None:
+                        raise ValueError("Gemma 4 processor did not expose a tokenizer.")
+                except Exception as formatter_error:
+                    logger.warning("Gemma-style processor load failed; falling back to tokenizer: %s", formatter_error)
+                    tokenizer = AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
+                    formatter = tokenizer
+            else:
+                tokenizer = AutoTokenizer.from_pretrained(TRANSLATION_MODEL_ID, trust_remote_code=True)
+                formatter = tokenizer
+
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token or tokenizer.unk_token
+
+            model_kwargs = build_translation_model_load_kwargs(torch)
+            model = None
+            last_error: Exception | None = None
+
+            try:
+                from peft import AutoPeftModelForCausalLM
+
+                try:
+                    model = AutoPeftModelForCausalLM.from_pretrained(
+                        TRANSLATION_MODEL_ID,
+                        **model_kwargs,
+                    )
+                    logger.info("Loaded translation repo as PEFT adapter: %s", TRANSLATION_MODEL_ID)
+                except Exception as peft_error:
+                    last_error = peft_error
+                    logger.info("PEFT adapter load unavailable for %s: %s", TRANSLATION_MODEL_ID, peft_error)
+            except Exception:
+                AutoPeftModelForCausalLM = None  # type: ignore[assignment]
+
+            if model is None:
+                try:
+                    model = AutoModelForCausalLM.from_pretrained(
+                        TRANSLATION_MODEL_ID,
+                        **model_kwargs,
+                    )
+                except Exception as model_error:
+                    last_error = model_error
+                    raise model_error
+
+            if accelerator == "mps":
+                model = model.to("mps")
+            _translation_pipeline = (model, formatter, tokenizer)
             _translation_error = None
-            logger.info("Translation model loaded: %s", TRANSLATION_MODEL_ID)
+            logger.info(
+                "Translation model loaded: %s (runtime=%s, base=%s)",
+                TRANSLATION_MODEL_ID,
+                accelerator,
+                TRANSLATION_BASE_MODEL,
+            )
         except Exception as e:
             logger.warning("Translation model not available: %s", e)
             _translation_error = str(e)
@@ -185,13 +416,13 @@ def get_asr_pipeline():
             import torch
             from transformers import pipeline as hf_pipeline
 
+            accelerator = detect_torch_accelerator(torch)
             _asr_pipeline = hf_pipeline(
                 "automatic-speech-recognition",
                 model=ASR_MODEL_ID,
-                torch_dtype=torch.float16,
-                device_map="auto",
+                **build_asr_pipeline_load_kwargs(torch),
             )
-            logger.info("ASR model loaded: %s", ASR_MODEL_ID)
+            logger.info("ASR model loaded: %s (runtime=%s)", ASR_MODEL_ID, accelerator)
             _asr_error = None
         except Exception as e:
             logger.warning("ASR model not available: %s", e)
@@ -566,12 +797,11 @@ def is_operational_message(text: str) -> bool:
 def glossary_candidates(entry: dict[str, Any], direction: str) -> list[str]:
     """Return candidate search terms for the given translation direction."""
     primary_key = "term_english" if direction == "English → Maasai" else "term_maasai"
-    secondary_key = "term_maasai" if direction == "English → Maasai" else "term_english"
-    return [
+    candidates = [
         str(entry.get(primary_key, "")).strip(),
         *[str(item).strip() for item in entry.get("alternate_spellings", [])],
-        str(entry.get(secondary_key, "")).strip(),
     ]
+    return [candidate for index, candidate in enumerate(candidates) if candidate and candidate not in candidates[:index]]
 
 
 def term_mentioned(text: str, term: str) -> bool:
@@ -641,7 +871,7 @@ def build_inference_prompt(text: str, direction: str, glossary_matches: list[dic
             + "\nUse these mappings faithfully. Preserve protected Maa terms exactly when appropriate.\n\n"
         )
 
-    return f"{glossary_section}{base_prompt}\n\n{RESPONSE_MARKER}\n"
+    return f"{glossary_section}{base_prompt}"
 
 
 def render_glossary_matches(glossary_matches: list[dict[str, Any]], direction: str) -> str:
@@ -774,10 +1004,73 @@ def build_composition_prompt(
         "Do not use bullets or headings.\n\n"
         f"{glossary_section}"
         f"{required_term_section}"
-        f"Theme or context:\n{theme.strip()}\n\n"
-        f"{RESPONSE_MARKER}\n"
+        f"Theme or context:\n{theme.strip()}\n"
     )
     return prompt, int(length_profile["max_new_tokens"])
+
+
+def lexical_tokens(text: str) -> list[str]:
+    """Split text into normalized alphabetic tokens."""
+    return re.findall(r"[A-Za-z']+", text.lower())
+
+
+def maasai_signal_score(text: str) -> int:
+    """Count lightweight Maa lexical cues in the text."""
+    score = 0
+    for token in lexical_tokens(text):
+        if token in MAASAI_SIGNAL_WORDS:
+            score += 2
+        elif token.startswith(MAASAI_SIGNAL_PREFIXES):
+            score += 1
+    return score
+
+
+def english_function_word_score(text: str) -> int:
+    """Count lightweight English function-word cues in the text."""
+    return sum(1 for token in lexical_tokens(text) if token in ENGLISH_FUNCTION_WORDS)
+
+
+def source_overlap_ratio(source_text: str, output_text: str) -> float:
+    """Measure how much the output repeats the source lexical content."""
+    source_tokens = {token for token in lexical_tokens(source_text) if len(token) > 2}
+    output_tokens = {token for token in lexical_tokens(output_text) if len(token) > 2}
+    if not output_tokens:
+        return 0.0
+    return len(source_tokens & output_tokens) / len(output_tokens)
+
+
+def has_english_leakage(output_text: str, *, source_text: str = "", direction: str = "English → Maasai") -> bool:
+    """Heuristic check for English-heavy output where Maa is expected."""
+    if direction != "English → Maasai":
+        return False
+
+    output_text = output_text.strip()
+    if not output_text:
+        return True
+
+    english_score = english_function_word_score(output_text)
+    maasai_score = maasai_signal_score(output_text)
+    overlap_ratio = source_overlap_ratio(source_text, output_text) if source_text else 0.0
+
+    if overlap_ratio >= 0.55:
+        return True
+    if english_score >= 3 and maasai_score == 0:
+        return True
+    if english_score >= max(3, maasai_score + 2):
+        return True
+    return False
+
+
+def build_maasai_repair_prompt(source_text: str, draft_text: str) -> str:
+    """Ask the model to rewrite a draft as natural Maa only."""
+    return (
+        "Rewrite the translation as fluent natural Maa.\n"
+        "Do not explain your reasoning.\n"
+        "Do not repeat the English source text.\n"
+        "Return only the final Maa translation.\n\n"
+        f'English source:\n"{source_text.strip()}"\n\n'
+        f'Weak draft:\n"{draft_text.strip()}"'
+    )
 
 
 def clean_generated_output(text: str) -> str:
@@ -785,6 +1078,11 @@ def clean_generated_output(text: str) -> str:
     cleaned = text.strip().strip('"').strip("'")
     if RESPONSE_MARKER in cleaned:
         cleaned = cleaned.split(RESPONSE_MARKER, 1)[1].strip()
+
+    cleaned = re.sub(r"<thinking>.*?</thinking>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"<thought>.*?</thought>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"<reasoning>.*?</reasoning>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r"^\s*(Final Answer|Answer|Translation)\s*:\s*", "", cleaned, flags=re.IGNORECASE)
 
     for marker in ("\nEnglish:", "\nMaasai:", "\nTranslation:", "\nExplanation:", "\nNotes:"):
         if marker in cleaned:
@@ -804,6 +1102,44 @@ def clean_composition_output(text: str) -> str:
         flags=re.IGNORECASE,
     )
     return cleaned
+
+
+def generate_model_text(
+    model: Any,
+    formatter: Any,
+    tokenizer: Any,
+    *,
+    user_prompt: str,
+    system_prompt: str,
+    max_new_tokens: int,
+    repetition_penalty: float,
+    do_sample: bool,
+    temperature: float | None = None,
+    top_p: float | None = None,
+    clean_output=clean_generated_output,
+    enable_thinking: bool = TRANSLATION_ENABLE_THINKING,
+) -> str:
+    """Run one generation pass through the configured model."""
+    prompt = render_generation_prompt(
+        user_prompt,
+        formatter,
+        system_prompt=system_prompt,
+        enable_thinking=enable_thinking,
+    )
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    generation_kwargs: dict[str, Any] = {
+        "max_new_tokens": max_new_tokens,
+        "do_sample": do_sample,
+        "repetition_penalty": repetition_penalty,
+        "pad_token_id": tokenizer.eos_token_id or tokenizer.pad_token_id,
+    }
+    if do_sample:
+        generation_kwargs["temperature"] = 0.72 if temperature is None else temperature
+        generation_kwargs["top_p"] = 0.92 if top_p is None else top_p
+    outputs = model.generate(**inputs, **generation_kwargs)
+    raw_text = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+    cleaned = clean_output(raw_text)
+    return cleaned or raw_text.strip()
 
 
 def _demo_compose_text(
@@ -922,8 +1258,8 @@ def compose_with_context(
     if used_demo:
         composition = _demo_compose_text(theme, composition_type, register, required_terms)
     else:
-        model, tokenizer = pipeline
-        prompt, max_new_tokens = build_composition_prompt(
+        model, formatter, tokenizer = pipeline
+        composition_prompt, max_new_tokens = build_composition_prompt(
             theme=theme,
             composition_type=composition_type,
             register=register,
@@ -931,18 +1267,30 @@ def compose_with_context(
             glossary_matches=glossary_matches,
             required_terms=required_terms,
         )
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        outputs = model.generate(
-            **inputs,
+        composition = generate_model_text(
+            model,
+            formatter,
+            tokenizer,
+            user_prompt=composition_prompt,
+            system_prompt=COMPOSITION_SYSTEM_PROMPT,
             max_new_tokens=max_new_tokens,
-            temperature=0.72,
-            top_p=0.92,
-            do_sample=True,
             repetition_penalty=1.08,
-            pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+            do_sample=True,
+            clean_output=clean_composition_output,
         )
-        raw_text = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-        composition = clean_composition_output(raw_text)
+        source_context = "\n".join(part for part in [theme.strip(), raw_terms.strip()] if part.strip())
+        if has_english_leakage(composition, source_text=source_context, direction="English → Maasai"):
+            composition = generate_model_text(
+                model,
+                formatter,
+                tokenizer,
+                user_prompt=build_maasai_repair_prompt(source_context, composition),
+                system_prompt=COMPOSITION_SYSTEM_PROMPT,
+                max_new_tokens=max_new_tokens,
+                repetition_penalty=1.05,
+                do_sample=False,
+                clean_output=clean_composition_output,
+            ) or composition
         if not composition:
             used_demo = True
             composition = _demo_compose_text(theme, composition_type, register, required_terms)
@@ -1054,20 +1402,33 @@ def translate_text(
         # Fallback demo response
         return _demo_translate(text, direction)
 
-    model, tokenizer = pipeline
-
-    prompt = build_inference_prompt(text, direction, glossary_matches)
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    outputs = model.generate(
-        **inputs,
+    model, formatter, tokenizer = pipeline
+    translation_prompt = build_inference_prompt(text, direction, glossary_matches)
+    result = generate_model_text(
+        model,
+        formatter,
+        tokenizer,
+        user_prompt=translation_prompt,
+        system_prompt=TRANSLATION_SYSTEM_PROMPT,
         max_new_tokens=256,
-        do_sample=False,
         repetition_penalty=1.02,
-        pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+        do_sample=False,
     )
-    result = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-    return clean_generated_output(result) or result.strip()
+    if has_english_leakage(result, source_text=text, direction=direction):
+        repaired = generate_model_text(
+            model,
+            formatter,
+            tokenizer,
+            user_prompt=build_maasai_repair_prompt(text, result),
+            system_prompt=TRANSLATION_SYSTEM_PROMPT,
+            max_new_tokens=256,
+            repetition_penalty=1.05,
+            do_sample=False,
+        )
+        if repaired and not has_english_leakage(repaired, source_text=text, direction=direction):
+            return repaired
+        return repaired or result
+    return result
 
 
 def translate_with_context(text: str, direction: str) -> tuple[str, str, str, str]:
@@ -2156,7 +2517,7 @@ def build_app() -> gr.Blocks:
                         <table class="data-table">
                             <tr>
                                 <th>Translation</th>
-                                <td>NorthernTribe-Research/maasai-en-mt (QLoRA on Qwen2.5-3B-Instruct)</td>
+                                <td>NorthernTribe-Research/maasai-en-mt (QLoRA on Gemma 4 E4B)</td>
                             </tr>
                             <tr>
                                 <th>Speech</th>

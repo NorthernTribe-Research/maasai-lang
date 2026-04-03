@@ -13,6 +13,57 @@ import re
 from pathlib import Path
 from typing import Any
 
+CONTENT_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "he",
+    "her",
+    "his",
+    "in",
+    "is",
+    "it",
+    "its",
+    "of",
+    "on",
+    "or",
+    "she",
+    "that",
+    "the",
+    "their",
+    "them",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "were",
+    "will",
+    "with",
+    "you",
+    "your",
+}
+
+BIBLE_THEME_KEYWORDS = {
+    "creation": {"beginning", "create", "created", "creation", "earth", "heaven", "light"},
+    "faith": {"believe", "believed", "faith", "hope", "trust"},
+    "love": {"beloved", "charity", "compassion", "love", "loved", "loving"},
+    "prayer": {"ask", "asked", "pray", "prayer", "praying", "supplication"},
+    "salvation": {"eternal", "grace", "redeem", "redeemed", "salvation", "save", "saved"},
+    "wisdom": {"instruction", "understanding", "wise", "wisdom"},
+    "peace": {"peace", "peacemaker", "rest", "shalom"},
+    "mercy": {"forgive", "forgiven", "forgiveness", "mercy", "merciful"},
+    "obedience": {"commandment", "commandments", "obey", "obedience"},
+    "kingdom": {"glory", "king", "kingdom", "lord", "reign", "throne"},
+}
+
 
 def build_translation_prompt(source_text: str, source_lang: Any, target_lang: Any) -> str:
     source_lang = str(source_lang or "").strip().lower()
@@ -228,6 +279,141 @@ def build_bible_passage_records(
     return records
 
 
+def _content_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[A-Za-z']+", text.lower())
+        if len(token) > 2 and token not in CONTENT_STOPWORDS
+    }
+
+
+def _bible_themes(text: str) -> set[str]:
+    tokens = _content_tokens(text)
+    return {
+        theme
+        for theme, keywords in BIBLE_THEME_KEYWORDS.items()
+        if tokens & keywords
+    }
+
+
+def _row_reference_label(row: dict[str, Any]) -> str:
+    for key in ("reference", "verse_ref", "verse_reference"):
+        value = str(row.get(key, "")).strip()
+        if value:
+            return value
+
+    book = str(row.get("book", "")).strip()
+    chapter = str(row.get("chapter", "")).strip()
+    verse = str(row.get("verse", "")).strip()
+    if book and chapter and verse:
+        return f"{book} {chapter}:{verse}"
+    return str(row.get("id", "unknown-reference")).strip() or "unknown-reference"
+
+
+def _related_bible_rows(
+    primary: dict[str, Any],
+    candidates: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    primary_text = str(primary.get("source_text", "")).strip()
+    primary_tokens = _content_tokens(primary_text)
+    primary_themes = _bible_themes(primary_text)
+    primary_book = str(primary.get("book", "")).strip().lower()
+
+    scored: list[tuple[float, dict[str, Any]]] = []
+    for candidate in candidates:
+        if candidate is primary:
+            continue
+
+        candidate_text = str(candidate.get("source_text", "")).strip()
+        candidate_tokens = _content_tokens(candidate_text)
+        if not candidate_tokens:
+            continue
+
+        overlap = len(primary_tokens & candidate_tokens)
+        theme_overlap = len(primary_themes & _bible_themes(candidate_text))
+        same_book = 1 if primary_book and primary_book == str(candidate.get("book", "")).strip().lower() else 0
+        score = float(theme_overlap * 10 + overlap * 3 + same_book)
+        if score <= 0:
+            continue
+        scored.append((score, candidate))
+
+    scored.sort(
+        key=lambda item: (
+            -item[0],
+            _row_reference_label(item[1]),
+            str(item[1].get("id", "")),
+        )
+    )
+    return [candidate for _, candidate in scored[:limit]]
+
+
+def build_bible_cross_reference_records(
+    rows: list[dict[str, Any]],
+    *,
+    max_records: int,
+    related_window: int = 2,
+) -> list[dict[str, Any]]:
+    if max_records <= 0 or related_window <= 0:
+        return []
+
+    bible_rows = [
+        row
+        for row in rows
+        if str(row.get("source_lang", "")).strip().lower() == "en"
+        and str(row.get("target_lang", "")).strip().lower() == "mas"
+        and str(row.get("domain", "")).strip().lower() in {"bible", "religion"}
+        and str(row.get("source_text", "")).strip()
+        and str(row.get("target_text", "")).strip()
+    ]
+    bible_rows.sort(key=_id_sort_key)
+
+    records: list[dict[str, Any]] = []
+    seen_signatures: set[tuple[str, tuple[str, ...]]] = set()
+
+    for primary in bible_rows:
+        related = _related_bible_rows(primary, bible_rows, limit=related_window)
+        if len(related) < related_window:
+            continue
+
+        related_refs = tuple(_row_reference_label(row) for row in related)
+        signature = (_row_reference_label(primary), related_refs)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
+
+        primary_ref = _row_reference_label(primary)
+        context_lines = "\n".join(
+            f'- {_row_reference_label(row)}: "{str(row.get("source_text", "")).strip()}"'
+            for row in related
+        )
+        prompt = (
+            "Translate the primary Biblical idea into Maa using the cross-reference context to keep the meaning clear.\n"
+            f'Primary verse ({primary_ref}): "{str(primary.get("source_text", "")).strip()}"\n'
+            "Related verses for context:\n"
+            f"{context_lines}\n"
+            "Keep a Biblical register and preserve the meaning of the primary verse."
+        )
+
+        base = dict(primary)
+        base["id"] = f"{str(primary.get('id', 'bible'))}-crossref"
+        records.append(
+            _make_record(
+                base,
+                task="maasai_biblical_cross_reference_generation",
+                prompt=prompt,
+                completion=str(primary.get("target_text", "")).strip(),
+                source_name_suffix="cross_reference",
+                notes="Derived Bible cross-reference generation task with semantically related verse context.",
+            )
+        )
+        if len(records) >= max_records:
+            break
+
+    return records
+
+
 def _story_opening_and_remainder(text: str) -> tuple[str | None, str | None]:
     paragraphs = [part.strip() for part in text.split("\n\n") if part.strip()]
     if len(paragraphs) >= 2:
@@ -322,6 +508,7 @@ def build_instruction_mixture(
     max_bible_passages: int,
     bible_passage_window: int,
     seed: int,
+    max_bible_cross_reference_records: int = 24,
 ) -> list[dict[str, Any]]:
     mixture = [ensure_instruction_record(row) for row in rows]
 
@@ -337,6 +524,13 @@ def build_instruction_mixture(
             rows,
             window=bible_passage_window,
             max_records=max_bible_passages,
+        )
+    )
+    mixture.extend(
+        build_bible_cross_reference_records(
+            rows,
+            max_records=max_bible_cross_reference_records if split_name == "train" else max(1, max_bible_cross_reference_records // 4),
+            related_window=2,
         )
     )
 

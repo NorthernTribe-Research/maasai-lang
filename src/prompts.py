@@ -7,6 +7,8 @@ Maasai terminology, clan references, and local dialect phrasing.
 
 from __future__ import annotations
 
+from typing import Any
+
 # ---------------------------------------------------------------------------
 # Core translation prompts
 # ---------------------------------------------------------------------------
@@ -21,6 +23,18 @@ MAS_TO_EN_PROMPT = (
 
 GENERIC_TRANSLATE_PROMPT = (
     'Translate from {source_lang} to {target_lang}:\n"{source_text}"'
+)
+
+TRANSLATION_SYSTEM_PROMPT = (
+    "You are an expert translator working between English and the Maasai language (Maa). "
+    "Return only the translation. Preserve culturally significant Maa terms when a direct "
+    "English substitute would flatten meaning."
+)
+
+TRANSLATION_INFERENCE_SYSTEM_PROMPT = (
+    "You are an expert translator working between English and the Maasai language (Maa). "
+    "Think carefully about meaning, register, grammar, and cultural nuance before answering. "
+    "Return only the final translation."
 )
 
 # ---------------------------------------------------------------------------
@@ -66,12 +80,95 @@ SUBTRIBE_CONTEXT_PROMPT = (
 # ---------------------------------------------------------------------------
 RESPONSE_MARKER = "### Response:"
 
-def build_training_text(prompt: str, completion: str) -> str:
+
+def model_uses_chat_template(model_name_or_path: str | None) -> bool:
+    """Return whether the model should be prompted through a native chat template."""
+    name = str(model_name_or_path or "").strip().lower()
+    return "gemma-4" in name
+
+
+def apply_chat_template(
+    formatter: Any,
+    messages: list[dict[str, str]],
+    *,
+    add_generation_prompt: bool,
+    enable_thinking: bool = False,
+) -> str:
+    """Render chat messages using a formatter that exposes apply_chat_template."""
+    kwargs = {
+        "tokenize": False,
+        "add_generation_prompt": add_generation_prompt,
+    }
+    try:
+        kwargs["enable_thinking"] = enable_thinking
+        return formatter.apply_chat_template(messages, **kwargs)
+    except TypeError:
+        kwargs.pop("enable_thinking", None)
+        return formatter.apply_chat_template(messages, **kwargs)
+
+
+def formatter_supports_chat_template(formatter: Any) -> bool:
+    """Return whether a formatter exposes a usable chat template."""
+    tokenizer = getattr(formatter, "tokenizer", formatter)
+    return bool(getattr(tokenizer, "chat_template", None)) and hasattr(formatter, "apply_chat_template")
+
+
+def should_enable_inference_thinking(
+    model_name_or_path: str | None,
+    requested: bool | None = None,
+) -> bool:
+    """Default Gemma 4 inference to thinking-enabled unless explicitly disabled."""
+    if requested is not None:
+        return requested
+    return model_uses_chat_template(model_name_or_path)
+
+
+def build_chat_messages(
+    user_prompt: str,
+    *,
+    assistant_response: str | None = None,
+    system_prompt: str = TRANSLATION_SYSTEM_PROMPT,
+) -> list[dict[str, str]]:
+    """Build a simple system-user(-assistant) chat turn."""
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
+    if assistant_response is not None:
+        messages.append({"role": "assistant", "content": assistant_response})
+    return messages
+
+
+def build_training_text(
+    prompt: str,
+    completion: str,
+    *,
+    model_name_or_path: str | None = None,
+    formatter: Any | None = None,
+) -> str:
     """Format a prompt+completion pair for causal LM training."""
+    if (
+        formatter is not None
+        and model_uses_chat_template(model_name_or_path)
+        and formatter_supports_chat_template(formatter)
+    ):
+        return apply_chat_template(
+            formatter,
+            build_chat_messages(prompt, assistant_response=completion),
+            add_generation_prompt=False,
+            enable_thinking=False,
+        )
     return f"{prompt}\n\n{RESPONSE_MARKER}\n{completion}"
 
 
-def build_inference_prompt(direction: str, text: str) -> str:
+def build_inference_prompt(
+    direction: str,
+    text: str,
+    *,
+    model_name_or_path: str | None = None,
+    formatter: Any | None = None,
+    enable_thinking: bool | None = None,
+) -> str:
     """Build the inference prompt with response marker for generation."""
     if direction == "English → Maasai" or direction == "en_to_mas":
         prompt = EN_TO_MAS_PROMPT.format(source_text=text)
@@ -81,7 +178,50 @@ def build_inference_prompt(direction: str, text: str) -> str:
         prompt = GENERIC_TRANSLATE_PROMPT.format(
             source_lang="unknown", target_lang="unknown", source_text=text
         )
+    if (
+        formatter is not None
+        and model_uses_chat_template(model_name_or_path)
+        and formatter_supports_chat_template(formatter)
+    ):
+        return apply_chat_template(
+            formatter,
+            build_chat_messages(
+                prompt,
+                system_prompt=TRANSLATION_INFERENCE_SYSTEM_PROMPT,
+            ),
+            add_generation_prompt=True,
+            enable_thinking=should_enable_inference_thinking(
+                model_name_or_path,
+                requested=enable_thinking,
+            ),
+        )
     return f"{prompt}\n\n{RESPONSE_MARKER}\n"
+
+
+def build_generation_prompt_from_user_prompt(
+    user_prompt: str,
+    *,
+    model_name_or_path: str | None = None,
+    formatter: Any | None = None,
+    system_prompt: str = TRANSLATION_INFERENCE_SYSTEM_PROMPT,
+    enable_thinking: bool | None = None,
+) -> str:
+    """Wrap an already-built user prompt for generation."""
+    if (
+        formatter is not None
+        and model_uses_chat_template(model_name_or_path)
+        and formatter_supports_chat_template(formatter)
+    ):
+        return apply_chat_template(
+            formatter,
+            build_chat_messages(user_prompt, system_prompt=system_prompt),
+            add_generation_prompt=True,
+            enable_thinking=should_enable_inference_thinking(
+                model_name_or_path,
+                requested=enable_thinking,
+            ),
+        )
+    return f"{user_prompt}\n\n{RESPONSE_MARKER}\n"
 
 
 def extract_response(full_text: str) -> str:

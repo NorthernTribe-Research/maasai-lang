@@ -190,6 +190,58 @@ For aggregators such as Openverse, discovery may be automated, but download and 
 - Best next use:
   - review mobile language-learning UX patterns, then inspect repository assets file-by-file before reusing any content in Maasai datasets
 
+## Newly Reviewed On April 3, 2026
+
+### 15. University of Iowa: Maasai Speech Samples
+
+- Status: approved for speech-focused review and controlled ingestion
+- Action lane: parse next
+- URL: `https://iro.uiowa.edu/esploro/outputs/dataset/Maasai-Speech-Samples/9983557355602771`
+- Rights notes:
+  - open-access dataset page
+  - CC BY 4.0
+  - useful for speech, pronunciation, and lexicon support rather than broad conversational fluency by itself
+- Best next use:
+  - add it to the speech-evaluation lane, pronunciation validation, and lexicon cleanup before promoting any derived training rows
+
+### 16. BibleNLP corpus
+
+- Status: reference_only pending file-level rights filtering
+- Action lane: manual review and selective ingest
+- URL: `https://huggingface.co/datasets/bible-nlp/biblenlp-corpus`
+- Rights notes:
+  - the dataset card exposes mixed rights metadata rather than one blanket reuse status for every file
+  - this makes it valuable, but not safe for blind bulk ingest
+- Best next use:
+  - inspect the Maa-specific files and only promote files whose individual rights basis is documented in the ingest manifest
+
+### 17. Global Storybooks / Multilingual English Storybooks with Maa support
+
+- Status: reference_only pending story-level license review
+- Action lane: manual review and selective ingest
+- URLs:
+  - `https://globalstorybooks.net/`
+  - `https://global-asp.github.io/storybooks-english/about/languages/`
+  - `https://www.storybookscanada.globalstorybooks.net/about/source/`
+- Rights notes:
+  - the project is openly reusable overall, but reuse still needs attribution and story-level verification
+  - Maa is present in the language inventory, which makes it a strong lead for simpler educational parallel text
+- Best next use:
+  - collect Maa story candidates one by one, record attribution, and use them as non-Bible fluency material
+
+### 18. African Storybook
+
+- Status: reference_only pending story-level license review
+- Action lane: manual review and selective ingest
+- URLs:
+  - `https://africanstorybook.org/about.php`
+  - `https://www.africanstorybook.org/terms.html`
+- Rights notes:
+  - the platform is openly licensed overall, but some stories carry additional non-commercial restrictions
+  - that means ingestion must happen per story, not as a blanket crawl
+- Best next use:
+  - expand child-literacy and everyday-narrative Maa coverage once clearly reusable titles are isolated
+
 ## Recommended Run
 
 ```bash
@@ -204,4 +256,6 @@ python scripts/discover_maasai_media_intelligence.py --output data/registry/maas
 2. Keep expanding Hollis conservatively beyond proverb-only coverage.
 3. Request access to ANV for speech training and evaluation.
 4. Contact UOregon before any dictionary/text ingestion.
-5. Treat OHCHR, Wikimedia CC BY-SA, Frans Mol preview, and modern travel-guide materials as review/permission lanes until rights are explicit.
+5. Add University of Iowa speech samples to the speech-review lane.
+6. Treat BibleNLP and storybook ecosystems as selective-ingest lanes until item-level rights are explicit.
+7. Treat OHCHR, Wikimedia CC BY-SA, Frans Mol preview, and modern travel-guide materials as review/permission lanes until rights are explicit.

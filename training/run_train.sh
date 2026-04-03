@@ -23,7 +23,7 @@ if [[ -z "$PYTHON_BIN" ]]; then
   fi
 fi
 
-MODEL_NAME="${MODEL_NAME:-Qwen/Qwen2.5-3B-Instruct}"
+MODEL_NAME="${MODEL_NAME:-google/gemma-4-E4B-it}"
 TRAIN_FILE="${TRAIN_FILE:-data/final_v3/train.jsonl}"
 VALID_FILE="${VALID_FILE:-data/final_v3/valid.jsonl}"
 OUTPUT_DIR="${OUTPUT_DIR:-outputs/maasai-en-mt-qlora}"

@@ -60,21 +60,21 @@ This repository follows a clear control-plane and data-plane split:
 | Hugging Face dataset | `NorthernTribe-Research/maasai-translation-corpus` |
 | Hugging Face model repo | `NorthernTribe-Research/maasai-en-mt` |
 | Daily training fallback model repo | `NorthernTribe-Research/maasai-en-mt-staging` |
-| Base translation model | `Qwen/Qwen2.5-3B-Instruct` |
+| Base translation model | `google/gemma-4-E4B-it` |
 | ASR model | `microsoft/paza-whisper-large-v3-turbo` |
 
 ## Version Snapshot
 
-As of **March 31, 2026**, the active versions and runtime targets are:
+As of **April 3, 2026**, the active versions and runtime targets are:
 
 | Component | Current Version / Target | Source |
 | --- | --- | --- |
 | Python automation runtime | `3.11` | `.github/workflows/ci.yml`, `.github/workflows/daily-train.yml` |
 | Space SDK | `gradio` `6.10.0` | `space/README.md` |
 | Gradio dependency | `>=6.10.0,<7.0.0` | `requirements.txt`, `space/requirements.txt`, `requirements-ci.txt` |
-| Transformers | `>=4.51.0` | `requirements.txt` |
+| Transformers | `>=4.57.0` | `requirements.txt` |
 | PyTorch | `>=2.3.0` | `requirements.txt` |
-| Base translation model | `Qwen/Qwen2.5-3B-Instruct` | `README.md`, workflow defaults |
+| Base translation model | `google/gemma-4-E4B-it` | `README.md`, workflow defaults |
 | ASR model | `microsoft/paza-whisper-large-v3-turbo` | `README.md`, `.env.example` |
 
 ## Dataset Snapshot
@@ -141,6 +141,16 @@ python scripts/evaluate_mt.py \
   --glossary_file data/glossary/maasai_glossary.json
 ```
 
+### Check Model Readiness
+
+Use the readiness gate before promoting a checkpoint to Hugging Face or pointing the Space at it:
+
+```bash
+python scripts/check_model_readiness.py \
+  --model-dir outputs/maasai-en-mt-qlora \
+  --eval-file outputs/maasai-en-mt-qlora/eval_results.json
+```
+
 ## Training Workflows
 
 ### Local Or Research Training
@@ -155,7 +165,7 @@ For direct control over the fine-tuning job:
 
 ```bash
 python scripts/train_qlora.py \
-  --model_name Qwen/Qwen2.5-3B-Instruct \
+  --model_name google/gemma-4-E4B-it \
   --train_file data/final_v3/train.jsonl \
   --valid_file data/final_v3/valid.jsonl \
   --output_dir outputs/maasai-en-mt-qlora
@@ -173,6 +183,11 @@ python scripts/train_daily_from_hf.py \
   --save-steps 100
 ```
 
+By default, the daily training path now also writes:
+
+- `eval_results.json` with bounded post-training evaluation
+- `model_readiness.json` with a promotion verdict for the checkpoint
+
 ### Kaggle Execution
 
 Use the retrying wrapper when you want GitHub or a local machine to submit the private Kaggle kernel and automatically retry unsupported GPU assignments.
@@ -184,6 +199,38 @@ KAGGLE_CONFIG_DIR="$PWD" .venv/bin/python scripts/run_kaggle_training.py \
   --report-to wandb \
   --embed-local-hf-token
 ```
+
+### Remote Cloud CPU Execution
+
+Use the cloud runner when you want a conservative CPU-only adapter training pass on the machine described in the local `cloud-machine-connection.md` file.
+
+```bash
+.venv/bin/python scripts/run_cloud_cpu_training.py --prepare-only
+.venv/bin/python scripts/run_cloud_cpu_training.py
+.venv/bin/python scripts/run_cloud_cpu_training.py --pull-only
+```
+
+The helper reads the fenced `sshconfig` block from the local markdown file, preserves the repo directory layout on the remote machine, installs a CPU-oriented requirements set, runs a bounded fine-tuning job, and syncs the adapter artifacts back. See `docs/cloud_cpu_training.md` for details.
+
+### Persistent Cloud CPU Training
+
+Use the persistent cloud manager when you want the remote CPU machine to keep running resumable Hugging Face training cycles on a schedule.
+
+```bash
+HF_TOKEN=... .venv/bin/python scripts/manage_cloud_cpu_training.py install
+.venv/bin/python scripts/manage_cloud_cpu_training.py status
+.venv/bin/python scripts/manage_cloud_cpu_training.py logs
+```
+
+This path keeps the cloud machine connected to the same dataset repo, model repo, checkpoint resume flow, and HF bucket bundle path that the rest of the project already uses. On the remote machine it installs either a systemd timer or a cron fallback, then repeatedly runs `scripts/train_daily_from_hf.py` through `scripts/run_cloud_train_cycle.py` with lock protection and a heartbeat file.
+
+### Continual Maa Learning Strategy
+
+Gemma 4 is the active base-model direction for this repo, and the project now treats fluent Maa generation as a continual-learning problem rather than a one-time fine-tune. The current strategy is documented in:
+
+- `TODO.md`
+- `docs/continual_learning_strategy.md`
+- `docs/project_status.md`
 
 ### GitHub Actions Control Plane
 
@@ -218,6 +265,7 @@ Execute publication:
 
 ```bash
 python scripts/publish_to_hf.py \
+  --require-ready-model \
   --execute \
   --create-model-repo
 ```
@@ -405,6 +453,8 @@ Quality expectations should remain realistic:
 
 - `docs/deployment.md`
 - `docs/daily_training.md`
+- `docs/continual_learning_strategy.md`
+- `docs/project_status.md`
 - `docs/kaggle_training.md`
 - `docs/dataset_card.md`
 - `docs/model_card.md`

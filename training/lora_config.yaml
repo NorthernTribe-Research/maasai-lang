@@ -1,8 +1,8 @@
 # LoRA Configuration for Maasai-English Translation
-# Base model: Qwen/Qwen2.5-3B-Instruct
+# Base model: google/gemma-4-E4B-it
 
 model:
-  name: "Qwen/Qwen2.5-3B-Instruct"
+  name: "google/gemma-4-E4B-it"
   quantization: "4bit"
   bnb_4bit_compute_dtype: "bfloat16"
   bnb_4bit_quant_type: "nf4"
